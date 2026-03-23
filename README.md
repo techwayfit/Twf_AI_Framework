@@ -396,23 +396,38 @@ report.NodeBreakdown  // List<NodeTimingEntry> with per-node ms, status, errors
 
 ```
 source/
-└── core/
-    ├── INode.cs                 # INode interface, NodeStatus enum
-    ├── BaseNode.cs              # Abstract base + NodeExecutionContext + SimpleTransformNode
-    ├── WorkflowBuilder.cs       # Workflow fluent builder and execution engine
-    ├── WorkflowContext.cs       # Runtime context (logger, tracker, global state, chat history)
-    ├── WorkflowData.cs          # Per-step data packet
-    ├── WorkflowResult.cs        # Final workflow result
-    ├── NodeResult.cs            # Per-node result + fluent OnSuccess/OnFailure
-    ├── NodeOptions.cs           # Per-node retry/timeout/condition config
-    ├── ExecutionTracker.cs      # Node timing recorder + report generator
-    ├── LlmNode.cs               # LLM API calls
-    ├── PromptBuilderNode.cs     # Prompt template rendering
-    ├── OutputParserNode.cs      # LLM JSON output parsing
-    ├── EmbeddingNode.cs         # Vector embedding generation
-    ├── IONodes.cs               # HTTP request node
-    ├── DataNodes.cs             # Transform and filter nodes
-    └── ControlNodes.cs          # Condition, delay, merge nodes
+└── core/                              # TwfAiFramework (project root)
+    ├── twf_ai_framework.csproj
+    │
+    ├── Core/                          # namespace TwfAiFramework.Core
+    │   ├── INode.cs                   # INode interface, NodeStatus enum
+    │   ├── WorkflowBuilder.cs         # Workflow fluent builder and execution engine
+    │   ├── WorkflowContext.cs         # Runtime context (logger, tracker, global state, chat history)
+    │   ├── WorkflowData.cs            # Per-step data packet
+    │   ├── WorkflowResult.cs          # Final workflow result
+    │   ├── NodeResult.cs              # Per-node result + fluent OnSuccess/OnFailure
+    │   └── NodeOptions.cs             # Per-node retry/timeout/condition config
+    │
+    ├── Nodes/                         # namespace TwfAiFramework.Nodes
+    │   ├── BaseNode.cs                # Abstract base + NodeExecutionContext + SimpleTransformNode
+    │   │
+    │   ├── AI/                        # namespace TwfAiFramework.Nodes.AI
+    │   │   ├── LlmNode.cs             # LLM API calls (OpenAI-compatible)
+    │   │   ├── PromptBuilderNode.cs   # Prompt template rendering ({{variable}} substitution)
+    │   │   ├── OutputParserNode.cs    # LLM JSON output parsing
+    │   │   └── EmbeddingNode.cs       # Vector embedding generation
+    │   │
+    │   ├── IO/                        # namespace TwfAiFramework.Nodes.IO
+    │   │   └── IONodes.cs             # HttpRequestNode — REST API calls
+    │   │
+    │   ├── Data/                      # namespace TwfAiFramework.Nodes.Data
+    │   │   └── DataNodes.cs           # TransformNode, FilterNode
+    │   │
+    │   └── Control/                   # namespace TwfAiFramework.Nodes.Control
+    │       └── ControlNodes.cs        # ConditionNode, DelayNode, MergeNode
+    │
+    └── Tracking/                      # namespace TwfAiFramework.Tracking
+        └── ExecutionTracker.cs        # Node timing recorder + report generator
 ```
 
 ---
