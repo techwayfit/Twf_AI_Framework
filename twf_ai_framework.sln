@@ -7,11 +7,13 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "twf_ai_framework", "source\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "twf_ai_framework.tests", "tests\TwfAiFramework.Tests\twf_ai_framework.tests.csproj", "{605A879E-3034-EBED-E5B5-BD8683429FF5}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TwfAiFramework.Web", "source\web\TwfAiFramework.Web.csproj", "{E37CB07D-6055-272E-A9ED-B44D62CD5355}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "twf_ai_framework.web", "source\web\twf_ai_framework.web.csproj", "{E37CB07D-6055-272E-A9ED-B44D62CD5355}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "source", "source", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F3232DDB-AE3F-4C8E-972A-9810DEB2EC2B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "twf_ai_framework.console", "source\console\twf_ai_framework.console.csproj", "{690AD182-34FD-DE8A-AA50-9B966196F7EE}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -59,6 +61,18 @@ Global
 		{E37CB07D-6055-272E-A9ED-B44D62CD5355}.Release|x64.Build.0 = Release|Any CPU
 		{E37CB07D-6055-272E-A9ED-B44D62CD5355}.Release|x86.ActiveCfg = Release|Any CPU
 		{E37CB07D-6055-272E-A9ED-B44D62CD5355}.Release|x86.Build.0 = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|x64.Build.0 = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Debug|x86.Build.0 = Debug|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|x64.ActiveCfg = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|x64.Build.0 = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|x86.ActiveCfg = Release|Any CPU
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -67,6 +81,7 @@ Global
 		{711E2E06-D04E-4591-9F96-A20B1EBC9234} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 		{605A879E-3034-EBED-E5B5-BD8683429FF5} = {F3232DDB-AE3F-4C8E-972A-9810DEB2EC2B}
 		{E37CB07D-6055-272E-A9ED-B44D62CD5355} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
+		{690AD182-34FD-DE8A-AA50-9B966196F7EE} = {02EA681E-C7D8-13C7-8484-4AC65E1B71E8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {5419587F-F369-4B6A-A85D-FA73681D105E}
