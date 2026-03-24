@@ -1,0 +1,98 @@
+{
+  "Id": "b48a4df8-b6c6-464c-8c43-cd4d5faca08f",
+  "Name": "New Workflow",
+  "Description": "Test",
+  "CreatedAt": "2026-03-24T08:05:24.0612054Z",
+  "UpdatedAt": "2026-03-24T09:07:38.684598Z",
+  "Nodes": [
+    {
+      "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "Name": "LLM",
+      "Type": "LlmNode",
+      "Category": "AI",
+      "Parameters": {
+        "apiUrl": "{{api_url}}"
+      },
+      "Position": {
+        "X": 259,
+        "Y": 247
+      },
+      "Color": "#4A90E2"
+    },
+    {
+      "Id": "5770722b-cbd5-4c28-850e-09087fa4db5b",
+      "Name": "Filter",
+      "Type": "FilterNode",
+      "Category": "Data",
+      "Parameters": {},
+      "Position": {
+        "X": 941,
+        "Y": 145
+      },
+      "Color": "#7ED321"
+    },
+    {
+      "Id": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "Name": "Condition",
+      "Type": "ConditionNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 637,
+        "Y": 148
+      },
+      "Color": "#F5A623"
+    },
+    {
+      "Id": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
+      "Name": "Embedding",
+      "Type": "EmbeddingNode",
+      "Category": "AI",
+      "Parameters": {},
+      "Position": {
+        "X": 649,
+        "Y": 411
+      },
+      "Color": "#4A90E2"
+    }
+  ],
+  "Connections": [
+    {
+      "Id": "7969992a-10f3-46ea-8807-312325d01460",
+      "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "SourcePort": "output",
+      "TargetNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "b1736987-4f00-437a-b75b-33833631b2fa",
+      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "SourcePort": "output",
+      "TargetNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "5fc5a3c1-07eb-469d-a246-c3d5d9890045",
+      "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "SourcePort": "output",
+      "TargetNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "40116c70-1146-4d60-b2f8-d4630e8af64e",
+      "SourceNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
+      "SourcePort": "output",
+      "TargetNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
+      "TargetPort": "input"
+    }
+  ],
+  "Variables": {
+    "api_url": "https://www.google.com"
+  },
+  "Metadata": {
+    "Author": null,
+    "Tags": [],
+    "Version": 1,
+    "IsActive": true
+  }
+}
