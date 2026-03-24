@@ -5,7 +5,7 @@ namespace TwfAiFramework.Core;
 /// conditional skipping, and error handling strategy.
 /// Applied at the workflow builder level: .AddNode(node, NodeOptions.WithRetry(3))
 /// </summary>
-public sealed class NodeOptions
+public sealed record NodeOptions
 {
     // ─── Defaults ────────────────────────────────────────────────────────────
 

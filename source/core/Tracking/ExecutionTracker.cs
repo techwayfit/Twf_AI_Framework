@@ -31,7 +31,7 @@ public sealed class ExecutionTracker
     {
         record.Status = result.Status;
         record.CompletedAt = DateTime.UtcNow;
-        record.Duration = record.CompletedAt - record.StartedAt;
+        record.Duration = (record.CompletedAt - record.StartedAt) ?? TimeSpan.Zero;
         record.ErrorMessage = result.ErrorMessage;
         record.Metadata = result.Metadata;
         record.Logs = result.Logs.ToList();
