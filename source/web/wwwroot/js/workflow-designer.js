@@ -7,11 +7,14 @@ let selectedConnection = null;
 let isDraggingNode = false;
 let isDraggingSelection = false;
 let isSelecting = false; // For drag-to-select
+let isDraggingConnection = false; // Dragging connection endpoint
+let draggedConnectionEnd = null; // { connectionId, end: 'source' | 'target' }
 let dragOffset = { x: 0, y: 0 };
 let groupDragStart = {}; // Store initial positions for group drag
 let selectionStart = { x: 0, y: 0 };
 let selectionRect = null;
 let connectingFrom = null;
+let isConnecting = false;
 let availableNodes = [];
 let nodeSchemas = {}; // Store node parameter schemas
 let zoomLevel = 1;
@@ -133,6 +136,7 @@ function renderVariablesList() {
     });
     
     variablesList.innerHTML = html;
+  variablesList.scrollTop = variablesList.scrollHeight;
 }
 
 function selectVariable(name) {
@@ -1014,13 +1018,16 @@ document.addEventListener('mouseup', onMouseUp);
 
 function onMouseMove(e) {
     if (isSelecting && selectionRect) {
-        const canvas = document.getElementById('canvas-area');
-     const rect = canvas.getBoundingClientRect();
+     const canvas = document.getElementById('canvas-area');
+        const rect = canvas.getBoundingClientRect();
         
         const currentX = (e.clientX - rect.left + canvas.scrollLeft) / zoomLevel;
    const currentY = (e.clientY - rect.top + canvas.scrollTop) / zoomLevel;
-        
+  
     updateSelectionRect(currentX, currentY);
+    } else if (isDraggingConnection) {
+    // Update visual feedback for connection dragging
+    updateConnectionDragFeedback(e);
     } else if (isDraggingNode) {
         const canvas = document.getElementById('canvas-area');
      const rect = canvas.getBoundingClientRect();
@@ -1031,25 +1038,25 @@ function onMouseMove(e) {
         
  // Calculate the new position for the node being dragged
         const newX = (mouseX / zoomLevel) - dragOffset.x;
-        const newY = (mouseY / zoomLevel) - dragOffset.y;
+     const newY = (mouseY / zoomLevel) - dragOffset.y;
         
         if (isDraggingSelection && selectedNodes.size > 1) {
           // Calculate delta from the dragged node's initial position
-       const initialPos = groupDragStart[selectedNode.id];
-            if (initialPos) {
+const initialPos = groupDragStart[selectedNode.id];
+    if (initialPos) {
     const deltaX = newX - initialPos.x;
       const deltaY = newY - initialPos.y;
 
-          // Apply delta to all selected nodes
+ // Apply delta to all selected nodes
        selectedNodes.forEach(nodeId => {
   const node = workflow.nodes.find(n => n.id === nodeId);
-          const startPos = groupDragStart[nodeId];
+     const startPos = groupDragStart[nodeId];
       if (node && startPos) {
-       node.position.x = Math.max(0, Math.round(startPos.x + deltaX));
+  node.position.x = Math.max(0, Math.round(startPos.x + deltaX));
   node.position.y = Math.max(0, Math.round(startPos.y + deltaY));
-           }
+         }
  });
-            }
+  }
   } else if (selectedNode) {
          // Move single node
     selectedNode.position.x = Math.max(0, Math.round(newX));
@@ -1057,50 +1064,67 @@ function onMouseMove(e) {
      }
         
  render();
-    } else if (isConnecting && connectingFrom) {
-        renderTempConnection(e);
+ } else if (isConnecting && connectingFrom) {
+    renderTempConnection(e);
+ }
+}
+
+function updateConnectionDragFeedback(e) {
+    // Highlight port under mouse
+    const target = e.target;
+    
+    // Remove previous hover highlights
+    document.querySelectorAll('.port.drop-target').forEach(port => {
+     port.style.transform = '';
+    });
+    
+    if (target.classList.contains('port') && target.classList.contains('drop-target')) {
+ // Visual feedback on valid drop target
+  target.style.transform = 'translateY(-50%) scale(1.8)';
     }
 }
 
 function onMouseUp(e) {
     if (isSelecting) {
         isSelecting = false;
-        if (selectionRect) {
+      if (selectionRect) {
             selectionRect.remove();
-     selectionRect = null;
-        }
+ selectionRect = null;
+     }
         
      if (selectedNodes.size === 1) {
    selectedNode = workflow.nodes.find(n => n.id === [...selectedNodes][0]);
           renderProperties();
-      } else if (selectedNodes.size > 1) {
+    } else if (selectedNodes.size > 1) {
     showMultiSelectionInfo();
         }
+    } else if (isDraggingConnection) {
+     finishConnectionDrag(e);
     } else if (isDraggingNode) {
-        isDraggingNode = false;
-      isDraggingSelection = false;
+    isDraggingNode = false;
+   isDraggingSelection = false;
     groupDragStart = {};
     } else if (isConnecting) {
   const target = e.target;
   if (target.classList.contains('port')) {
      const targetNodeId = target.closest('.workflow-node').dataset.nodeId;
-            const targetPort = target.dataset.port;
+  const targetPort = target.dataset.port;
    
             // Don't connect to the same node or same port type
  if (targetNodeId !== connectingFrom.nodeId && 
-         targetPort !== connectingFrom.port) {
-           addConnection(
+      targetPort !== connectingFrom.port) {
+        addConnection(
     connectingFrom.nodeId,
           connectingFrom.port,
     targetNodeId,
   targetPort
            );
         }
-        }
-        
+      }
+    
         isConnecting = false;
  connectingFrom = null;
-        document.getElementById('temp-connection-layer').innerHTML = '';
+  document.getElementById('temp-connection-layer').innerHTML = '';
     }
 }
 
@@ -1112,8 +1136,8 @@ function renderTempConnection(e) {
     const port = connectingFrom.element;
     const portRect = port.getBoundingClientRect();
     
-    const x1 = (portRect.left + portRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
-    const y1 = (portRect.top + portRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+ const x1 = (portRect.left + portRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+ const y1 = (portRect.top + portRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
     const x2 = (e.clientX - canvasRect.left + canvas.scrollLeft) / zoomLevel;
     const y2 = (e.clientY - canvasRect.top + canvas.scrollTop) / zoomLevel;
     
@@ -1139,46 +1163,82 @@ function addConnection(sourceNodeId, sourcePort, targetNodeId, targetPort) {
 
 function renderConnections() {
     const connectionsLayer = document.getElementById('connections-layer');
-    connectionsLayer.innerHTML = '';
+ connectionsLayer.innerHTML = '';
     
     workflow.connections.forEach(conn => {
-        const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
-        const targetNode = workflow.nodes.find(n => n.id === conn.targetNodeId);
+      const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
+const targetNode = workflow.nodes.find(n => n.id === conn.targetNodeId);
       
       if (!sourceNode || !targetNode) return;
         
         const sourceEl = document.querySelector(`[data-node-id="${conn.sourceNodeId}"] .port.${conn.sourcePort}`);
         const targetEl = document.querySelector(`[data-node-id="${conn.targetNodeId}"] .port.${conn.targetPort}`);
-        
+     
     if (!sourceEl || !targetEl) return;
    
-        const canvas = document.getElementById('canvas-area');
+  const canvas = document.getElementById('canvas-area');
    const canvasRect = canvas.getBoundingClientRect();
       
       const sourceRect = sourceEl.getBoundingClientRect();
 const targetRect = targetEl.getBoundingClientRect();
-        
+    
         const x1 = (sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
         const y1 = (sourceRect.top + sourceRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
         const x2 = (targetRect.left + targetRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
-      const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+  const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
         
       const path = createBezierPath(x1, y1, x2, y2);
-        
-        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        pathEl.setAttribute('d', path);
-        pathEl.setAttribute('class', 'connection-line');
-        pathEl.setAttribute('marker-end', 'url(#arrowhead)');
-        pathEl.dataset.connectionId = conn.id;
-        
-        pathEl.addEventListener('click', () => {
-selectedConnection = conn;
-            selectedNode = null;
+    
+        // Create connection group
+    const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.dataset.connectionId = conn.id;
+
+        // Create path element
+  const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  pathEl.setAttribute('d', path);
+     pathEl.setAttribute('class', 'connection-line');
+     pathEl.setAttribute('marker-end', 'url(#arrowhead)');
+    pathEl.dataset.connectionId = conn.id;
+ 
+        pathEl.addEventListener('click', (e) => {
+       e.stopPropagation();
+  selectedConnection = conn;
+   selectedNode = null;
     selectedNodes.clear();
-         render();
-     });
-     
-  connectionsLayer.appendChild(pathEl);
+   render();
+ showConnectionProperties(conn);
+  });
+        
+    // Create draggable source endpoint
+        const sourceEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        sourceEndpoint.setAttribute('cx', x1);
+  sourceEndpoint.setAttribute('cy', y1);
+      sourceEndpoint.setAttribute('class', 'connection-endpoint source');
+     sourceEndpoint.dataset.connectionId = conn.id;
+        sourceEndpoint.dataset.end = 'source';
+    
+        sourceEndpoint.addEventListener('mousedown', (e) => {
+     e.stopPropagation();
+  startConnectionDrag(conn.id, 'source', e);
+        });
+        
+   // Create draggable target endpoint
+        const targetEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    targetEndpoint.setAttribute('cx', x2);
+        targetEndpoint.setAttribute('cy', y2);
+        targetEndpoint.setAttribute('class', 'connection-endpoint target');
+        targetEndpoint.dataset.connectionId = conn.id;
+      targetEndpoint.dataset.end = 'target';
+        
+      targetEndpoint.addEventListener('mousedown', (e) => {
+e.stopPropagation();
+    startConnectionDrag(conn.id, 'target', e);
+        });
+        
+        group.appendChild(pathEl);
+        group.appendChild(sourceEndpoint);
+        group.appendChild(targetEndpoint);
+  connectionsLayer.appendChild(group);
     });
 }
 
@@ -1202,15 +1262,15 @@ const panel = document.getElementById('properties-content');
     
     if (!schema) {
         panel.innerHTML = `
-            <div class="alert alert-warning small">
-                <i class="bi bi-exclamation-triangle"></i> No schema available for ${selectedNode.type}
+       <div class="alert alert-warning small">
+      <i class="bi bi-exclamation-triangle"></i> No schema available for ${selectedNode.type}
    </div>
  `;
-        return;
-    }
+     return;
+  }
     
     let html = `
-        <h6 class="border-bottom pb-2 mb-3">${selectedNode.name}</h6>
+      <h6 class="border-bottom pb-2 mb-3">${selectedNode.name}</h6>
     
         <div class="mb-3">
       <label class="form-label small fw-bold">Node Name</label>
@@ -1218,14 +1278,14 @@ const panel = document.getElementById('properties-content');
         value="${selectedNode.name}" 
  onchange="updateNodeProperty('name', this.value)" />
      </div>
-        
-        <div class="mb-3">
-            <label class="form-label small text-muted">Type</label>
+     
+   <div class="mb-3">
+        <label class="form-label small text-muted">Type</label>
       <input type="text" class="form-control form-control-sm" 
-        value="${selectedNode.type}" disabled />
-        </div>
-        
-        <hr />
+    value="${selectedNode.type}" disabled />
+      </div>
+     
+      <hr />
         <h6 class="small fw-bold mb-3">Parameters</h6>
     `;
     
@@ -1235,6 +1295,176 @@ const panel = document.getElementById('properties-content');
     });
     
 panel.innerHTML = html;
+}
+
+// ??? Connection Endpoint Dragging ??????????????????????????????????????????
+
+function startConnectionDrag(connectionId, end, event) {
+  event.preventDefault();
+    event.stopPropagation();
+
+    isDraggingConnection = true;
+    draggedConnectionEnd = { connectionId, end };
+    
+    const connection = workflow.connections.find(c => c.id === connectionId);
+    if (!connection) return;
+    
+    // Highlight the connection being dragged
+    const pathEl = document.querySelector(`path[data-connection-id="${connectionId}"]`);
+ if (pathEl) {
+        pathEl.classList.add(end === 'source' ? 'dragging-source' : 'dragging-target');
+}
+    
+  // Highlight valid drop targets
+    highlightValidPorts(connection, end);
+    
+    console.log(`Started dragging ${end} endpoint of connection ${connectionId}`);
+}
+
+function highlightValidPorts(connection, draggedEnd) {
+    // Get all ports
+    const allPorts = document.querySelectorAll('.workflow-node .port');
+  
+    allPorts.forEach(port => {
+        const portType = port.dataset.port; // 'input' or 'output'
+     const nodeId = port.closest('.workflow-node').dataset.nodeId;
+      
+        // Determine if this port is a valid drop target
+    let isValid = false;
+        
+        if (draggedEnd === 'source') {
+  // Dragging source endpoint - can only connect to input ports
+       // Can't connect to the current target node
+      isValid = portType === 'input' && nodeId !== connection.targetNodeId;
+ } else {
+    // Dragging target endpoint - can only connect to output ports
+  // Can't connect to the current source node
+            isValid = portType === 'output' && nodeId !== connection.sourceNodeId;
+        }
+    
+        // Can't connect node to itself
+      if (draggedEnd === 'source' && nodeId === connection.sourceNodeId) isValid = false;
+        if (draggedEnd === 'target' && nodeId === connection.targetNodeId) isValid = false;
+        
+        if (isValid) {
+   port.classList.add('drop-target');
+} else {
+    port.classList.add('drop-invalid');
+        }
+    });
+}
+
+function clearPortHighlights() {
+    document.querySelectorAll('.workflow-node .port').forEach(port => {
+        port.classList.remove('drop-target', 'drop-invalid');
+    });
+}
+
+function finishConnectionDrag(event) {
+    if (!isDraggingConnection || !draggedConnectionEnd) return;
+    
+    const { connectionId, end } = draggedConnectionEnd;
+    const connection = workflow.connections.find(c => c.id === connectionId);
+    
+    if (!connection) {
+   cancelConnectionDrag();
+  return;
+    }
+    
+    // Check if dropped on a valid port
+    const target = event.target;
+    if (target.classList.contains('port') && target.classList.contains('drop-target')) {
+   const newNodeId = target.closest('.workflow-node').dataset.nodeId;
+  const newPort = target.dataset.port;
+     
+    // Update the connection
+     if (end === 'source') {
+    connection.sourceNodeId = newNodeId;
+       connection.sourcePort = newPort;
+        console.log(`Reconnected source to node ${newNodeId}, port ${newPort}`);
+    } else {
+          connection.targetNodeId = newNodeId;
+connection.targetPort = newPort;
+ console.log(`Reconnected target to node ${newNodeId}, port ${newPort}`);
+        }
+      
+   render();
+    } else {
+  // Dropped on invalid target - cancel
+     console.log('Dropped on invalid target, reverting');
+    }
+    
+    cancelConnectionDrag();
+}
+
+function cancelConnectionDrag() {
+    if (!isDraggingConnection) return;
+    
+    // Remove highlight from dragged connection
+    if (draggedConnectionEnd) {
+    const pathEl = document.querySelector(`path[data-connection-id="${draggedConnectionEnd.connectionId}"]`);
+      if (pathEl) {
+   pathEl.classList.remove('dragging-source', 'dragging-target');
+     }
+    }
+    
+    // Clear port highlights
+    clearPortHighlights();
+    
+    isDraggingConnection = false;
+    draggedConnectionEnd = null;
+    
+    render();
+}
+
+function showConnectionProperties(connection) {
+ const sourceNode = workflow.nodes.find(n => n.id === connection.sourceNodeId);
+  const targetNode = workflow.nodes.find(n => n.id === connection.targetNodeId);
+    
+    const panel = document.getElementById('properties-content');
+    panel.innerHTML = `
+        <h6 class="border-bottom pb-2 mb-3">
+        <i class="bi bi-bezier2"></i> Connection
+      </h6>
+        
+   <div class="alert alert-info small">
+          <i class="bi bi-info-circle"></i>
+      <strong>Drag endpoints to reconnect</strong><br/>
+        <small>Drag the green circle (source) or red circle (target) to a different port.</small>
+        </div>
+ 
+   <div class="mb-3">
+      <label class="form-label small fw-bold">Source</label>
+       <div class="input-group input-group-sm">
+   <span class="input-group-text bg-success text-white">
+      <i class="bi bi-arrow-right-circle"></i>
+          </span>
+      <input type="text" class="form-control form-control-sm" 
+     value="${sourceNode?.name || 'Unknown'} (${connection.sourcePort})" 
+  disabled />
+       </div>
+            <small class="form-text text-muted">Drag green endpoint to change source</small>
+        </div>
+        
+        <div class="mb-3">
+          <label class="form-label small fw-bold">Target</label>
+  <div class="input-group input-group-sm">
+      <span class="input-group-text bg-danger text-white">
+  <i class="bi bi-arrow-left-circle"></i>
+   </span>
+    <input type="text" class="form-control form-control-sm" 
+  value="${targetNode?.name || 'Unknown'} (${connection.targetPort})" 
+            disabled />
+   </div>
+            <small class="form-text text-muted">Drag red endpoint to change target</small>
+        </div>
+        
+        <div class="d-grid gap-2 mt-3">
+      <button class="btn btn-sm btn-danger" onclick="deleteConnection('${connection.id}')">
+       <i class="bi bi-trash"></i> Delete Connection
+          </button>
+      </div>
+    `;
 }
 
 // ??? Utility Functions ?????????????????????????????????????????????????????
@@ -1252,17 +1482,17 @@ async function saveWorkflow() {
   const result = await response.json();
         
         if (result.success) {
-         // Show success message
+      // Show success message
  const toolbar = document.getElementById('toolbar-buttons');
      const msg = document.createElement('span');
-            msg.style.color = '#27ae60';
-            msg.style.fontWeight = 'bold';
+       msg.style.color = '#27ae60';
+       msg.style.fontWeight = 'bold';
   msg.innerHTML = '<i class="bi bi-check-circle-fill"></i> Saved!';
-         toolbar.appendChild(msg);
-      setTimeout(() => msg.remove(), 2000);
+    toolbar.appendChild(msg);
+   setTimeout(() => msg.remove(), 2000);
         } else {
-            alert('Error saving workflow: ' + result.error);
-        }
+   alert('Error saving workflow: ' + result.error);
+      }
     } catch (error) {
         console.error('Error saving workflow:', error);
     alert('Error saving workflow: ' + error.message);

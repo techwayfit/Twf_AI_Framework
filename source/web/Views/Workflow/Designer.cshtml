@@ -399,17 +399,70 @@ font-size: 0.85rem;
 
         .connection-line {
     stroke: #3498db;
-            stroke-width: 2.5;
-          fill: none;
+      stroke-width: 2.5;
+     fill: none;
             pointer-events: stroke;
+        cursor: pointer;
         }
 
       .connection-line:hover {
-            stroke: #e74c3c;
+stroke: #e74c3c;
 stroke-width: 3.5;
+   }
+
+ .connection-line.dragging-source {
+      stroke: #f39c12;
+   stroke-width: 3.5;
+       stroke-dasharray: 5, 5;
         }
 
-        .temp-connection {
+        .connection-line.dragging-target {
+      stroke: #9b59b6;
+      stroke-width: 3.5;
+            stroke-dasharray: 5, 5;
+    }
+
+        /* Connection endpoints */
+        .connection-endpoint {
+            fill: #3498db;
+            stroke: white;
+            stroke-width: 2;
+    cursor: grab;
+      r: 6;
+transition: all 0.2s;
+   }
+
+        .connection-endpoint:hover {
+            fill: #e74c3c;
+            r: 8;
+       cursor: grab;
+        }
+
+        .connection-endpoint:active {
+          cursor: grabbing;
+        }
+
+        .connection-endpoint.source {
+        fill: #27ae60;
+        }
+
+   .connection-endpoint.target {
+    fill: #e74c3c;
+        }
+
+        /* Port highlighting during connection drag */
+    .workflow-node .port.drop-target {
+            background: #27ae60;
+   transform: translateY(-50%) scale(1.8);
+            box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
+        }
+
+        .workflow-node .port.drop-invalid {
+ background: #95a5a6;
+    opacity: 0.5;
+        }
+
+.temp-connection {
             stroke: #95a5a6;
       stroke-width: 2;
  stroke-dasharray: 5,5;
@@ -610,10 +663,19 @@ border-radius: 4px;
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/js/workflow-designer.js" asp-append-version="true"></script>
+    <script src="~/js/designer/state.js" asp-append-version="true"></script>
+    <script src="~/js/designer/utils.js" asp-append-version="true"></script>
+    <script src="~/js/designer/initialization.js" asp-append-version="true"></script>
+    <script src="~/js/designer/variables.js" asp-append-version="true"></script>
+    <script src="~/js/designer/autocomplete.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes.js" asp-append-version="true"></script>
+    <script src="~/js/designer/connections.js" asp-append-version="true"></script>
+  <script src="~/js/designer/rendering.js" asp-append-version="true"></script>
+    <script src="~/js/designer/properties.js" asp-append-version="true"></script>
+    <script src="~/js/designer/events.js" asp-append-version="true"></script>
     <script>
         const workflowId = '@Model.Id';
-                initializeDesigner(workflowId);
+    initializeDesigner(workflowId);
     </script>
 </body>
 </html>

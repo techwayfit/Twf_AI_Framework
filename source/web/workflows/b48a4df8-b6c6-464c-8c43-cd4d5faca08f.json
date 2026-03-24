@@ -3,11 +3,11 @@
   "Name": "New Workflow",
   "Description": "Test",
   "CreatedAt": "2026-03-24T08:05:24.0612054Z",
-  "UpdatedAt": "2026-03-24T09:07:38.684598Z",
+  "UpdatedAt": "2026-03-24T09:09:34.8158415Z",
   "Nodes": [
     {
       "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
-      "Name": "LLM",
+      "Name": "Check API URL",
       "Type": "LlmNode",
       "Category": "AI",
       "Parameters": {
