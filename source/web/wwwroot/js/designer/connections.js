@@ -24,51 +24,61 @@ function deleteConnection(connectionId) {
 function showConnectionProperties(connection) {
     const sourceNode = workflow.nodes.find(n => n.id === connection.sourceNodeId);
   const targetNode = workflow.nodes.find(n => n.id === connection.targetNodeId);
-    
+  
     const panel = document.getElementById('properties-content');
     panel.innerHTML = `
-        <h6 class="border-bottom pb-2 mb-3">
-            <i class="bi bi-bezier2"></i> Connection
+  <h6 class="border-bottom pb-2 mb-3">
+    <i class="bi bi-bezier2"></i> Connection
       </h6>
         
-   <div class="alert alert-info small">
-  <i class="bi bi-info-circle"></i>
- <strong>Drag endpoints to reconnect</strong><br/>
-            <small>Drag the green circle (source) or red circle (target) to a different port.</small>
+ <div class="alert alert-info small">
+     <i class="bi bi-info-circle"></i>
+   <strong>Drag endpoints to reconnect</strong><br/>
+      <small>Drag the green circle (source) or red circle (target) to a different node port.</small>
         </div>
         
- <div class="mb-3">
-    <label class="form-label small fw-bold">Source</label>
-     <div class="input-group input-group-sm">
-   <span class="input-group-text bg-success text-white">
-        <i class="bi bi-arrow-right-circle"></i>
-              </span>
-           <input type="text" class="form-control form-control-sm" 
-         value="${sourceNode?.name || 'Unknown'} (${connection.sourcePort})" 
-      disabled />
-    </div>
-            <small class="form-text text-muted">Drag green endpoint to change source</small>
+      <div class="mb-3">
+  <label class="form-label small fw-bold">Source Node</label>
+  <div class="input-group input-group-sm">
+    <span class="input-group-text bg-success text-white">
+   <i class="bi bi-arrow-right-circle"></i>
+       </span>
+        <input type="text" class="form-control form-control-sm" 
+      value="${sourceNode?.name || 'Unknown'} (${connection.sourcePort})" 
+          disabled />
    </div>
+        <small class="form-text text-muted">Drag the green circle on the canvas to reconnect the source</small>
+      </div>
         
         <div class="mb-3">
- <label class="form-label small fw-bold">Target</label>
-      <div class="input-group input-group-sm">
-       <span class="input-group-text bg-danger text-white">
-        <i class="bi bi-arrow-left-circle"></i>
-</span>
-      <input type="text" class="form-control form-control-sm" 
+   <label class="form-label small fw-bold">Target Node</label>
+<div class="input-group input-group-sm">
+      <span class="input-group-text bg-danger text-white">
+    <i class="bi bi-arrow-left-circle"></i>
+         </span>
+        <input type="text" class="form-control form-control-sm" 
       value="${targetNode?.name || 'Unknown'} (${connection.targetPort})" 
-disabled />
-    </div>
-            <small class="form-text text-muted">Drag red endpoint to change target</small>
-      </div>
-   
-        <div class="d-grid gap-2 mt-3">
-  <button class="btn btn-sm btn-danger" onclick="deleteConnection('${connection.id}')">
-      <i class="bi bi-trash"></i> Delete Connection
-       </button>
-   </div>
+  disabled />
+ </div>
+            <small class="form-text text-muted">Drag the red circle on the canvas to reconnect the target</small>
+  </div>
+        
+        <hr class="mt-4" />
+        <div class="d-grid gap-2">
+ <button class="btn btn-danger" onclick="deleteSelectedConnection()">
+  <i class="bi bi-trash"></i> Delete Connection
+    </button>
+        </div>
     `;
+}
+
+// Helper function to delete the selected connection
+function deleteSelectedConnection() {
+    if (!selectedConnection) return;
+    
+    if (confirm('Delete this connection?')) {
+        deleteConnection(selectedConnection.id);
+    }
 }
 
 // ??? Connection Endpoint Dragging ??????????????????????????????????????????
@@ -76,23 +86,28 @@ disabled />
 function startConnectionDrag(connectionId, end, event) {
     event.preventDefault();
     event.stopPropagation();
-
+    
+    // Immediately set the dragging state to prevent other handlers
     isDraggingConnection = true;
     draggedConnectionEnd = { connectionId, end };
-    
+
     const connection = workflow.connections.find(c => c.id === connectionId);
-    if (!connection) return;
+    if (!connection) {
+        isDraggingConnection = false;
+        draggedConnectionEnd = null;
+        return;
+    }
     
-    // Highlight the connection being dragged
+  // Highlight the connection being dragged
     const pathEl = document.querySelector(`path[data-connection-id="${connectionId}"]`);
     if (pathEl) {
         pathEl.classList.add(end === 'source' ? 'dragging-source' : 'dragging-target');
-    }
+ }
     
     // Highlight valid drop targets
     highlightValidPorts(connection, end);
     
-    console.log(`Started dragging ${end} endpoint of connection ${connectionId}`);
+  console.log(`Started dragging ${end} endpoint of connection ${connectionId}`);
 }
 
 function highlightValidPorts(connection, draggedEnd) {

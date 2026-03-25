@@ -19,43 +19,55 @@ function setupEventListeners() {
     // Keyboard shortcuts
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Delete') {
-            deleteSelected();
-        }
+   deleteSelected();
+ }
         if (e.key === 'Escape') {
-            deselectAll();
-   }
+  deselectAll();
+    }
         if (e.ctrlKey && e.key === 's') {
- e.preventDefault();
-     saveWorkflow();
+       e.preventDefault();
+          saveWorkflow();
         }
         if (e.ctrlKey && e.key === 'a') {
-     e.preventDefault();
-     selectAll();
-}
+   e.preventDefault();
+          selectAll();
+        }
     });
 }
 
 // ??? Canvas Events ??????????????????????????????????????????????????????????
 
 function onCanvasMouseDown(e) {
-    // Only start selection if clicking on canvas directly, not on nodes
-    if (e.target.id === 'canvas-area' || e.target.id === 'workflow-canvas' || 
-        e.target.id === 'nodes-layer' || e.target.closest('g')) {
-        
-     isSelecting = true;
+    // Don't start selection if clicking on:
+    // - SVG connection elements (circles, paths)
+    // - Nodes
+    // - Ports
+    const isConnectionEndpoint = e.target.classList.contains('connection-endpoint');
+    const isConnectionPath = e.target.classList.contains('connection-line');
+    const isSvgElement = e.target.tagName === 'circle' || e.target.tagName === 'path';
+    const isNode = e.target.closest('.workflow-node');
+    
+    // Only start selection if clicking on canvas directly
+    const isCanvas = e.target.id === 'canvas-area' || 
+        e.target.id === 'workflow-canvas' || 
+     e.target.id === 'nodes-layer';
+    
+    // Start selection only if on canvas and not on any interactive element
+    if (isCanvas && !isConnectionEndpoint && !isConnectionPath && !isSvgElement && !isNode) {
+        isSelecting = true;
         const canvas = document.getElementById('canvas-area');
         const rect = canvas.getBoundingClientRect();
-      
-      selectionStart.x = (e.clientX - rect.left + canvas.scrollLeft) / zoomLevel;
-        selectionStart.y = (e.clientY - rect.top + canvas.scrollTop) / zoomLevel;
+
+        selectionStart.x = (e.clientX - rect.left + canvas.scrollLeft) / zoomLevel;
+      selectionStart.y = (e.clientY - rect.top + canvas.scrollTop) / zoomLevel;
         
-        // Clear selection if not holding Ctrl
+   // Clear selection if not holding Ctrl
         if (!e.ctrlKey) {
-    deselectAll();
+deselectAll();
         }
         
         // Create selection rectangle
-        createSelectionRect();
+    createSelectionRect();
     }
 }
 
@@ -156,42 +168,45 @@ function onPortMouseDown(e, node) {
 function onMouseMove(e) {
     if (isSelecting && selectionRect) {
         const canvas = document.getElementById('canvas-area');
-        const rect = canvas.getBoundingClientRect();
-        
+   const rect = canvas.getBoundingClientRect();
+ 
    const currentX = (e.clientX - rect.left + canvas.scrollLeft) / zoomLevel;
     const currentY = (e.clientY - rect.top + canvas.scrollTop) / zoomLevel;
-  
+        
         updateSelectionRect(currentX, currentY);
     } else if (isDraggingConnection) {
-        updateConnectionDragFeedback(e);
+     // Update visual feedback for connection dragging
+ updateConnectionDragFeedback(e);
+ // Also render a temporary line from the dragged endpoint to mouse
+        renderDraggingConnection(e);
     } else if (isDraggingNode) {
         const canvas = document.getElementById('canvas-area');
-      const rect = canvas.getBoundingClientRect();
-        
+ const rect = canvas.getBoundingClientRect();
+ 
         const mouseX = e.clientX - rect.left + canvas.scrollLeft;
- const mouseY = e.clientY - rect.top + canvas.scrollTop;
-        
- const newX = (mouseX / zoomLevel) - dragOffset.x;
+     const mouseY = e.clientY - rect.top + canvas.scrollTop;
+   
+        const newX = (mouseX / zoomLevel) - dragOffset.x;
         const newY = (mouseY / zoomLevel) - dragOffset.y;
 
         if (isDraggingSelection && selectedNodes.size > 1) {
    const initialPos = groupDragStart[selectedNode.id];
-      if (initialPos) {
-  const deltaX = newX - initialPos.x;
-       const deltaY = newY - initialPos.y;
+  if (initialPos) {
+       const deltaX = newX - initialPos.x;
+        const deltaY = newY - initialPos.y;
 
-  selectedNodes.forEach(nodeId => {
-    const node = workflow.nodes.find(n => n.id === nodeId);
-       const startPos = groupDragStart[nodeId];
-            if (node && startPos) {
-              node.position.x = Math.max(0, Math.round(startPos.x + deltaX));
-         node.position.y = Math.max(0, Math.round(startPos.y + deltaY));
+        selectedNodes.forEach(nodeId => {
+       const node = workflow.nodes.find(n => n.id === nodeId);
+    const startPos = groupDragStart[nodeId];
+   if (node && startPos) {
+         node.position.x = Math.max(0, Math.round(startPos.x + deltaX));
+   node.position.y = Math.max(0, Math.round(startPos.y + deltaY));
+ }
+     });
       }
- });
-}
-   } else if (selectedNode) {
-            selectedNode.position.x = Math.max(0, Math.round(newX));
-            selectedNode.position.y = Math.max(0, Math.round(newY));
+  } else if (selectedNode) {
+  selectedNode.position.x = Math.max(0, Math.round(newX));
+   selectedNode.position.y = Math.max(0, Math.round(newY));
         }
  
         render();
@@ -203,44 +218,55 @@ function onMouseMove(e) {
 function onMouseUp(e) {
     if (isSelecting) {
         isSelecting = false;
-    if (selectionRect) {
-      selectionRect.remove();
-     selectionRect = null;
+        if (selectionRect) {
+selectionRect.remove();
+            selectionRect = null;
         }
         
-  if (selectedNodes.size === 1) {
- selectedNode = workflow.nodes.find(n => n.id === [...selectedNodes][0]);
-        renderProperties();
-} else if (selectedNodes.size > 1) {
-       showMultiSelectionInfo();
-        }
+     if (selectedNodes.size === 1) {
+            selectedNode = workflow.nodes.find(n => n.id === [...selectedNodes][0]);
+    renderProperties();
+  } else if (selectedNodes.size > 1) {
+      showMultiSelectionInfo();
+      }
     } else if (isDraggingConnection) {
         finishConnectionDrag(e);
     } else if (isDraggingNode) {
-     isDraggingNode = false;
-     isDraggingSelection = false;
-        groupDragStart = {};
+      isDraggingNode = false;
+        isDraggingSelection = false;
+ groupDragStart = {};
     } else if (isConnecting) {
-        const target = e.target;
+     const target = e.target;
         if (target.classList.contains('port')) {
-      const targetNodeId = target.closest('.workflow-node').dataset.nodeId;
+            const targetNodeId = target.closest('.workflow-node').dataset.nodeId;
             const targetPort = target.dataset.port;
-   
-      // Don't connect to the same node or same port type
-            if (targetNodeId !== connectingFrom.nodeId && 
-      targetPort !== connectingFrom.port) {
-             addConnection(
-           connectingFrom.nodeId,
-       connectingFrom.port,
-  targetNodeId,
-     targetPort
-           );
+    
+  // Don't connect to the same node or same port type
+  if (targetNodeId !== connectingFrom.nodeId && 
+     targetPort !== connectingFrom.port) {
+           addConnection(
+         connectingFrom.nodeId,
+        connectingFrom.port,
+          targetNodeId,
+          targetPort
+    );
             }
-        }
-   
-   isConnecting = false;
+    }
+     
+        isConnecting = false;
         connectingFrom = null;
-document.getElementById('temp-connection-layer').innerHTML = '';
+        document.getElementById('temp-connection-layer').innerHTML = '';
+    } else {
+     // Click on empty canvas - deselect connections too
+ if (e.target.id === 'canvas-area' || e.target.id === 'workflow-canvas' || 
+     e.target.id === 'nodes-layer') {
+            selectedConnection = null;
+      selectedNode = null;
+            selectedNodes.clear();
+            render();
+document.getElementById('properties-content').innerHTML = 
+      '<p class="text-muted small">Select a node or connection to edit.</p>';
+        }
     }
 }
 

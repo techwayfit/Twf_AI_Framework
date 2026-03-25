@@ -1,4 +1,4 @@
-// ???????????????????????????????????????????????????????????????????????????
+// ??????????????????????????????????????????????????????????????????????????
 // Workflow Designer - Canvas Rendering
 // ???????????????????????????????????????????????????????????????????????????
 
@@ -51,76 +51,113 @@ function renderConnections() {
     connectionsLayer.innerHTML = '';
     
     workflow.connections.forEach(conn => {
-   const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
-        const targetNode = workflow.nodes.find(n => n.id === conn.targetNodeId);
+ const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
+    const targetNode = workflow.nodes.find(n => n.id === conn.targetNodeId);
+        
+     if (!sourceNode || !targetNode) return;
    
-        if (!sourceNode || !targetNode) return;
-        
  const sourceEl = document.querySelector(`[data-node-id="${conn.sourceNodeId}"] .port.${conn.sourcePort}`);
-const targetEl = document.querySelector(`[data-node-id="${conn.targetNodeId}"] .port.${conn.targetPort}`);
-        
- if (!sourceEl || !targetEl) return;
-        
-        const canvas = document.getElementById('canvas-area');
+    const targetEl = document.querySelector(`[data-node-id="${conn.targetNodeId}"] .port.${conn.targetPort}`);
+      
+        if (!sourceEl || !targetEl) return;
+
+   const canvas = document.getElementById('canvas-area');
         const canvasRect = canvas.getBoundingClientRect();
         
         const sourceRect = sourceEl.getBoundingClientRect();
-      const targetRect = targetEl.getBoundingClientRect();
+        const targetRect = targetEl.getBoundingClientRect();
         
-  const x1 = (sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
-   const y1 = (sourceRect.top + sourceRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+        const x1 = (sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+        const y1 = (sourceRect.top + sourceRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
         const x2 = (targetRect.left + targetRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
-        const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+      const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
         
-        const path = createBezierPath(x1, y1, x2, y2);
-     
-     // Create connection group
-  const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        group.dataset.connectionId = conn.id;
+   const path = createBezierPath(x1, y1, x2, y2);
+    
+  // Check if this connection is selected
+ const isSelected = selectedConnection && selectedConnection.id === conn.id;
+    
+  // Determine arrowhead marker based on state
+        let arrowheadMarker = 'url(#arrowhead)';
+        if (isSelected) {
+            arrowheadMarker = 'url(#arrowhead-selected)';
+        }
+    
+ // Create connection group
+   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      group.dataset.connectionId = conn.id;
         
         // Create path element
-  const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        pathEl.setAttribute('d', path);
-     pathEl.setAttribute('class', 'connection-line');
-pathEl.setAttribute('marker-end', 'url(#arrowhead)');
+    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+   pathEl.setAttribute('d', path);
+        pathEl.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
+ pathEl.setAttribute('marker-end', arrowheadMarker);
         pathEl.dataset.connectionId = conn.id;
- 
+  
         pathEl.addEventListener('click', (e) => {
- e.stopPropagation();
-      selectedConnection = conn;
-   selectedNode = null;
-    selectedNodes.clear();
-        render();
-            showConnectionProperties(conn);
+      e.stopPropagation();
+        e.preventDefault();
+            selectedConnection = conn;
+            selectedNode = null;
+  selectedNodes.clear();
+    render();
+   showConnectionProperties(conn);
+     });
+        
+     // Add hover listener to change arrowhead on hover
+   pathEl.addEventListener('mouseenter', () => {
+            if (!isSelected) {
+                pathEl.setAttribute('marker-end', 'url(#arrowhead-hover)');
+     }
+   });
+        
+        pathEl.addEventListener('mouseleave', () => {
+       if (!isSelected) {
+             pathEl.setAttribute('marker-end', 'url(#arrowhead)');
+     }
         });
-   
- // Create draggable source endpoint
-        const sourceEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        sourceEndpoint.setAttribute('cx', x1);
-        sourceEndpoint.setAttribute('cy', y1);
+ 
+      // Create draggable source endpoint
+   const sourceEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  sourceEndpoint.setAttribute('cx', x1);
+    sourceEndpoint.setAttribute('cy', y1);
         sourceEndpoint.setAttribute('class', 'connection-endpoint source');
-        sourceEndpoint.dataset.connectionId = conn.id;
-      sourceEndpoint.dataset.end = 'source';
+sourceEndpoint.dataset.connectionId = conn.id;
+  sourceEndpoint.dataset.end = 'source';
         
    sourceEndpoint.addEventListener('mousedown', (e) => {
-            e.stopPropagation();
-  startConnectionDrag(conn.id, 'source', e);
-        });
-     
-        // Create draggable target endpoint
-        const targetEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        targetEndpoint.setAttribute('cx', x2);
-        targetEndpoint.setAttribute('cy', y2);
-        targetEndpoint.setAttribute('class', 'connection-endpoint target');
-        targetEndpoint.dataset.connectionId = conn.id;
-        targetEndpoint.dataset.end = 'target';
-        
-  targetEndpoint.addEventListener('mousedown', (e) => {
      e.stopPropagation();
-            startConnectionDrag(conn.id, 'target', e);
+          e.preventDefault();
+     startConnectionDrag(conn.id, 'source', e);
         });
-        
-        group.appendChild(pathEl);
+ 
+        // Prevent the endpoint from triggering canvas mousedown
+        sourceEndpoint.addEventListener('click', (e) => {
+       e.stopPropagation();
+e.preventDefault();
+   });
+   
+     // Create draggable target endpoint
+ const targetEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        targetEndpoint.setAttribute('cx', x2);
+  targetEndpoint.setAttribute('cy', y2);
+      targetEndpoint.setAttribute('class', 'connection-endpoint target');
+   targetEndpoint.dataset.connectionId = conn.id;
+        targetEndpoint.dataset.end = 'target';
+  
+        targetEndpoint.addEventListener('mousedown', (e) => {
+   e.stopPropagation();
+         e.preventDefault();
+         startConnectionDrag(conn.id, 'target', e);
+      });
+  
+        // Prevent the endpoint from triggering canvas mousedown
+        targetEndpoint.addEventListener('click', (e) => {
+ e.stopPropagation();
+    e.preventDefault();
+     });
+      
+  group.appendChild(pathEl);
         group.appendChild(sourceEndpoint);
         group.appendChild(targetEndpoint);
       connectionsLayer.appendChild(group);
@@ -131,10 +168,10 @@ function renderTempConnection(e) {
     if (!connectingFrom) return;
 
     const canvas = document.getElementById('canvas-area');
-  const canvasRect = canvas.getBoundingClientRect();
-    const port = connectingFrom.element;
+    const canvasRect = canvas.getBoundingClientRect();
+  const port = connectingFrom.element;
     const portRect = port.getBoundingClientRect();
-    
+
     const x1 = (portRect.left + portRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
     const y1 = (portRect.top + portRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
     const x2 = (e.clientX - canvasRect.left + canvas.scrollLeft) / zoomLevel;
@@ -143,8 +180,51 @@ function renderTempConnection(e) {
     const path = createBezierPath(x1, y1, x2, y2);
     
     document.getElementById('temp-connection-layer').innerHTML = `
-    <path d="${path}" class="temp-connection" />
+      <path d="${path}" class="temp-connection" marker-end="url(#arrowhead-temp)" />
     `;
+}
+
+function renderDraggingConnection(e) {
+    if (!isDraggingConnection || !draggedConnectionEnd) return;
+    
+    const { connectionId, end } = draggedConnectionEnd;
+    const connection = workflow.connections.find(c => c.id === connectionId);
+    if (!connection) return;
+    
+    const canvas = document.getElementById('canvas-area');
+    const canvasRect = canvas.getBoundingClientRect();
+    
+    // Get the fixed endpoint
+    const fixedNodeId = end === 'source' ? connection.targetNodeId : connection.sourceNodeId;
+    const fixedPort = end === 'source' ? connection.targetPort : connection.sourcePort;
+    
+  const fixedEl = document.querySelector(`[data-node-id="${fixedNodeId}"] .port.${fixedPort}`);
+    if (!fixedEl) return;
+    
+    const fixedRect = fixedEl.getBoundingClientRect();
+    const fixedX = (fixedRect.left + fixedRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+    const fixedY = (fixedRect.top + fixedRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+    
+ // Mouse position
+    const mouseX = (e.clientX - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+    const mouseY = (e.clientY - canvasRect.top + canvas.scrollTop) / zoomLevel;
+  
+    // Create path from fixed to mouse
+    let path;
+    let markerType;
+    if (end === 'source') {
+    // Dragging source, so mouse is source
+   path = createBezierPath(mouseX, mouseY, fixedX, fixedY);
+        markerType = 'url(#arrowhead-dragging-source)';
+    } else {
+        // Dragging target, so mouse is target
+        path = createBezierPath(fixedX, fixedY, mouseX, mouseY);
+        markerType = 'url(#arrowhead-dragging-target)';
+    }
+    
+    document.getElementById('temp-connection-layer').innerHTML = `
+        <path d="${path}" class="temp-connection" marker-end="${markerType}" />
+`;
 }
 
 function createBezierPath(x1, y1, x2, y2) {
@@ -153,7 +233,7 @@ function createBezierPath(x1, y1, x2, y2) {
     
     const cx1 = x1 + controlDistance;
     const cy1 = y1;
-    const cx2 = x2 - controlDistance;
+const cx2 = x2 - controlDistance;
     const cy2 = y2;
     
     return `M ${x1} ${y1} C ${cx1} ${cy1}, ${cx2} ${cy2}, ${x2} ${y2}`;

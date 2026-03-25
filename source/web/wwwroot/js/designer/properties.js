@@ -17,9 +17,11 @@ function renderProperties() {
  return;
     }
     
-    let html = `
-        <h6 class="border-bottom pb-2 mb-3">${selectedNode.name}</h6>
-        
+  let html = `
+        <h6 class="border-bottom pb-2 mb-3">
+      <i class="bi bi-diagram-3"></i> ${selectedNode.name}
+        </h6>
+  
         <div class="mb-3">
       <label class="form-label small fw-bold">Node Name</label>
      <input type="text" class="form-control form-control-sm" 
@@ -28,7 +30,7 @@ function renderProperties() {
         </div>
         
    <div class="mb-3">
- <label class="form-label small text-muted">Type</label>
+ <label class="form-label small text-muted">Node Type</label>
    <input type="text" class="form-control form-control-sm" 
      value="${selectedNode.type}" disabled />
    </div>
@@ -38,9 +40,19 @@ function renderProperties() {
     `;
  
     // Render each parameter based on its type
-    schema.parameters.forEach(param => {
+  schema.parameters.forEach(param => {
     html += renderParameterField(param, selectedNode.parameters[param.name]);
     });
+    
+    // Add delete button at the bottom
+    html += `
+     <hr class="mt-4" />
+  <div class="d-grid gap-2">
+      <button class="btn btn-danger" onclick="deleteSelectedNode()">
+                <i class="bi bi-trash"></i> Delete Node
+            </button>
+        </div>
+    `;
     
     panel.innerHTML = html;
 }
@@ -204,5 +216,14 @@ function updateNodeProperty(property, value) {
   if (selectedNode) {
       selectedNode[property] = value;
  render();
+    }
+}
+
+// Helper function to delete the selected node
+function deleteSelectedNode() {
+    if (!selectedNode) return;
+    
+    if (confirm(`Delete node "${selectedNode.name}"?`)) {
+deleteNode(selectedNode.id);
     }
 }

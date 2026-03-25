@@ -85,16 +85,42 @@
 </div>
 
             <div id="canvas-area">
-                <svg id="workflow-canvas" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
-                            <polygon points="0 0, 10 3, 0 6" fill="#3498db" />
-                        </marker>
-                    </defs>
-                    <g id="connections-layer"></g>
-                    <g id="temp-connection-layer"></g>
-                </svg>
-                <div id="nodes-layer"></div>
+             <svg id="workflow-canvas" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+        <!-- Default arrowhead (blue) -->
+  <marker id="arrowhead" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+ <polygon points="0 0, 10 3, 0 6" fill="#3498db" />
+</marker>
+      
+     <!-- Selected arrowhead (dark red) -->
+ <marker id="arrowhead-selected" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+   <polygon points="0 0, 10 3, 0 6" fill="#c0392b" />
+  </marker>
+     
+   <!-- Hover arrowhead (red) -->
+    <marker id="arrowhead-hover" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 10 3, 0 6" fill="#e74c3c" />
+   </marker>
+     
+    <!-- Dragging source arrowhead (orange) -->
+     <marker id="arrowhead-dragging-source" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+     <polygon points="0 0, 10 3, 0 6" fill="#f39c12" />
+        </marker>
+    
+       <!-- Dragging target arrowhead (purple) -->
+       <marker id="arrowhead-dragging-target" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+     <polygon points="0 0, 10 3, 0 6" fill="#9b59b6" />
+  </marker>
+    
+<!-- Temporary connection arrowhead (gray) -->
+       <marker id="arrowhead-temp" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
+       <polygon points="0 0, 10 3, 0 6" fill="#95a5a6" />
+ </marker>
+   </defs>
+  <g id="connections-layer"></g>
+       <g id="temp-connection-layer"></g>
+        </svg>
+     <div id="nodes-layer"></div>
             </div>
 
             <div id="properties-panel">

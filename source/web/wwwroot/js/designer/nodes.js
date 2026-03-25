@@ -100,23 +100,23 @@ function deselectAll() {
 
 function deleteSelected() {
     if (selectedNodes.size > 0) {
-        if (confirm(`Delete ${selectedNodes.size} selected node(s)?`)) {
-          selectedNodes.forEach(nodeId => {
-              workflow.nodes = workflow.nodes.filter(n => n.id !== nodeId);
-      workflow.connections = workflow.connections.filter(
-     c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
-       );
-         });
-            deselectAll();
-            render();
-      }
+     if (confirm(`Delete ${selectedNodes.size} selected node(s)?`)) {
+            selectedNodes.forEach(nodeId => {
+     workflow.nodes = workflow.nodes.filter(n => n.id !== nodeId);
+     workflow.connections = workflow.connections.filter(
+  c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
+   );
+     });
+  deselectAll();
+    render();
+ }
     } else if (selectedNode) {
-        if (confirm(`Delete node "${selectedNode.name}"?`)) {
-            deleteNode(selectedNode.id);
+if (confirm(`Delete node "${selectedNode.name}"?`)) {
+      deleteNode(selectedNode.id);
         }
     } else if (selectedConnection) {
-      if (confirm('Delete this connection?')) {
-    deleteConnection(selectedConnection.id);
+  if (confirm('Delete this connection?')) {
+ deleteConnection(selectedConnection.id);
         }
     }
 }
