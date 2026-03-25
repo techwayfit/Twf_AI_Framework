@@ -135,6 +135,38 @@
     </div>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    
+    <!-- Phase 0: New Architecture - Core Classes -->
+    <script src="~/js/designer/core/Constants.js" asp-append-version="true"></script>
+    <script src="~/js/designer/core/WorkflowData.js" asp-append-version="true"></script>
+    <script src="~/js/designer/core/BaseNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/core/NodeRegistry.js" asp-append-version="true"></script>
+
+    <!-- Phase 0: Node Classes - AI -->
+    <script src="~/js/designer/nodes/ai/LlmNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/ai/PromptBuilderNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/ai/EmbeddingNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/ai/OutputParserNode.js" asp-append-version="true"></script>
+
+    <!-- Phase 0: Node Classes - Control -->
+    <script src="~/js/designer/nodes/control/ConditionNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/DelayNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/MergeNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/LogNode.js" asp-append-version="true"></script>
+
+    <!-- Phase 0: Node Classes - Data -->
+    <script src="~/js/designer/nodes/data/TransformNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/data/FilterNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/data/ChunkTextNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/data/MemoryNode.js" asp-append-version="true"></script>
+
+    <!-- Phase 0: Node Classes - IO -->
+    <script src="~/js/designer/nodes/io/HttpRequestNode.js" asp-append-version="true"></script>
+
+    <!-- Phase 0: UI Components -->
+    <script src="~/js/designer/ui/NodeRenderer.js" asp-append-version="true"></script>
+
+    <!-- Existing architecture (backward compatibility) -->
     <script src="~/js/designer/state.js" asp-append-version="true"></script>
     <script src="~/js/designer/utils.js" asp-append-version="true"></script>
     <script src="~/js/designer/initialization.js" asp-append-version="true"></script>
@@ -145,9 +177,13 @@
     <script src="~/js/designer/rendering.js" asp-append-version="true"></script>
     <script src="~/js/designer/properties.js" asp-append-version="true"></script>
     <script src="~/js/designer/events.js" asp-append-version="true"></script>
+    
+    <!-- Phase 0: Main Orchestrator (loads last) -->
+    <script src="~/js/designer/core/Designer.js" asp-append-version="true"></script>
+    
     <script>
             const workflowId = '@Model.Id';
-        initializeDesigner(workflowId);
+    initializeDesigner(workflowId);
     </script>
 </body>
 </html>

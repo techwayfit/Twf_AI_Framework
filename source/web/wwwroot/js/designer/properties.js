@@ -6,15 +6,28 @@ function renderProperties() {
     if (!selectedNode) return;
     
     const panel = document.getElementById('properties-content');
-    const schema = nodeSchemas[selectedNode.type];
  
+    // Check if node has its own renderProperties method (new architecture)
+    if (typeof selectedNode.renderProperties === 'function') {
+  try {
+  panel.innerHTML = selectedNode.renderProperties();
+     return;
+ } catch (error) {
+   console.error('Error rendering properties from node class:', error);
+   // Fall through to legacy rendering
+     }
+  }
+    
+  // Legacy rendering for plain objects
+    const schema = nodeSchemas[selectedNode.type];
+    
     if (!schema) {
-        panel.innerHTML = `
-  <div class="alert alert-warning small">
+panel.innerHTML = `
+       <div class="alert alert-warning small">
    <i class="bi bi-exclamation-triangle"></i> No schema available for ${selectedNode.type}
-       </div>
-    `;
- return;
+    </div>
+        `;
+return;
     }
     
   let html = `
@@ -193,29 +206,52 @@ workflow.variables && Object.keys(workflow.variables).length > 0) {
 }
 
 function updateNodeParameter(paramName, value) {
-if (selectedNode) {
-   selectedNode.parameters[paramName] = value;
-    console.log(`Updated ${selectedNode.name}.${paramName} = ${value}`);
+    // Delegate to designerInstance if available (new architecture)
+    if (window.designerInstance && selectedNode) {
+window.designerInstance.updateNodeParameter(selectedNode.id, paramName, value);
+    return;
+    }
+    
+    // Fallback to direct update
+    if (selectedNode) {
+        if (!selectedNode.parameters) selectedNode.parameters = {};
+        selectedNode.parameters[paramName] = value;
+      console.log(`Updated ${selectedNode.name}.${paramName} = ${value}`);
     }
 }
 
 function updateNodeParameterJson(paramName, jsonString) {
+    // Delegate to designerInstance if available (new architecture)
+  if (window.designerInstance && selectedNode) {
+   window.designerInstance.updateNodeParameterJson(selectedNode.id, paramName, jsonString);
+     return;
+    }
+    
+    // Fallback to direct update
     if (!selectedNode) return;
     
     try {
-   const value = jsonString ? JSON.parse(jsonString) : null;
-   selectedNode.parameters[paramName] = value;
-  console.log(`Updated ${selectedNode.name}.${paramName} =`, value);
+        const value = jsonString ? JSON.parse(jsonString) : null;
+    if (!selectedNode.parameters) selectedNode.parameters = {};
+  selectedNode.parameters[paramName] = value;
+ console.log(`Updated ${selectedNode.name}.${paramName} =`, value);
     } catch (error) {
         console.error('Invalid JSON:', error);
-   alert('Invalid JSON format. Please check your input.');
+        alert('Invalid JSON format. Please check your input.');
     }
 }
 
 function updateNodeProperty(property, value) {
+    // Delegate to designerInstance if available (new architecture)
+  if (window.designerInstance && selectedNode) {
+window.designerInstance.updateNodeProperty(selectedNode.id, property, value);
+        return;
+    }
+    
+    // Fallback to direct update
   if (selectedNode) {
-      selectedNode[property] = value;
- render();
+    selectedNode[property] = value;
+        render();
     }
 }
 
