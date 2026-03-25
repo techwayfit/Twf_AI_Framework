@@ -51,6 +51,23 @@ public class NodeDefinition
     public NodePosition Position { get; set; } = new();
 
     public string? Color { get; set; }
+    
+    // Phase 1: Execution options
+    public NodeExecutionOptions? ExecutionOptions { get; set; }
+}
+
+/// <summary>
+/// Execution options for a specific node instance
+/// Phase 1: Node execution configuration
+/// </summary>
+public class NodeExecutionOptions
+{
+    public int MaxRetries { get; set; } = 0;
+    public int RetryDelayMs { get; set; } = 1000;
+    public int? TimeoutMs { get; set; }
+    public bool ContinueOnError { get; set; } = false;
+    public string? RunCondition { get; set; } // e.g., "{{should_run}} == true"
+ public Dictionary<string, object?>? FallbackData { get; set; }
 }
 
 /// <summary>

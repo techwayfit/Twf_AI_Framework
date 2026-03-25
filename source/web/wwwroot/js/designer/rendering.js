@@ -8,159 +8,197 @@ function render() {
 }
 
 function renderNodes() {
-  const nodesLayer = document.getElementById('nodes-layer');
+    const nodesLayer = document.getElementById('nodes-layer');
     
     // Remove all nodes but keep selection rectangle
     const existingRect = document.getElementById('selection-rect');
     nodesLayer.innerHTML = '';
     if (existingRect) {
-        nodesLayer.appendChild(existingRect);
+nodesLayer.appendChild(existingRect);
     }
     
     workflow.nodes.forEach(node => {
-  const nodeEl = document.createElement('div');
+        // Get node schema for port definitions
+       const schema = nodeSchemas[node.type];
         const isSelected = selectedNodes.has(node.id) || selectedNode?.id === node.id;
-        nodeEl.className = 'workflow-node' + (isSelected ? ' selected multi-selected' : '');
-  nodeEl.style.left = node.position.x + 'px';
-        nodeEl.style.top = node.position.y + 'px';
- nodeEl.style.borderColor = node.color || '#3498db';
-        nodeEl.dataset.nodeId = node.id;
  
-        nodeEl.innerHTML = `
-     <div class="node-header">${node.name}</div>
-   <div class="node-type">${node.type}</div>
-      <div class="port input" data-port="input"></div>
-     <div class="port output" data-port="output"></div>
-     `;
+        // Use NodeRenderer if available (Phase 2 enhancement)
+        let nodeEl;
+        if (window.NodeRenderer) {
+   nodeEl = NodeRenderer.renderNode(node, schema, isSelected);
+        } else {
+            // Fallback to legacy rendering
+nodeEl = renderNodeLegacy(node, isSelected);
+        }
+   
+  // Add node dataset
+        nodeEl.dataset.nodeId = node.id;
+        if (schema && schema.capabilities?.supportsMultipleOutputs) {
+   nodeEl.dataset.nodeType = node.type;
+        }
    
         // Node drag handlers
         nodeEl.addEventListener('mousedown', (e) => onNodeMouseDown(e, node));
    
    // Port connection handlers
      const ports = nodeEl.querySelectorAll('.port');
-        ports.forEach(port => {
-          port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
+     ports.forEach(port => {
+  port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
         });
-        
+      
   nodesLayer.appendChild(nodeEl);
     });
+}
+
+/**
+ * Legacy node rendering (fallback)
+ * @param {object} node
+ * @param {boolean} isSelected
+ * @returns {HTMLElement}
+ */
+function renderNodeLegacy(node, isSelected) {
+    const nodeEl = document.createElement('div');
+    nodeEl.className = 'workflow-node' + (isSelected ? ' selected multi-selected' : '');
+    nodeEl.style.left = node.position.x + 'px';
+    nodeEl.style.top = node.position.y + 'px';
+    nodeEl.style.borderColor = node.color || '#3498db';
+    
+    nodeEl.innerHTML = `
+        <div class="node-header">${node.name}</div>
+  <div class="node-type">${node.type}</div>
+        <div class="port input" data-port="input"></div>
+        <div class="port output" data-port="output"></div>
+    `;
+    
+  return nodeEl;
 }
 
 function renderConnections() {
     const connectionsLayer = document.getElementById('connections-layer');
     connectionsLayer.innerHTML = '';
     
-    workflow.connections.forEach(conn => {
- const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
+  workflow.connections.forEach(conn => {
+        const sourceNode = workflow.nodes.find(n => n.id === conn.sourceNodeId);
     const targetNode = workflow.nodes.find(n => n.id === conn.targetNodeId);
         
-     if (!sourceNode || !targetNode) return;
+ if (!sourceNode || !targetNode) return;
    
- const sourceEl = document.querySelector(`[data-node-id="${conn.sourceNodeId}"] .port.${conn.sourcePort}`);
-    const targetEl = document.querySelector(`[data-node-id="${conn.targetNodeId}"] .port.${conn.targetPort}`);
-      
-        if (!sourceEl || !targetEl) return;
+        // Use NodeRenderer helper if available, fallback to direct query
+        let sourceEl, targetEl;
+     if (window.NodeRenderer) {
+            sourceEl = NodeRenderer.getPortElement(conn.sourceNodeId, conn.sourcePort, 'output');
+  targetEl = NodeRenderer.getPortElement(conn.targetNodeId, conn.targetPort, 'input');
+        } else {
+ sourceEl = document.querySelector(`[data-node-id="${conn.sourceNodeId}"] .port.${conn.sourcePort}`);
+    targetEl = document.querySelector(`[data-node-id="${conn.targetNodeId}"] .port.${conn.targetPort}`);
+      }
+  
+  if (!sourceEl || !targetEl) return;
 
-   const canvas = document.getElementById('canvas-area');
-        const canvasRect = canvas.getBoundingClientRect();
+        const canvas = document.getElementById('canvas-area');
+ const canvasRect = canvas.getBoundingClientRect();
         
         const sourceRect = sourceEl.getBoundingClientRect();
-        const targetRect = targetEl.getBoundingClientRect();
+   const targetRect = targetEl.getBoundingClientRect();
         
-        const x1 = (sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+     const x1 = (sourceRect.left + sourceRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
         const y1 = (sourceRect.top + sourceRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
-        const x2 = (targetRect.left + targetRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
-      const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
-        
-   const path = createBezierPath(x1, y1, x2, y2);
+   const x2 = (targetRect.left + targetRect.width / 2 - canvasRect.left + canvas.scrollLeft) / zoomLevel;
+        const y2 = (targetRect.top + targetRect.height / 2 - canvasRect.top + canvas.scrollTop) / zoomLevel;
+      
+        const path = createBezierPath(x1, y1, x2, y2);
     
-  // Check if this connection is selected
- const isSelected = selectedConnection && selectedConnection.id === conn.id;
+        // Check if this connection is selected
+        const isSelected = selectedConnection && selectedConnection.id === conn.id;
     
-  // Determine arrowhead marker based on state
-        let arrowheadMarker = 'url(#arrowhead)';
+        // Determine arrowhead marker based on state
+  let arrowheadMarker = 'url(#arrowhead)';
         if (isSelected) {
-            arrowheadMarker = 'url(#arrowhead-selected)';
+   arrowheadMarker = 'url(#arrowhead-selected)';
         }
     
- // Create connection group
-   const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-      group.dataset.connectionId = conn.id;
+  // Determine connection type for styling
+        const portType = sourceEl.dataset.portType || 'Data';
+   const connectionClass = `connection-line connection-${portType.toLowerCase()}` + (isSelected ? ' selected' : '');
+    
+        // Create connection group
+        const group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+     group.dataset.connectionId = conn.id;
         
         // Create path element
-    const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-   pathEl.setAttribute('d', path);
-        pathEl.setAttribute('class', 'connection-line' + (isSelected ? ' selected' : ''));
- pathEl.setAttribute('marker-end', arrowheadMarker);
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', path);
+     pathEl.setAttribute('class', connectionClass);
+     pathEl.setAttribute('marker-end', arrowheadMarker);
         pathEl.dataset.connectionId = conn.id;
   
         pathEl.addEventListener('click', (e) => {
-      e.stopPropagation();
-        e.preventDefault();
+        e.stopPropagation();
+   e.preventDefault();
             selectedConnection = conn;
-            selectedNode = null;
-  selectedNodes.clear();
-    render();
-   showConnectionProperties(conn);
-     });
-        
-     // Add hover listener to change arrowhead on hover
-   pathEl.addEventListener('mouseenter', () => {
+  selectedNode = null;
+            selectedNodes.clear();
+            render();
+       showConnectionProperties(conn);
+ });
+    
+        // Add hover listener to change arrowhead on hover
+        pathEl.addEventListener('mouseenter', () => {
+     if (!isSelected) {
+          pathEl.setAttribute('marker-end', 'url(#arrowhead-hover)');
+            }
+        });
+   
+pathEl.addEventListener('mouseleave', () => {
             if (!isSelected) {
-                pathEl.setAttribute('marker-end', 'url(#arrowhead-hover)');
-     }
-   });
-        
-        pathEl.addEventListener('mouseleave', () => {
-       if (!isSelected) {
-             pathEl.setAttribute('marker-end', 'url(#arrowhead)');
-     }
+       pathEl.setAttribute('marker-end', 'url(#arrowhead)');
+      }
         });
  
-      // Create draggable source endpoint
-   const sourceEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-  sourceEndpoint.setAttribute('cx', x1);
-    sourceEndpoint.setAttribute('cy', y1);
+        // Create draggable source endpoint
+        const sourceEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        sourceEndpoint.setAttribute('cx', x1);
+        sourceEndpoint.setAttribute('cy', y1);
         sourceEndpoint.setAttribute('class', 'connection-endpoint source');
-sourceEndpoint.dataset.connectionId = conn.id;
-  sourceEndpoint.dataset.end = 'source';
+        sourceEndpoint.dataset.connectionId = conn.id;
+        sourceEndpoint.dataset.end = 'source';
         
    sourceEndpoint.addEventListener('mousedown', (e) => {
      e.stopPropagation();
-          e.preventDefault();
-     startConnectionDrag(conn.id, 'source', e);
+        e.preventDefault();
+   startConnectionDrag(conn.id, 'source', e);
         });
  
-        // Prevent the endpoint from triggering canvas mousedown
+     // Prevent the endpoint from triggering canvas mousedown
         sourceEndpoint.addEventListener('click', (e) => {
-       e.stopPropagation();
-e.preventDefault();
-   });
+ e.stopPropagation();
+     e.preventDefault();
+        });
    
-     // Create draggable target endpoint
- const targetEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+ // Create draggable target endpoint
+        const targetEndpoint = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
         targetEndpoint.setAttribute('cx', x2);
   targetEndpoint.setAttribute('cy', y2);
-      targetEndpoint.setAttribute('class', 'connection-endpoint target');
-   targetEndpoint.dataset.connectionId = conn.id;
-        targetEndpoint.dataset.end = 'target';
+        targetEndpoint.setAttribute('class', 'connection-endpoint target');
+        targetEndpoint.dataset.connectionId = conn.id;
+  targetEndpoint.dataset.end = 'target';
   
         targetEndpoint.addEventListener('mousedown', (e) => {
-   e.stopPropagation();
-         e.preventDefault();
-         startConnectionDrag(conn.id, 'target', e);
-      });
+    e.stopPropagation();
+     e.preventDefault();
+       startConnectionDrag(conn.id, 'target', e);
+        });
   
-        // Prevent the endpoint from triggering canvas mousedown
-        targetEndpoint.addEventListener('click', (e) => {
- e.stopPropagation();
-    e.preventDefault();
-     });
+      // Prevent the endpoint from triggering canvas mousedown
+     targetEndpoint.addEventListener('click', (e) => {
+          e.stopPropagation();
+e.preventDefault();
+        });
       
-  group.appendChild(pathEl);
-        group.appendChild(sourceEndpoint);
-        group.appendChild(targetEndpoint);
-      connectionsLayer.appendChild(group);
+        group.appendChild(pathEl);
+     group.appendChild(sourceEndpoint);
+   group.appendChild(targetEndpoint);
+        connectionsLayer.appendChild(group);
     });
 }
 
