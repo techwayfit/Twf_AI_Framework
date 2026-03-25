@@ -19,7 +19,9 @@ namespace TwfAiFramework.Nodes.AI;
 /// </summary>
 public sealed class OutputParserNode : BaseNode
 {
-    public override string Name => "OutputParser";
+    private readonly string _name;
+
+    public override string Name => _name;
     public override string Category => "AI";
     public override string Description =>
         "Parses structured JSON from LLM responses and maps fields to WorkflowData";
@@ -31,9 +33,11 @@ public sealed class OutputParserNode : BaseNode
     ///     If null, all JSON keys are written directly to WorkflowData.</param>
     /// <param name="strict">If true, throw if JSON cannot be parsed. If false, pass through.</param>
     public OutputParserNode(
+        string name = "OutputParser",
         Dictionary<string, string>? fieldMapping = null,
         bool strict = false)
     {
+        _name = name;
         _fieldMapping = fieldMapping;
         _strict = strict;
     }
@@ -143,8 +147,8 @@ public sealed class OutputParserNode : BaseNode
 
     // ─── Convenience Factory Methods ──────────────────────────────────────────
 
-    public static OutputParserNode WithMapping(params (string JsonKey, string DataKey)[] mappings) =>
-        new(mappings.ToDictionary(m => m.JsonKey, m => m.DataKey));
+    public static OutputParserNode WithMapping(string name,params (string JsonKey, string DataKey)[] mappings) =>
+        new(name,mappings.ToDictionary(m => m.JsonKey, m => m.DataKey));
 
-    public static OutputParserNode Strict() => new(strict: true);
+    public static OutputParserNode Strict(string name) => new(name,strict: true);
 }

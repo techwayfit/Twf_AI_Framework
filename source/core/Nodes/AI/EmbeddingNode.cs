@@ -19,7 +19,8 @@ namespace TwfAiFramework.Nodes.AI;
 /// </summary>
 public sealed class EmbeddingNode : BaseNode
 {
-    public override string Name => "Embedding";
+    
+    public override string Name { get; }
     public override string Category => "AI";
     public override string Description =>
         $"Generates vector embeddings using {_config.Model}";
@@ -27,8 +28,9 @@ public sealed class EmbeddingNode : BaseNode
     private readonly EmbeddingConfig _config;
     private readonly HttpClient _httpClient;
 
-    public EmbeddingNode(EmbeddingConfig config, HttpClient? httpClient = null)
+    public EmbeddingNode(string name, EmbeddingConfig config, HttpClient? httpClient = null)
     {
+        Name = name;
         _config = config;
         _httpClient = httpClient ?? new HttpClient();
     }

@@ -11,13 +11,8 @@ Inspired by tools like [n8n](https://n8n.io/), but designed as a C# library you 
 ```csharp
 var result = await Workflow.Create("CustomerSupportBot")
     .UseLogger(logger)
-    .AddNode(new PromptBuilderNode("You are a helpful assistant. User asked: {{question}}"))
-    .AddNode(new LlmNode(new LlmConfig
-    {
-        Provider = "openai",
-        Model    = "gpt-4o",
-        ApiKey   = Environment.GetEnvironmentVariable("OPENAI_API_KEY")!
-    }))
+    .AddNode(new PromptBuilderNode("PromptBuilder", "You are a helpful assistant. User asked: {{question}}"))
+    .AddNode(new LlmNode("LLM", LlmConfig.OpenAI(Environment.GetEnvironmentVariable("OPENAI_API_KEY")!, "gpt-4o")))
     .AddNode(new OutputParserNode())
     .RunAsync(new WorkflowData().Set("question", "What is the weather today?"));
 
@@ -134,7 +129,7 @@ Per-node configuration for retry, timeout, and conditional execution:
 
 ```csharp
 // Retry up to 3 times with exponential backoff
-.AddNode(new LlmNode(config), NodeOptions.WithRetry(3))
+.AddNode(new LlmNode("Responder", config), NodeOptions.WithRetry(3))
 
 // Set a 10-second timeout
 .AddNode(new HttpRequestNode("FetchData", httpConfig), NodeOptions.WithTimeout(TimeSpan.FromSeconds(10)))
@@ -159,16 +154,17 @@ Per-node configuration for retry, timeout, and conditional execution:
 Calls any OpenAI-compatible LLM API (OpenAI, Azure OpenAI, Anthropic, Ollama, etc.).
 
 ```csharp
-new LlmNode(new LlmConfig
+new LlmNode("ChatBot", LlmConfig.OpenAI("sk-...", "gpt-4o") with
 {
-    Provider            = "openai",
-    Model               = "gpt-4o",
-    ApiKey              = "sk-...",
     DefaultSystemPrompt = "You are a helpful assistant.",
     MaintainHistory     = true,   // enables multi-turn conversation
     Temperature         = 0.7f,
     MaxTokens           = 1000
-})
+
+
+// Or using fluent config
+var config = LlmConfig.Anthropic("sk-ant-...", "claude-sonnet-4-20250514");
+new LlmNode("AssistantNode", config with { Temperature = 0.3f })
 ```
 
 **Reads:** `prompt` or `messages`, `system_prompt`  
@@ -340,8 +336,8 @@ Merges multiple `WorkflowData` keys into a single aggregated value.
     itemsKey:  "documents",
     outputKey: "summaries",
     bodyBuilder: b => b
-        .AddNode(new PromptBuilderNode("Summarise: {{item}}"))
-        .AddNode(new LlmNode(config))
+   .AddNode(new PromptBuilderNode("BuildPrompt", "Summarise: {{__loop_item__}}"))
+        .AddNode(new LlmNode("Summarizer", config))
 )
 ```
 

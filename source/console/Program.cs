@@ -1,69 +1,142 @@
-﻿// See https://aka.ms/new-console-template for more information
-using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Console;
-using TwfAiFramework.Core;
-using TwfAiFramework.Nodes.Control;
-using TwfAiFramework.Nodes.Data;
+﻿using twf_ai_framework.console.concepts;
+using twf_ai_framework.console.examples;
 
-using var logFactory = LoggerFactory.Create(b =>
-       b.AddConsole().SetMinimumLevel(LogLevel.Debug));
-var logger = logFactory.CreateLogger("Demo");
+namespace twf_ai_framework.console;
 
-Console.WriteLine("📌 Concept 1: WorkflowData fluent API");
-var data = WorkflowData.From("user_message", "Hello from FlowForge!")
-    .Set("user_id", 42)
-    .Set("language", "en")
-    .Set("tags", new List<string> { "demo", "test" });
-
-Console.WriteLine($"  data.GetString('user_message') = '{data.GetString("user_message")}'");
-Console.WriteLine($"  data.Get<int>('user_id')       = {data.Get<int>("user_id")}");
-Console.WriteLine($"  data.Has('language')           = {data.Has("language")}");
-Console.WriteLine($"  data.Keys                      = [{string.Join(", ", data.Keys)}]");
-Console.WriteLine($"  data.ToJson()                  = {data.ToJson()}");
-
-
-
-Console.WriteLine("\n📌 Concept 2: Node chaining & branching");
-
-var workflow = Workflow.Create("ConceptDemo")
-    .UseLogger(logger)
-
-    // Validate
-    .AddNode(new FilterNode("Validate")
-        .RequireNonEmpty("text")
-        .MaxLength("text", 100))
-
-    // Transform
-    .AddNode(new TransformNode("Uppercase",
-        d => d.Clone().Set("text_upper", d.GetString("text")?.ToUpper())))
-
-    // Condition
-    .AddNode(new ConditionNode("CheckLength",
-        ("is_long", d => (d.GetString("text")?.Length ?? 0) > 20)))
-
-    // Branch based on condition
-    .Branch(
-        condition: d => d.Get<bool>("is_long"),
-        trueBranch: b => b.AddNode(new TransformNode("LongTextHandler",
-            d => d.Clone().Set("result", $"LONG: {d.GetString("text_upper")}"))),
-        falseBranch: b => b.AddNode(new TransformNode("ShortTextHandler",
-            d => d.Clone().Set("result", $"SHORT: {d.GetString("text_upper")}")))
-    )
-
-    // Log result
-    .AddNode(LogNode.Keys("Final", "result", "is_long"))
-
-    .OnComplete(r =>
+class Program
+{
+    static async Task Main(string[] args)
     {
-        Console.WriteLine($"  ✅ Pipeline completed: result = '{r.Data.GetString("result")}'");
-        Console.WriteLine(r.Summary());
-    });
+   Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║      TwfAiFramework - Demo Console Application         ║");
+        Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
-await workflow.RunAsync(WorkflowData.From("text", "Hello FlowForge!"));
-await workflow.RunAsync(WorkflowData.From("text", "Manas!"));
-await workflow.RunAsync(WorkflowData.From("text", "This is a longer text that exceeds 20 chars"));
+    while (true)
+        {
+            DisplayMenu();
+    var choice = Console.ReadLine()?.Trim();
 
+            if (choice?.ToLower() == "q")
+            {
+      Console.WriteLine("\n👋 Goodbye!");
+         break;
+ }
 
+    try
+          {
+      await ExecuteChoice(choice);
+         }
+            catch (Exception ex)
+      {
+      Console.WriteLine($"\n❌ Error: {ex.Message}");
+      Console.WriteLine($"{ex.GetType().Name}");
+}
 
+ Console.WriteLine("\n" + new string('─', 60));
+  Console.WriteLine("Press any key to continue...");
+   Console.ReadKey();
+            Console.Clear();
+        }
+    }
 
-Console.ReadLine();
+    static void DisplayMenu()
+    {
+Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
+        Console.WriteLine("║          MAIN MENU           ║");
+   Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  CONCEPTS - Framework Fundamentals   ║");
+  Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  1. WorkflowData Fluent API          ║");
+        Console.WriteLine("║  2. Node Chaining & Branching  ║");
+        Console.WriteLine("║  3. Parallel Execution      ║");
+        Console.WriteLine("║  4. Loop (ForEach)  ║");
+        Console.WriteLine("║  5. Error Handling & Retry       ║");
+        Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  EXAMPLES - Complete AI Workflows      ║");
+        Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  6. Customer Support Chatbot    ║");
+        Console.WriteLine("║  7. RAG Document Q&A Pipeline         ║");
+    Console.WriteLine("║8. Content Generation Pipeline ║");
+        Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
+        Console.WriteLine("║  Q. Quit        ║");
+        Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
+     Console.Write("\nEnter your choice: ");
+    }
+
+    static async Task ExecuteChoice(string? choice)
+    {
+        Console.Clear();
+
+        switch (choice)
+        {
+            // Concepts
+            case "1":
+         await WorkflowDataFluentApi.RunAsync();
+     break;
+
+  case "2":
+            await NodeChainingAndBranching.RunAsync();
+    break;
+
+            case "3":
+                await ParallelExecution.RunAsync();
+      break;
+
+  case "4":
+           await LoopForEach.RunAsync();
+        break;
+
+   case "5":
+            await ErrorHandlingAndRetry.RunAsync();
+       break;
+
+            // Examples (require API key)
+            case "6":
+                var apiKey6 = GetApiKey("Anthropic");
+        if (!string.IsNullOrEmpty(apiKey6))
+           await CustomerSupportChatbot.RunAsync(apiKey6);
+     break;
+
+         case "7":
+ var apiKey7 = GetApiKey("OpenAI (for embeddings) and Anthropic (for LLM)");
+      if (!string.IsNullOrEmpty(apiKey7))
+        await RagDocumentQA.RunAsync(apiKey7);
+         break;
+
+case "8":
+   var apiKey8 = GetApiKey("Anthropic");
+      if (!string.IsNullOrEmpty(apiKey8))
+ await ContentGenerationPipeline.RunAsync(apiKey8);
+ break;
+
+            default:
+        Console.WriteLine("❌ Invalid choice. Please select a valid option.");
+                break;
+        }
+    }
+
+    static string? GetApiKey(string provider)
+    {
+        Console.WriteLine($"\n🔑 This example requires an API key for {provider}");
+   Console.WriteLine("   You can:");
+        Console.WriteLine("   1. Enter it now");
+     Console.WriteLine("   2. Set environment variable: AI_API_KEY");
+        Console.WriteLine("   3. Press Enter to skip");
+        Console.Write("\nEnter API key (or press Enter to check env): ");
+  
+        var input = Console.ReadLine()?.Trim();
+
+     if (!string.IsNullOrEmpty(input))
+   return input;
+
+        var envKey = Environment.GetEnvironmentVariable("AI_API_KEY");
+        if (!string.IsNullOrEmpty(envKey))
+   {
+            Console.WriteLine("✅ Using API key from AI_API_KEY environment variable");
+  return envKey;
+        }
+
+        Console.WriteLine("⚠️  No API key provided. Skipping this example.");
+        return null;
+    }
+}

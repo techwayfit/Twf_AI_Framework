@@ -19,7 +19,7 @@ namespace TwfAiFramework.Nodes.AI;
 /// </summary>
 public sealed class PromptBuilderNode : BaseNode
 {
-    public override string Name => "PromptBuilder";
+    public override string Name { get; }
     public override string Category => "AI";
     public override string Description =>
         "Builds a dynamic prompt from a template with variable substitution";
@@ -29,10 +29,12 @@ public sealed class PromptBuilderNode : BaseNode
     private readonly Dictionary<string, object?> _staticVariables;
 
     public PromptBuilderNode(
+        string name,
         string promptTemplate,
         string? systemTemplate = null,
         Dictionary<string, object?>? staticVariables = null)
     {
+        Name = name;
         _promptTemplate = promptTemplate;
         _systemTemplate = systemTemplate;
         _staticVariables = staticVariables ?? new();
@@ -77,16 +79,16 @@ public sealed class PromptBuilderNode : BaseNode
 
     // ─── Convenience Factory Methods ──────────────────────────────────────────
 
-    public static PromptBuilderNode Simple(string template) =>
-        new(template);
+    public static PromptBuilderNode Simple(string name, string template) =>
+        new(name, template);
 
-    public static PromptBuilderNode WithSystem(string prompt, string system) =>
-        new(prompt, system);
+    public static PromptBuilderNode WithSystem(string name, string prompt, string system) =>
+        new(name, prompt, system);
 
-    public static PromptBuilderNode FromFile(string templatePath, string? systemPath = null)
+    public static PromptBuilderNode FromFile(string name, string templatePath, string? systemPath = null)
     {
         var prompt = File.ReadAllText(templatePath);
         var system = systemPath is not null ? File.ReadAllText(systemPath) : null;
-        return new PromptBuilderNode(prompt, system);
+        return new PromptBuilderNode(name, prompt, system);
     }
 }

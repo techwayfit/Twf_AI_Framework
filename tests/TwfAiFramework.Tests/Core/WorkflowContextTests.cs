@@ -1,3 +1,5 @@
+using twf_ai_framework.Core.Models;
+
 namespace TwfAiFramework.Tests.Core;
 
 /// <summary>

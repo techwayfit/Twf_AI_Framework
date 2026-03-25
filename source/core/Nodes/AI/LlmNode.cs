@@ -2,6 +2,7 @@ using TwfAiFramework.Core;
 using TwfAiFramework.Nodes;
 using System.Text;
 using System.Text.Json;
+using twf_ai_framework.Core.Models;
 
 namespace TwfAiFramework.Nodes.AI;
 
@@ -20,7 +21,7 @@ namespace TwfAiFramework.Nodes.AI;
 /// </summary>
 public sealed class LlmNode : BaseNode
 {
-    public override string Name => _config.NodeName;
+    public override string Name { get; }
     public override string Category => "AI";
     public override string Description =>
         $"Calls {_config.Provider} ({_config.Model}) with the current prompt";
@@ -28,8 +29,9 @@ public sealed class LlmNode : BaseNode
     private readonly LlmConfig _config;
     private readonly HttpClient _httpClient;
 
-    public LlmNode(LlmConfig config, HttpClient? httpClient = null)
+    public LlmNode(string name, LlmConfig config, HttpClient? httpClient = null)
     {
+        Name = name;
         _config = config;
         _httpClient = httpClient ?? new HttpClient();
     }
@@ -196,9 +198,8 @@ public sealed class LlmNode : BaseNode
 
 public enum LlmProvider { OpenAI, Anthropic, AzureOpenAI, Ollama, Custom }
 
-public sealed class LlmConfig
+public sealed record LlmConfig
 {
-    public string NodeName { get; init; } = "LLM";
     public LlmProvider Provider { get; init; } = LlmProvider.OpenAI;
     public string Model { get; init; } = "gpt-4o";
     public string ApiKey { get; init; } = "";
@@ -215,8 +216,7 @@ public sealed class LlmConfig
         Provider = LlmProvider.OpenAI,
         Model = model,
         ApiKey = apiKey,
-        ApiEndpoint = "https://api.openai.com/v1/chat/completions",
-        NodeName = $"OpenAI/{model}"
+        ApiEndpoint = "https://api.openai.com/v1/chat/completions"
     };
 
     public static LlmConfig Anthropic(string apiKey, string model = "claude-sonnet-4-20250514") => new()
@@ -224,15 +224,13 @@ public sealed class LlmConfig
         Provider = LlmProvider.Anthropic,
         Model = model,
         ApiKey = apiKey,
-        ApiEndpoint = "https://api.anthropic.com/v1/messages",
-        NodeName = $"Anthropic/{model}"
+        ApiEndpoint = "https://api.anthropic.com/v1/messages"
     };
 
     public static LlmConfig Ollama(string model = "llama3.2", string host = "http://localhost:11434") => new()
     {
         Provider = LlmProvider.Ollama,
         Model = model,
-        ApiEndpoint = $"{host}/v1/chat/completions",
-        NodeName = $"Ollama/{model}"
+        ApiEndpoint = $"{host}/v1/chat/completions"
     };
 }

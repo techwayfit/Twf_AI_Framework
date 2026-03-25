@@ -1,5 +1,6 @@
 using TwfAiFramework.Tracking;
 using Microsoft.Extensions.Logging;
+using twf_ai_framework.Core.Models;
 
 namespace TwfAiFramework.Core;
 
@@ -117,43 +118,5 @@ public sealed class WorkflowContext
     {
         SetState(key, value);
         return this;
-    }
-}
-
-// ─── Supporting Types ─────────────────────────────────────────────────────────
-
-/// <summary>Represents a single message in a conversation.</summary>
-public record ChatMessage(string Role, string Content, DateTime Timestamp)
-{
-    public static ChatMessage System(string content) =>
-        new("system", content, DateTime.UtcNow);
-    public static ChatMessage User(string content) =>
-        new("user", content, DateTime.UtcNow);
-    public static ChatMessage Assistant(string content) =>
-        new("assistant", content, DateTime.UtcNow);
-}
-
-/// <summary>Logger that prefixes all messages with a context string.</summary>
-internal sealed class PrefixedLogger : ILogger
-{
-    private readonly ILogger _inner;
-    private readonly string _prefix;
-
-    public PrefixedLogger(ILogger inner, string prefix)
-    {
-        _inner = inner;
-        _prefix = prefix;
-    }
-
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull =>
-        _inner.BeginScope(state);
-
-    public bool IsEnabled(LogLevel logLevel) => _inner.IsEnabled(logLevel);
-
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
-        Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        _inner.Log(logLevel, eventId, state, exception,
-            (s, ex) => $"{_prefix} {formatter(s, ex)}");
     }
 }

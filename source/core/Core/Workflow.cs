@@ -1,7 +1,7 @@
-using TwfAiFramework.Core;
-using TwfAiFramework.Tracking;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
+using twf_ai_framework.Core.Models;
+using twf_ai_framework.Nodes;
 
 namespace TwfAiFramework.Core;
 
@@ -370,92 +370,5 @@ public sealed class Workflow
 
         var resultData = data.Clone().Set(step.LoopOutputKey!, outputs);
         return StepExecutionResult.Ok(resultData, allResults);
-    }
-}
-
-// ─── Internal Types ───────────────────────────────────────────────────────────
-
-internal enum StepType { Node, Branch, Parallel, Loop }
-internal enum GlobalErrorStrategy { StopOnFirstFailure, ContinueOnFailure }
-
-internal sealed class PipelineStep
-{
-    public StepType Type { get; }
-    public INode? Node { get; }
-    public NodeOptions Options { get; }
-
-    // Branch
-    public Func<WorkflowData, bool>? BranchCondition { get; init; }
-    public Workflow? TrueBranch { get; init; }
-    public Workflow? FalseBranch { get; init; }
-
-    // Parallel
-    public INode[]? ParallelNodes { get; init; }
-
-    // Loop
-    public string? LoopItemsKey { get; init; }
-    public string? LoopOutputKey { get; init; }
-    public Workflow? LoopBody { get; init; }
-
-    public PipelineStep(StepType type, INode? node = null, NodeOptions? options = null)
-    {
-        Type = type;
-        Node = node;
-        Options = options ?? NodeOptions.Default;
-    }
-}
-
-internal sealed class StepExecutionResult
-{
-    public bool IsSuccess { get; private init; }
-    public WorkflowData Data { get; private init; } = new();
-    public IReadOnlyList<NodeResult> Results { get; private init; } = Array.Empty<NodeResult>();
-    public string? FailedNodeName { get; private init; }
-    public string? ErrorMessage { get; private init; }
-    public Exception? Exception { get; private init; }
-
-    public static StepExecutionResult Ok(WorkflowData data, IEnumerable<NodeResult> results) => new()
-    {
-        IsSuccess = true, Data = data, Results = results.ToList()
-    };
-
-    public static StepExecutionResult Fail(NodeResult failed, WorkflowData lastGoodData) => new()
-    {
-        IsSuccess = false,
-        Data = lastGoodData,
-        Results = new[] { failed },
-        FailedNodeName = failed.NodeName,
-        ErrorMessage = failed.ErrorMessage,
-        Exception = failed.Exception
-    };
-}
-
-/// <summary>Wraps a lambda as an INode — for quick inline steps.</summary>
-internal sealed class LambdaNode : INode
-{
-    private readonly Func<WorkflowData, WorkflowContext, Task<WorkflowData>> _func;
-
-    public string Name { get; }
-    public string Category => "Lambda";
-    public string Description => $"Inline step: {Name}";
-
-    public LambdaNode(string name, Func<WorkflowData, WorkflowContext, Task<WorkflowData>> func)
-    {
-        Name = name;
-        _func = func;
-    }
-
-    public async Task<NodeResult> ExecuteAsync(WorkflowData data, WorkflowContext context)
-    {
-        var start = DateTime.UtcNow;
-        try
-        {
-            var output = await _func(data, context);
-            return NodeResult.Success(Name, output, DateTime.UtcNow - start, start);
-        }
-        catch (Exception ex)
-        {
-            return NodeResult.Failure(Name, data, ex.Message, ex, DateTime.UtcNow - start, start);
-        }
     }
 }
