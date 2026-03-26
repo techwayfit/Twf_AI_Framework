@@ -116,7 +116,7 @@ class NodeRenderer {
 
         ports.forEach((port, index) => {
        const portClass = NodeRenderer.getPortClass(port, direction);
-     const portStyle = NodeRenderer.getPortStyle(port, index, ports.length, isInput);
+     const portStyle = NodeRenderer.getPortStyle(port, index, ports.length, isInput, node);
             const tooltip = port.description || port.label || port.id;
 
             // For INPUT ports: port circle FIRST, then label (label appears on RIGHT when visible)
@@ -135,6 +135,8 @@ class NodeRenderer {
 
         html += `
  <div class="port-container ${isInput ? 'port-container-left' : 'port-container-right'}" 
+         data-port="${port.id}"
+         data-direction="${direction}"
          style="${portStyle}"
             title="${tooltip}">
  ${isInput ? portCircle + portLabel : portLabel + portCircle}
@@ -185,7 +187,20 @@ class NodeRenderer {
      * @param {boolean} isInput
      * @returns {string} CSS style string
      */
- static getPortStyle(port, index, total, isInput) {
+ static getPortStyle(port, index, total, isInput, node) {
+  // ConditionNode ports are anchored to diamond corners/tips.
+  if (node?.type === 'ConditionNode') {
+      if (isInput) {
+          return 'top: 0; left: 50%; transform: translate(-50%, -50%);';
+      }
+
+      if (port.id === 'success') {
+          return 'top: 50%; left: 0; right: auto; transform: translate(-50%, -50%);';
+      }
+
+      return 'top: 50%; right: 0; left: auto; transform: translate(50%, -50%);';
+  }
+
   // Port circle is 14px, so we need to offset by 7px to center it on the edge
   const portRadius = 7; // Half of 14px port size
         

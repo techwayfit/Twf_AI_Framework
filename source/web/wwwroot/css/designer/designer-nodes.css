@@ -72,6 +72,7 @@ position: absolute;
 /* Conditional node special styling - FIXED VERSION */
 .workflow-node[data-node-type="ConditionNode"],
 .workflow-node.node-condition {
+    --condition-tip-offset: 25px;
     position: relative;
   border: none !important;
     border-radius: 0 !important;
@@ -83,7 +84,7 @@ display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
     justify-content: center !important;
-    padding: 8px !important;
+    padding: 0 !important;
     text-align: center !important;
     background: transparent !important;  /* Changed from white to transparent */
     box-shadow: none !important;
@@ -122,8 +123,7 @@ position: relative;
 /* Ports must be above everything */
 .workflow-node[data-node-type="ConditionNode"] .port,
 .workflow-node.node-condition .port {
-  z-index: 15 !important;
-  position: absolute !important;
+    z-index: 15 !important;
 }
 
 .workflow-node[data-node-type="ConditionNode"] .node-header,
@@ -324,52 +324,6 @@ padding: 12px;
 
 .workflow-node[data-node-type="ConditionNode"] .port-container[data-port="failure"] .port-label {
     background: #e74c3c;
-}
-
-/* ConditionNode (Diamond) Port Positioning - Simplified approach */
-/* Ports are rendered with inline styles by the legacy renderer */
-/* This CSS provides fallback positioning for NodeRenderer-created ports */
-.workflow-node[data-node-type="ConditionNode"] .port,
-.workflow-node.node-condition .port {
-    z-index: 20 !important;
-  position: absolute !important;
-    background: #3498db !important;  /* Ensure ports are visible */
-    border: 2px solid white !important;  /* White border for contrast */
-    width: 14px !important;
-    height: 14px !important;
-    border-radius: 50% !important;
-    cursor: pointer !important;
-}
-
-.workflow-node[data-node-type="ConditionNode"] .port.input,
-.workflow-node.node-condition .port.input {
-    left: 50% !important;
-    top: 15px !important;
-    transform: translateX(-50%) !important;
-}
-
-.workflow-node[data-node-type="ConditionNode"] .port.output[data-port="success"],
-.workflow-node.node-condition .port.output[data-port="success"] {
-    right: 15px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: #27ae60 !important;  /* Green for success */
-}
-
-.workflow-node[data-node-type="ConditionNode"] .port.output[data-port="failure"],
-.workflow-node.node-condition .port.output[data-port="failure"] {
-    left: 15px !important;
-    top: 50% !important;
-    transform: translateY(-50%) !important;
-    background: #e74c3c !important;  /* Red for failure */
-}
-
-/* Hide the port containers for diamond nodes (we use absolute positioning) */
-.workflow-node[data-node-type="ConditionNode"] .node-ports-left,
-.workflow-node[data-node-type="ConditionNode"] .node-ports-right,
-.workflow-node.node-condition .node-ports-left,
-.workflow-node.node-condition .node-ports-right {
- display: none !important;
 }
 
 /* Start node styling */
