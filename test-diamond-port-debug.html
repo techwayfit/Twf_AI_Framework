@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diamond Port Debug - Visual Guide</title>
+    <style>
+   body {
+ margin: 40px;
+      font-family: Arial, sans-serif;
+     background: #f5f5f5;
+        }
+        
+    .workflow-node {
+    position: relative;
+            background: white;
+        min-width: 120px;
+   min-height: 120px;
+       max-width: 120px;
+      max-height: 120px;
+ display: flex;
+    flex-direction: column;
+            align-items: center;
+  justify-content: center;
+            padding: 8px;
+      text-align: center;
+       margin: 60px auto;
+     border: none;
+        }
+
+        /* Border layer - rotated square creates diamond border */
+        .workflow-node::before {
+            content: '';
+     position: absolute;
+top: 50%;
+            left: 50%;
+        width: 100%;
+        height: 100%;
+border: 3px solid #f39c12;
+  background: white;
+            transform: translate(-50%, -50%) rotate(45deg);
+            box-sizing: border-box;
+        z-index: 0;
+    pointer-events: none;
+      }
+
+        /* Content mask */
+ .workflow-node::after {
+            content: '';
+ position: absolute;
+    top: 0;
+    left: 0;
+  right: 0;
+            bottom: 0;
+            background: white;
+ clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+    z-index: 1;
+          pointer-events: none;
+   }
+
+        .node-header,
+        .node-type {
+            position: relative;
+  z-index: 5;
+      }
+
+        .node-header {
+font-weight: 600;
+    font-size: 0.85rem;
+        }
+
+        .node-type {
+         font-size: 0.65rem;
+            color: #7f8c8d;
+        }
+
+        .port {
+     width: 14px;
+          height: 14px;
+            border-radius: 50%;
+            border: 3px solid white;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      position: absolute;
+   z-index: 10;
+    }
+
+        /* Port colors */
+.port-input { background: #27ae60; }
+        .port-success { background: #27ae60; }
+        .port-failed { background: #95a5a6; }
+        .port-error { background: #e74c3c; }
+
+   /* TOP CORNER (input) */
+        .port-top {
+       top: -7px;
+     left: 50%;
+      transform: translateX(-50%);
+ }
+
+        /* LEFT CORNER (success) */
+        .port-left {
+            top: 50%;
+      left: -7px;
+  transform: translateY(-50%);
+      }
+
+    /* BOTTOM CORNER (failed) */
+   .port-bottom {
+    bottom: -7px;
+       left: 50%;
+     transform: translateX(-50%);
+        }
+
+    /* RIGHT CORNER (error) */
+     .port-right {
+    top: 50%;
+  right: -7px;
+     transform: translateY(-50%);
+        }
+
+        /* Visual guide lines */
+        .guide-lines {
+         position: absolute;
+      top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+ pointer-events: none;
+   z-index: 15;
+     }
+
+        .guide-line-h {
+         position: absolute;
+  width: 100%;
+            height: 1px;
+   background: rgba(255, 0, 0, 0.3);
+      top: 50%;
+        }
+
+        .guide-line-v {
+          position: absolute;
+       height: 100%;
+         width: 1px;
+            background: rgba(255, 0, 0, 0.3);
+        left: 50%;
+        }
+
+        .label {
+     position: absolute;
+     font-size: 11px;
+          background: yellow;
+      padding: 2px 5px;
+ border-radius: 3px;
+       z-index: 20;
+   white-space: nowrap;
+        }
+
+        .label-top { top: -35px; left: 50%; transform: translateX(-50%); }
+        .label-left { left: -70px; top: 50%; transform: translateY(-50%); }
+        .label-bottom { bottom: -35px; left: 50%; transform: translateX(-50%); }
+     .label-right { right: -70px; top: 50%; transform: translateY(-50%); }
+
+        .info-box {
+    background: white;
+            padding: 20px;
+            margin: 20px auto;
+max-width: 600px;
+            border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .info-box h3 {
+       margin-top: 0;
+            color: #f39c12;
+        }
+
+        .info-box code {
+    background: #f8f9fa;
+  padding: 2px 6px;
+            border-radius: 3px;
+ font-size: 0.9em;
+    }
+
+     table {
+            width: 100%;
+  border-collapse: collapse;
+  margin: 10px 0;
+        }
+
+        table th,
+        table td {
+            padding: 8px;
+    text-align: left;
+            border-bottom: 1px solid #dee2e6;
+   }
+
+        table th {
+     background: #f8f9fa;
+            font-weight: 600;
+      }
+    </style>
+</head>
+<body>
+    <div class="info-box">
+        <h3>?? Diamond Port Positioning Debug</h3>
+        <p>This page shows the exact positioning needed for ports on diamond corners.</p>
+   <p><strong>The diamond is a 120×120px square rotated 45°.</strong></p>
+    </div>
+
+  <div class="workflow-node">
+        <div class="guide-lines">
+            <div class="guide-line-h"></div>
+      <div class="guide-line-v"></div>
+   </div>
+        
+        <div class="node-header">Condition</div>
+        <div class="node-type">ConditionNode</div>
+        
+        <!-- Top corner (input) -->
+        <div class="port port-input port-top"></div>
+        <div class="label label-top">top: -7px<br>left: 50%</div>
+        
+     <!-- Left corner (success) -->
+    <div class="port port-success port-left"></div>
+        <div class="label label-left">top: 50%<br>left: -7px</div>
+    
+   <!-- Bottom corner (failed) -->
+        <div class="port port-failed port-bottom"></div>
+      <div class="label label-bottom">bottom: -7px<br>left: 50%</div>
+        
+        <!-- Right corner (error) -->
+     <div class="port port-error port-right"></div>
+        <div class="label label-right">top: 50%<br>right: -7px</div>
+    </div>
+
+    <div class="info-box">
+     <h3>?? Port Positioning Table</h3>
+        <table>
+            <thead>
+            <tr>
+ <th>Port</th>
+           <th>Corner</th>
+     <th>CSS</th>
+  <th>Color</th>
+         </tr>
+            </thead>
+    <tbody>
+       <tr>
+        <td><code>input</code></td>
+              <td>Top (0°)</td>
+             <td><code>top: -7px; left: 50%; transform: translateX(-50%);</code></td>
+      <td style="color: #27ae60;">? Green</td>
+            </tr>
+        <tr>
+          <td><code>success</code></td>
+         <td>Left (90°)</td>
+     <td><code>top: 50%; left: -7px; transform: translateY(-50%);</code></td>
+    <td style="color: #27ae60;">? Green</td>
+         </tr>
+                <tr>
+                    <td><code>failed</code></td>
+            <td>Bottom (180°)</td>
+          <td><code>bottom: -7px; left: 50%; transform: translateX(-50%);</code></td>
+          <td style="color: #95a5a6;">? Gray</td>
+            </tr>
+         <tr>
+                 <td><code>error</code></td>
+ <td>Right (270°)</td>
+      <td><code>top: 50%; right: -7px; transform: translateY(-50%);</code></td>
+   <td style="color: #e74c3c;">? Red</td>
+    </tr>
+       </tbody>
+        </table>
+    </div>
+
+    <div class="info-box">
+        <h3>?? Why -7px?</h3>
+        <p>The port circle is <code>14px</code> in diameter (including border).</p>
+      <p>To center the port ON the corner point, we offset by half the diameter: <code>-7px</code></p>
+        <p>This moves the port's center to exactly align with the diamond's corner.</p>
+ 
+        <h4 style="margin-top: 20px;">Visual Explanation:</h4>
+        <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 0.85em;">
+Without offset (wrong): With -7px offset (correct):
+    ??
+   ? ?                ? ?
+  ?   ?             ?   ?
+?       ?        ?       ?
+  ?   ??   ?
+   ? ?           ? ?
+    ?       ?
+    
+Ports on box edges       Ports on diamond corners ?
+        </pre>
+    </div>
+
+    <div class="info-box">
+<h3>? Copy-Paste CSS</h3>
+        <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; font-size: 0.85em;">/* Top corner - input */
+.port.input {
+    top: -7px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+/* Left corner - success */
+.port[data-port="success"] {
+    top: 50% !important;
+    left: -7px !important;
+  transform: translateY(-50%) !important;
+}
+
+/* Bottom corner - failed */
+.port[data-port="failed"] {
+ bottom: -7px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+/* Right corner - error */
+.port[data-port="error"] {
+    top: 50% !important;
+    right: -7px !important;
+    transform: translateY(-50%) !important;
+}</pre>
+    </div>
+</body>
+</html>

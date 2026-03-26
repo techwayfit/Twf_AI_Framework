@@ -59,25 +59,25 @@
     position: relative; /* Keep as relative within flex container */
 }
 
-/* Legacy single port positioning - only for nodes without port containers */
-.workflow-node .port.input:not(.port-container .port) {
-    position: absolute;
-  left: 0;
- top: 50%;
-    transform: translate(-50%, -50%);
-}
+    /* Legacy single port positioning - only for nodes without port containers */
+    .workflow-node .port.input:not(.port-container .port) {
+        position: absolute;
+        left: 0;
+        top: 50%;
+        transform: translate(-50%, -50%);
+    }
 
-.workflow-node .port.output:not(.port-container .port) {
-    position: absolute;
-    right: 0;
-    top: 50%;
-    transform: translate(50%, -50%);
-}
+    .workflow-node .port.output:not(.port-container .port) {
+        position: absolute;
+        right: 0;
+        top: 50%;
+        transform: translate(50%, -50%);
+    }
 
 /* Multi-port container ports - ensure they don't inherit conflicting positioning */
 .port-container .port {
     position: relative; /* Relative within the flex container */
-  transform: none; /* No transform needed - container handles positioning */
+    transform: none; /* No transform needed - container handles positioning */
 }
 
 /* ???????????????????????????????????????????????????????????????????????????
@@ -86,8 +86,8 @@
 
 .port-label {
     font-size: 0.7rem;
-  color: #6c757d;
-background: white;
+    color: #6c757d;
+    background: white;
     padding: 2px 6px;
     border-radius: 3px;
     white-space: nowrap;
@@ -96,7 +96,7 @@ background: white;
     transition: opacity 0.2s, visibility 0.2s;
     pointer-events: none;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
- font-weight: 600;
+    font-weight: 600;
     position: absolute; /* Don't affect flex layout */
 }
 
@@ -183,15 +183,16 @@ background: white;
 
 .workflow-node .port.drop-target {
     background: #27ae60;
- transform: scale(1.8);
+    transform: scale(1.8);
     box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
-animation: pulse 0.8s infinite;
+    animation: pulse 0.8s infinite;
 }
 
 @keyframes pulse {
     0%, 100% {
-box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
+        box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
     }
+
     50% {
         box-shadow: 0 0 20px rgba(39, 174, 96, 0.9);
     }
@@ -205,4 +206,97 @@ box-shadow: 0 0 12px rgba(39, 174, 96, 0.6);
     background: #95a5a6;
     opacity: 0.3;
     cursor: not-allowed;
+}
+
+/* ???????????????????????????????????????????????????????????????????????????
+   Diamond-Shaped ConditionNode Port Positioning
+   ??????????????????????????????????????????????????????????????????????????? */
+
+/* ConditionNode has a diamond shape - ports positioned at the 4 VISUAL CORNERS (diamond points) */
+/* The diamond is created by rotating the node 45°, but ports are positioned on the NON-rotated box */
+/* So we use edge positioning (top: 0, left: 0, etc.) with small negative offsets to reach the visual corners */
+
+/* Input port at the TOP visual corner (top point of diamond) */
+.workflow-node[data-node-type="ConditionNode"] .node-ports-left,
+.workflow-node.node-condition .node-ports-left {
+    position: absolute !important;
+    top: -30px !important; /* Small offset to position on visual corner */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+.workflow-node[data-node-type="ConditionNode"] .port-container-left,
+.workflow-node.node-condition .port-container-left {
+    top: 0px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+/* Legacy: Input port without container */
+.workflow-node[data-node-type="ConditionNode"] > .port.input,
+.workflow-node.node-condition > .port.input {
+    position: absolute !important;
+    top: 0px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+/* Output ports container */
+.workflow-node[data-node-type="ConditionNode"] .node-ports-right,
+.workflow-node.node-condition .node-ports-right {
+    position: absolute !important;
+    width: 100% !important;
+    height: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
+}
+
+/* Success port - LEFT visual corner (left point of diamond) */
+.workflow-node[data-node-type="ConditionNode"] .port[data-port="success"],
+.workflow-node.node-condition .port[data-port="success"] {
+    position: absolute !important;
+    top: 50% !important;
+    left: -30px !important; /* Small offset to position on visual corner */
+    transform: translateY(-50%) !important;
+}
+
+/* Failed port - BOTTOM visual corner (bottom point of diamond) */
+.workflow-node[data-node-type="ConditionNode"] .port[data-port="failed"],
+.workflow-node.node-condition .port[data-port="failed"] {
+    position: absolute !important;
+    bottom: -30px !important; /* Small offset to position on visual corner */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+}
+
+/* Error port - RIGHT visual corner (right point of diamond) */
+.workflow-node[data-node-type="ConditionNode"] .port[data-port="error"],
+.workflow-node.node-condition .port[data-port="error"] {
+    position: absolute !important;
+    top: 50% !important;
+    right: -30px !important; /* Small offset to position on visual corner */
+    transform: translateY(-50%) !important;
+}
+
+/* Override port-container positioning for diamond outputs */
+.workflow-node[data-node-type="ConditionNode"] .port-container-right,
+.workflow-node.node-condition .port-container-right {
+    position: static !important;
+    transform: none !important;
+}
+
+/* Hide port labels for diamond node to avoid clutter - show on hover */
+.workflow-node[data-node-type="ConditionNode"] .port-label,
+.workflow-node.node-condition .port-label {
+    font-size: 0.65rem !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+.workflow-node[data-node-type="ConditionNode"] .port:hover + .port-label,
+.workflow-node[data-node-type="ConditionNode"] .port-container:hover .port-label,
+.workflow-node.node-condition .port:hover + .port-label,
+.workflow-node.node-condition .port-container:hover .port-label {
+    opacity: 1 !important;
+    visibility: visible !important;
 }

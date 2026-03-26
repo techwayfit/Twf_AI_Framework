@@ -19,15 +19,15 @@ class WorkflowDesigner {
      * Initialize the designer (called after existing initialization)
      */
     async initialize() {
-        console.log('Initializing new node architecture...");
+        console.log('Initializing new node architecture...');
         
-    // Load schemas into registry
-   await nodeRegistry.loadSchemas();
-    
+        // Load schemas into registry
+    await nodeRegistry.loadSchemas();
+
         // Convert existing workflow nodes to class instances if needed
         this.convertWorkflowNodesToClasses();
         
- console.log('New architecture initialized');
+   console.log('New architecture initialized');
     }
 
   /**

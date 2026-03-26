@@ -18,17 +18,17 @@
     
     <!-- Designer Stylesheets (Modular Architecture) -->
     <!-- Note: designer.css imports all modules in correct order -->
-  <link rel="stylesheet" href="~/css/designer.css" asp-append-version="true" />
+  @* <link rel="stylesheet" href="~/css/designer.css?v=20240101-5" asp-append-version="true" /> *@
     
  <!-- Alternative: Import individual modules (uncomment if you need granular control) -->
-    <!--
+
     <link rel="stylesheet" href="~/css/designer/designer-base.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/designer/designer-sidebar.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/designer/designer-nodes.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/designer/designer-ports.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/designer/designer-connections.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/designer/designer-interactions.css" asp-append-version="true" />
-    -->
+
 </head>
 <body>
     <div id="designer-container">
@@ -179,22 +179,29 @@
     <script src="~/js/designer/nodes/io/HttpRequestNode.js" asp-append-version="true"></script>
 
     <!-- Phase 2: Enhanced Node Renderer (multi-port support) -->
-    <script src="~/js/designer/ui/NodeRenderer.js" asp-append-version="true"></script>
+    <script src="~/js/designer/ui/NodeRenderer.js?v=20240101-4" asp-append-version="true"></script>
+
+    <!-- Phase 3: Condition Node Enhancement (Task 3.1, 3.3, 3.4, 3.6, 3.7) -->
+    <script src="~/js/designer/utils/ExpressionValidator.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/utils/ConnectionValidator.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/utils/WorkflowTemplates.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/ui/VariableAutocomplete.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/ui/ConditionEditor.js?v=20240101-2" asp-append-version="true"></script>
 
     <!-- Existing architecture (backward compatibility) -->
-    <script src="~/js/designer/state.js" asp-append-version="true"></script>
-    <script src="~/js/designer/utils.js" asp-append-version="true"></script>
-    <script src="~/js/designer/initialization.js" asp-append-version="true"></script>
-    <script src="~/js/designer/variables.js" asp-append-version="true"></script>
-    <script src="~/js/designer/autocomplete.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes.js" asp-append-version="true"></script>
-    <script src="~/js/designer/connections.js" asp-append-version="true"></script>
-    <script src="~/js/designer/rendering.js" asp-append-version="true"></script>
-    <script src="~/js/designer/properties.js" asp-append-version="true"></script>
-    <script src="~/js/designer/events.js" asp-append-version="true"></script>
+    <script src="~/js/designer/state.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/utils.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/initialization.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/variables.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/autocomplete.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/connections.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/rendering.js?v=20240101-3" asp-append-version="true"></script>
+    <script src="~/js/designer/properties.js?v=20240101-2" asp-append-version="true"></script>
+    <script src="~/js/designer/events.js?v=20240101-2" asp-append-version="true"></script>
     
     <!-- Phase 0: Main Orchestrator (loads last) -->
-    <script src="~/js/designer/core/Designer.js" asp-append-version="true"></script>
+    <script src="~/js/designer/core/Designer.js?v=20240101-2" asp-append-version="true"></script>
     
     <script>
             const workflowId = '@Model.Id';

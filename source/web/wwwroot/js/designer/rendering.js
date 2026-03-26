@@ -19,34 +19,50 @@ nodesLayer.appendChild(existingRect);
     
     workflow.nodes.forEach(node => {
         // Get node schema for port definitions
-       const schema = nodeSchemas[node.type];
+      const schema = nodeSchemas?.[node.type];
         const isSelected = selectedNodes.has(node.id) || selectedNode?.id === node.id;
  
         // Use NodeRenderer if available (Phase 2 enhancement)
-        let nodeEl;
-        if (window.NodeRenderer) {
-   nodeEl = NodeRenderer.renderNode(node, schema, isSelected);
-        } else {
+   let nodeEl;
+    
+    // Debug logging
+        console.log(`Rendering node: ${node.name} (${node.type})`);
+ console.log('NodeRenderer available?', !!window.NodeRenderer);
+        console.log('Schema available?', !!schema);
+        
+        if (window.NodeRenderer && schema) {
+  console.log('Using NodeRenderer for', node.type);
+            try {
+       nodeEl = NodeRenderer.renderNode(node, schema, isSelected);
+      } catch (error) {
+     console.error('NodeRenderer failed, falling back to legacy:', error);
+      nodeEl = renderNodeLegacy(node, isSelected);
+    }
+  } else {
+       console.log('Using legacy renderer for', node.type, '- NodeRenderer:', !!window.NodeRenderer, 'Schema:', !!schema);
             // Fallback to legacy rendering
-nodeEl = renderNodeLegacy(node, isSelected);
+            nodeEl = renderNodeLegacy(node, isSelected);
         }
    
-  // Add node dataset
+  // Ensure node dataset is set (NodeRenderer already sets this, but keep for backward compatibility)
         nodeEl.dataset.nodeId = node.id;
-        if (schema && schema.capabilities?.supportsMultipleOutputs) {
-   nodeEl.dataset.nodeType = node.type;
-        }
+        nodeEl.dataset.nodeType = node.type;
+        
+        // Add node-condition class for ConditionNode (CSS fallback)
+     if (node.type === 'ConditionNode' && !nodeEl.classList.contains('node-condition')) {
+   nodeEl.classList.add('node-condition');
+      }
    
-        // Node drag handlers
+  // Node drag handlers
         nodeEl.addEventListener('mousedown', (e) => onNodeMouseDown(e, node));
    
-   // Port connection handlers
-     const ports = nodeEl.querySelectorAll('.port');
-     ports.forEach(port => {
-  port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
-        });
+        // Port connection handlers
+        const ports = nodeEl.querySelectorAll('.port');
+        ports.forEach(port => {
+      port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
+   });
       
-  nodesLayer.appendChild(nodeEl);
+   nodesLayer.appendChild(nodeEl);
     });
 }
 
@@ -57,20 +73,38 @@ nodeEl = renderNodeLegacy(node, isSelected);
  * @returns {HTMLElement}
  */
 function renderNodeLegacy(node, isSelected) {
-    const nodeEl = document.createElement('div');
-    nodeEl.className = 'workflow-node' + (isSelected ? ' selected multi-selected' : '');
-    nodeEl.style.left = node.position.x + 'px';
+  const nodeEl = document.createElement('div');
+    
+    let className = 'workflow-node';
+    if (isSelected) className += ' selected multi-selected';
+    if (node.type === 'ConditionNode') className += ' node-condition';
+    
+    nodeEl.className = className;
+  nodeEl.style.left = node.position.x + 'px';
     nodeEl.style.top = node.position.y + 'px';
     nodeEl.style.borderColor = node.color || '#3498db';
     
+    // Special handling for ConditionNode - render 3 output ports
+    if (node.type === 'ConditionNode') {
+        nodeEl.innerHTML = `
+     <div class="node-header">${node.name}</div>
+     <div class="node-type">${node.type}</div>
+          <div class="port input" data-port="input" data-port-type="Data"></div>
+    <div class="port output" data-port="success" data-port-type="Conditional"></div>
+        <div class="port output" data-port="failed" data-port-type="Conditional"></div>
+      <div class="port output" data-port="error" data-port-type="Conditional"></div>
+      `;
+} else {
+        // Standard 1 input + 1 output
     nodeEl.innerHTML = `
-        <div class="node-header">${node.name}</div>
-  <div class="node-type">${node.type}</div>
-        <div class="port input" data-port="input"></div>
-        <div class="port output" data-port="output"></div>
-    `;
+            <div class="node-header">${node.name}</div>
+       <div class="node-type">${node.type}</div>
+          <div class="port input" data-port="input"></div>
+     <div class="port output" data-port="output"></div>
+        `;
+    }
     
-  return nodeEl;
+    return nodeEl;
 }
 
 function renderConnections() {

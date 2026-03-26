@@ -3,7 +3,7 @@
   "Name": "New Workflow",
   "Description": "Test",
   "CreatedAt": "2026-03-24T08:05:24.0612054Z",
-  "UpdatedAt": "2026-03-24T09:09:34.8158415Z",
+  "UpdatedAt": "2026-03-26T08:10:55.578427Z",
   "Nodes": [
     {
       "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
@@ -17,7 +17,8 @@
         "X": 259,
         "Y": 247
       },
-      "Color": "#4A90E2"
+      "Color": "#4A90E2",
+      "ExecutionOptions": null
     },
     {
       "Id": "5770722b-cbd5-4c28-850e-09087fa4db5b",
@@ -29,7 +30,8 @@
         "X": 941,
         "Y": 145
       },
-      "Color": "#7ED321"
+      "Color": "#7ED321",
+      "ExecutionOptions": null
     },
     {
       "Id": "bd758d98-d761-451c-a391-21e9f18a41cd",
@@ -38,10 +40,11 @@
       "Category": "Control",
       "Parameters": {},
       "Position": {
-        "X": 637,
-        "Y": 148
+        "X": 570,
+        "Y": 97
       },
-      "Color": "#F5A623"
+      "Color": "#F5A623",
+      "ExecutionOptions": null
     },
     {
       "Id": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
@@ -53,17 +56,11 @@
         "X": 649,
         "Y": 411
       },
-      "Color": "#4A90E2"
+      "Color": "#4A90E2",
+      "ExecutionOptions": null
     }
   ],
   "Connections": [
-    {
-      "Id": "7969992a-10f3-46ea-8807-312325d01460",
-      "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
-      "SourcePort": "output",
-      "TargetNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
-      "TargetPort": "input"
-    },
     {
       "Id": "b1736987-4f00-437a-b75b-33833631b2fa",
       "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
@@ -83,6 +80,27 @@
       "SourceNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
       "SourcePort": "output",
       "TargetNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "e97ef026-af9f-428f-acd7-be2006fde49d",
+      "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "SourcePort": "output",
+      "TargetNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "ac2fb65e-fdd0-40e0-a6a7-0a0f3da94094",
+      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "SourcePort": "failed",
+      "TargetNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "dda64194-e12a-4658-b05d-3cc0877d046c",
+      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "SourcePort": "success",
+      "TargetNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
       "TargetPort": "input"
     }
   ],

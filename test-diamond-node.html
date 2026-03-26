@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Diamond Node Border Fix Test</title>
+    <style>
+     body {
+       margin: 40px;
+            font-family: Arial, sans-serif;
+     background: #f5f5f5;
+   }
+        
+        .workflow-node {
+            position: relative;
+         background: white;
+  border: 2px solid #3498db;
+         border-radius: 8px;
+            padding: 12px 16px;
+   min-width: 160px;
+       max-width: 250px;
+   min-height: 60px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin: 40px;
+            display: inline-block;
+  }
+
+        .node-header {
+          font-weight: 600;
+       font-size: 0.95rem;
+            margin-bottom: 2px;
+         color: #2c3e50;
+        }
+
+        .node-type {
+     font-size: 0.7rem;
+  color: #7f8c8d;
+        }
+
+        .port {
+     width: 14px;
+            height: 14px;
+    border-radius: 50%;
+            background: #3498db;
+   border: 3px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            position: absolute;
+            z-index: 10;
+        }
+
+      .port.input {
+background: #27ae60;
+        }
+
+        .port.output {
+   background: #e74c3c;
+        }
+
+        /* DIAMOND SHAPE - WORKING APPROACH */
+        .workflow-node[data-node-type="ConditionNode"],
+     .workflow-node.node-condition {
+  position: relative;
+            border: none !important;
+      border-radius: 0 !important;
+     min-width: 120px !important;
+        min-height: 120px !important;
+  max-width: 120px !important;
+       max-height: 120px !important;
+    display: flex !important;
+       flex-direction: column !important;
+            align-items: center !important;
+ justify-content: center !important;
+            padding: 8px !important;
+       text-align: center !important;
+          background: white;
+       box-shadow: none !important;
+     /* NO clip-path on main element */
+    }
+
+     /* Border layer - rotated square creates diamond border */
+        .workflow-node[data-node-type="ConditionNode"]::before,
+        .workflow-node.node-condition::before {
+     content: '';
+    position: absolute;
+            top: 50%;
+        left: 50%;
+ width: 100%;
+            height: 100%;
+            border: 3px solid #f39c12;
+  background: white;
+            transform: translate(-50%, -50%) rotate(45deg);
+            box-sizing: border-box;
+  z-index: 0;
+      pointer-events: none;
+     }
+
+    /* Content mask - clip content to diamond shape */
+        .workflow-node[data-node-type="ConditionNode"]::after,
+        .workflow-node.node-condition::after {
+    content: '';
+  position: absolute;
+            top: 0;
+            left: 0;
+   right: 0;
+            bottom: 0;
+            background: white;
+         clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+     z-index: 1;
+            pointer-events: none;
+    }
+
+        /* Ensure content text and ports are above everything */
+        .workflow-node[data-node-type="ConditionNode"] .node-header,
+      .workflow-node[data-node-type="ConditionNode"] .node-type,
+.workflow-node.node-condition .node-header,
+        .workflow-node.node-condition .node-type {
+     position: relative;
+          z-index: 5;
+        }
+
+        .workflow-node[data-node-type="ConditionNode"] .port,
+        .workflow-node.node-condition .port {
+        z-index: 10 !important;
+        }
+
+        .workflow-node[data-node-type="ConditionNode"] .node-header,
+        .workflow-node.node-condition .node-header {
+font-size: 0.85rem !important;
+            line-height: 1.2 !important;
+        }
+
+        .workflow-node[data-node-type="ConditionNode"] .node-type,
+        .workflow-node.node-condition .node-type {
+            font-size: 0.65rem !important;
+        }
+
+        /* Hover state */
+        .workflow-node[data-node-type="ConditionNode"]:hover::before,
+        .workflow-node.node-condition:hover::before {
+      border-color: #f39c12;
+   box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+        }
+
+        /* Selected state */
+        .workflow-node[data-node-type="ConditionNode"].selected::before,
+        .workflow-node.node-condition.selected::before {
+            border-color: #c0392b !important;
+            border-style: dashed !important;
+            border-width: 3px !important;
+        }
+
+   /* Port positioning - ON VISUAL DIAMOND CORNERS */
+        /* The diamond is a 120x120 square rotated 45°, so we need to position ports
+       at the corners of the ROTATED square, not the bounding box */
+     
+        .workflow-node.node-condition .port.input,
+   .workflow-node[data-node-type="ConditionNode"] .port.input {
+            /* Top visual corner - at the top point of the diamond */
+        position: absolute !important;
+            top: -7px !important;
+ left: 50% !important;
+   transform: translateX(-50%) !important;
+        }
+
+        .workflow-node.node-condition .port[data-port="success"],
+   .workflow-node[data-node-type="ConditionNode"] .port[data-port="success"] {
+            /* Left visual corner - at the left point of the diamond */
+   position: absolute !important;
+  top: 50% !important;
+       left: -7px !important;
+            transform: translateY(-50%) !important;
+ background: #27ae60 !important;
+        }
+
+        .workflow-node.node-condition .port[data-port="failed"],
+ .workflow-node[data-node-type="ConditionNode"] .port[data-port="failed"] {
+            /* Bottom visual corner - at the bottom point of the diamond */
+     position: absolute !important;
+   bottom: -7px !important;
+     left: 50% !important;
+ transform: translateX(-50%) !important;
+            background: #95a5a6 !important;
+        }
+
+   .workflow-node.node-condition .port[data-port="error"],
+        .workflow-node[data-node-type="ConditionNode"] .port[data-port="error"] {
+            /* Right visual corner - at the right point of the diamond */
+     position: absolute !important;
+          top: 50% !important;
+ right: -7px !important;
+    transform: translateY(-50%) !important;
+            background: #e74c3c !important;
+        }
+
+        .test-section {
+          background: white;
+            padding: 20px;
+         margin: 20px 0;
+  border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .debug-info {
+            background: #fff3cd;
+        border: 1px solid #ffc107;
+            padding: 10px;
+            margin: 20px 0;
+          border-radius: 4px;
+      font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>? Diamond Node Border Fix Test</h1>
+    <p><strong>Expected:</strong> Orange diamond border visible around condition nodes</p>
+    
+    <div class="debug-info">
+        <strong>?? Debug Info:</strong><br>
+        • Border layer: <code>::before</code> with rotated square (z-index: 0)<br>
+  • Content mask: <code>::after</code> with clip-path (z-index: 1)<br>
+        • Text content: z-index: 5<br>
+        • Ports: z-index: 10
+    </div>
+
+    <div class="test-section">
+        <h2>1?? Regular Node (Rectangle) - Control Test</h2>
+        <div class="workflow-node" data-node-type="LlmNode">
+            <div class="node-header">LLM</div>
+         <div class="node-type">LlmNode</div>
+            <div class="port input" data-port="input" style="left: 0; top: 50%; transform: translate(-50%, -50%);"></div>
+     <div class="port output" data-port="output" style="right: 0; top: 50%; transform: translate(50%, -50%);"></div>
+        </div>
+    <p>? Should have blue border and rounded corners</p>
+    </div>
+
+    <div class="test-section">
+  <h2>2?? Condition Node (Diamond) - WITH node-condition class</h2>
+   <div class="workflow-node node-condition" data-node-type="ConditionNode">
+            <div class="node-header">Condition</div>
+        <div class="node-type">ConditionNode</div>
+            <div class="port input" data-port="input"></div>
+            <div class="port output" data-port="success"></div>
+            <div class="port output" data-port="failed"></div>
+   <div class="port output" data-port="error"></div>
+        </div>
+        <p>? Should have <strong style="color: #f39c12;">THICK ORANGE diamond border (3px)</strong> with 4 colored ports</p>
+    </div>
+
+    <div class="test-section">
+        <h2>3?? Condition Node - data-node-type attribute only</h2>
+        <div class="workflow-node" data-node-type="ConditionNode">
+       <div class="node-header">Condition</div>
+       <div class="node-type">ConditionNode</div>
+      <div class="port input" data-port="input"></div>
+     <div class="port output" data-port="success"></div>
+            <div class="port output" data-port="failed"></div>
+         <div class="port output" data-port="error"></div>
+        </div>
+    <p>? Should also have <strong style="color: #f39c12;">THICK ORANGE diamond border</strong></p>
+    </div>
+
+    <div class="test-section">
+        <h2>4?? Selected Diamond Node</h2>
+        <div class="workflow-node node-condition selected" data-node-type="ConditionNode">
+            <div class="node-header">Condition</div>
+ <div class="node-type">ConditionNode</div>
+            <div class="port input" data-port="input"></div>
+            <div class="port output" data-port="success"></div>
+       <div class="port output" data-port="failed"></div>
+    <div class="port output" data-port="error"></div>
+        </div>
+        <p>? Should have <strong style="color: #c0392b;">RED DASHED diamond border</strong> (selected state)</p>
+    </div>
+
+    <div class="test-section">
+        <h2>?? Technical Implementation (New Approach)</h2>
+      <ul>
+            <li><code>::before</code> pseudo-element: Rotated 45° square with <strong>3px orange border</strong></li>
+            <li><code>::after</code> pseudo-element: White background with <code>clip-path: polygon(...)</code> to mask corners</li>
+            <li>Text content: <code>z-index: 5</code> (above mask)</li>
+          <li>Ports: <code>z-index: 10</code> (above everything)</li>
+     <li><strong>No clip-path on main element</strong> - this was preventing the border from showing!</li>
+     </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>?? Pseudo-element Visualization</h2>
+        <pre style="background: #f8f9fa; padding: 15px; border-radius: 4px; font-size: 0.85rem;">
+Layer Stack (bottom to top):
+???????????????????????????????????
+? ::before (z-index: 0)           ? ? Rotated square with ORANGE BORDER
+?   ???????????????????????????   ?
+?   ? ::after (z-index: 1)    ?   ? ? White fill with diamond clip-path
+?   ?   ???????????????????   ?   ?
+?   ?   ? Content (z: 5)  ?   ?   ? ? Text content
+?   ?   ? Ports (z: 10)   ?   ?   ? ? Colored circles
+?   ?   ??????????????????? ?   ?
+?   ???????????????????????????   ?
+???????????????????????????????????
+
+Result: Diamond shape with visible orange border!
+        </pre>
+    </div>
+
+    <script>
+        // Test hover effect
+  document.querySelectorAll('.workflow-node').forEach(node => {
+      node.addEventListener('mouseenter', () => {
+  console.log('Hover:', node.dataset.nodeType);
+            });
+        });
+
+  // Debug: Log pseudo-elements
+        window.addEventListener('load', () => {
+    const conditionNode = document.querySelector('[data-node-type="ConditionNode"]');
+            if (conditionNode) {
+    const before = window.getComputedStyle(conditionNode, '::before');
+        const after = window.getComputedStyle(conditionNode, '::after');
+       console.log('::before border:', before.border);
+                console.log('::before transform:', before.transform);
+     console.log('::after clip-path:', after.clipPath);
+      }
+        });
+    </script>
+</body>
+</html>

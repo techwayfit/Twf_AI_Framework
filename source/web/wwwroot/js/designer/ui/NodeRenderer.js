@@ -12,32 +12,47 @@ class NodeRenderer {
      */
     static renderNode(node, schema, isSelected = false) {
         const nodeEl = document.createElement('div');
-        nodeEl.className = 'workflow-node' + (isSelected ? ' selected multi-selected' : '');
+        
+        // Build class list
+        let classList = ['workflow-node'];
+        if (isSelected) {
+            classList.push('selected', 'multi-selected');
+        }
+        
+        // Add node-type-specific class (fallback for CSS styling)
+        if (node.type === 'ConditionNode') {
+            classList.push('node-condition');
+        }
+      
+        nodeEl.className = classList.join(' ');
         nodeEl.style.left = node.position.x + 'px';
-   nodeEl.style.top = node.position.y + 'px';
-      nodeEl.style.borderColor = node.color || '#3498db';
-     nodeEl.dataset.nodeId = node.id;
+        nodeEl.style.top = node.position.y + 'px';
+        nodeEl.style.borderColor = node.color || '#3498db';
+        nodeEl.dataset.nodeId = node.id;
+
+     // Set node type for CSS styling (e.g., diamond shape for ConditionNode)
+     nodeEl.dataset.nodeType = node.type;
 
      // Get port definitions from schema
         const inputPorts = schema?.inputPorts || [
       { id: 'input', label: 'Input', type: 'Data', required: true }
-        ];
+  ];
         const outputPorts = NodeRenderer.getOutputPorts(node, schema);
 
-        // Calculate required height based on port count
-      const maxPorts = Math.max(inputPorts.length, outputPorts.length);
-      if (maxPorts > 1) {
-            const requiredHeight = 35 + (maxPorts * 20) + 10; // header + ports + padding
+        // Calculate required height based on port count (skip for diamond-shaped nodes)
+        const maxPorts = Math.max(inputPorts.length, outputPorts.length);
+      if (maxPorts > 1 && node.type !== 'ConditionNode') {
+     const requiredHeight = 35 + (maxPorts * 20) + 10; // header + ports + padding
   nodeEl.style.minHeight = `${requiredHeight}px`;
       }
 
     // Build node HTML
         let html = `
-            <div class="node-header">${node.name}</div>
-       <div class="node-type">${node.type}</div>
+         <div class="node-header">${node.name}</div>
+  <div class="node-type">${node.type}</div>
         `;
 
-        // Render input ports
+// Render input ports
   html += NodeRenderer.renderPorts(inputPorts, 'input', node);
 
         // Render output ports
@@ -48,7 +63,7 @@ class NodeRenderer {
     }
 
     /**
-   * Get output ports for a node (handles dynamic ports for ConditionNode)
+     * Get output ports for a node (handles dynamic ports for ConditionNode)
      * @param {object} node
      * @param {object} schema
      * @returns {Array} Output port definitions
@@ -58,11 +73,8 @@ class NodeRenderer {
             return [{ id: 'output', label: 'Output', type: 'Data' }];
         }
 
- // Check if node supports dynamic ports (e.g., ConditionNode)
-        if (schema.capabilities?.supportsDynamicPorts && node.type === 'ConditionNode') {
-   return NodeRenderer.getDynamicConditionPorts(node, schema);
-        }
-
+        // ConditionNode always uses the fixed 3-port schema (Success, Failed, Error)
+        // No dynamic port generation needed
         return schema.outputPorts;
     }
 
@@ -71,33 +83,12 @@ class NodeRenderer {
      * @param {object} node
      * @param {object} schema
      * @returns {Array} Dynamic port definitions
+     * @deprecated - ConditionNode now uses fixed ports
      */
   static getDynamicConditionPorts(node, schema) {
-    const ports = [];
-
- // Parse conditions from parameters
-      const conditionsParam = node.parameters?.conditions;
-        if (conditionsParam && typeof conditionsParam === 'object') {
-    // conditionsParam is like: { "is_positive": "sentiment == 'positive'", "is_urgent": "priority > 7" }
-       Object.keys(conditionsParam).forEach(conditionName => {
-                ports.push({
-          id: conditionName,
-label: NodeRenderer.formatPortLabel(conditionName),
-   type: 'Conditional',
-    description: `Output when: ${conditionsParam[conditionName]}`
-        });
-     });
-      }
-
-// Always add default port
-        ports.push({
-    id: 'default',
-            label: 'Default',
-   type: 'Conditional',
-            description: 'Default path if no conditions match'
-        });
-
-        return ports;
+        // This method is kept for backward compatibility but is no longer used
+   // ConditionNode now has fixed Success/Failed/Error ports
+        return schema.outputPorts;
     }
 
     /**
@@ -149,27 +140,31 @@ label: NodeRenderer.formatPortLabel(conditionName),
 
     /**
      * Get CSS class for port based on type
- * @param {object} port
-  * @param {string} direction
- * @returns {string}
+     * @param {object} port
+     * @param {string} direction
+     * @returns {string}
      */
   static getPortClass(port, direction) {
         const classes = [direction];
         
         // Add type-specific class
         if (port.type) {
-   classes.push(`port-${port.type.toLowerCase()}`);
-     }
+        // Handle both string and enum types
+       const portType = typeof port.type === 'string' 
+        ? port.type 
+   : (port.type.toString ? port.type.toString() : 'Data');
+     classes.push(`port-${portType.toLowerCase()}`);
+        }
 
         // Add required class
- if (port.required) {
-      classes.push('port-required');
+  if (port.required) {
+            classes.push('port-required');
         }
 
         // Add condition class for conditional ports
         if (port.condition) {
-            classes.push('port-conditional');
-        }
+     classes.push('port-conditional');
+  }
 
         return classes.join(' ');
     }
@@ -236,19 +231,19 @@ label: NodeRenderer.formatPortLabel(conditionName),
      * @returns {HTMLElement|null}
      */
     static getPortElement(nodeId, portId, portClass) {
-     // Try exact match first
-  let portEl = document.querySelector(
+   // Try exact match first
+     let portEl = document.querySelector(
       `[data-node-id="${nodeId}"] .port.${portClass}[data-port="${portId}"]`
         );
 
-      // Fallback to first port of that type if exact match not found
+        // Fallback to first port of that type if exact match not found
         if (!portEl) {
-portEl = document.querySelector(
-     `[data-node-id="${nodeId}"] .port.${portClass}``
-     );
+      portEl = document.querySelector(
+     `[data-node-id="${nodeId}"] .port.${portClass}`
+ );
         }
 
-        return portEl;
+    return portEl;
     }
 
     /**

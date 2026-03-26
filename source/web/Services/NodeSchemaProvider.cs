@@ -147,34 +147,40 @@ new() { Name = "model", Label = "Embedding Model", Type = ParameterType.Select, 
 
             // Control Nodes
             ["ConditionNode"] = new()
-            {
-                NodeType = "ConditionNode",
-                Description = "Routes workflow based on conditional expressions",
-                InputPorts = new()
+  {
+              NodeType = "ConditionNode",
+      Description = "Routes workflow based on conditional expressions",
+   InputPorts = new()
+ {
+      new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true }
+    },
+        OutputPorts = new()
                 {
-                    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true }
-                },
-                OutputPorts = new()
+  new() { Id = "success", Label = "Success", Type = PortType.Conditional, Description = "Success path" },
+              new() { Id = "failed", Label = "Failed", Type = PortType.Conditional, Description = "Failed path" },
+                new() { Id = "error", Label = "Error", Type = PortType.Conditional, Description = "Error path" }
+             },
+  Capabilities = new()
                 {
-                    // Conditional outputs - these will be created dynamically based on conditions
-                    new() { Id = "default", Label = "Default", Type = PortType.Conditional, Description = "Default path if no conditions match" }
-                },
-                Capabilities = new()
-                {
-                    SupportsConditionalRouting = true,
-                    SupportsDynamicPorts = true,
-                    SupportsMultipleOutputs = true
-                },
-                ExecutionOptions = new()
-                {
-                    new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
-                },
-                Parameters = new()
-                {
-                    new() { Name = "conditions", Label = "Conditions (JSON)", Type = ParameterType.Json, Required = true,
-                        Placeholder = "{\"is_positive\": \"sentiment == 'positive'\", \"is_urgent\": \"priority > 7\"}", 
-                        Description = "Key-value pairs where key is output port name and value is the condition expression" }
-                }
+    SupportsConditionalRouting = true,
+        SupportsMultipleOutputs = true
+        },
+     ExecutionOptions = new()
+           {
+  new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
+         },
+  Parameters = new()
+  {
+        new() { Name = "successCondition", Label = "Success Condition", Type = ParameterType.Text, Required = false,
+         Placeholder = "e.g., status == 'ok' && score > 0.5", 
+         Description = "Expression that evaluates to true for success path" },
+         new() { Name = "errorCondition", Label = "Error Condition", Type = ParameterType.Text, Required = false,
+        Placeholder = "e.g., error != null || status == 'error'", 
+         Description = "Expression that evaluates to true for error path (checked first)" },
+      new() { Name = "failedDescription", Label = "Failed Condition", Type = ParameterType.Text, Required = false,
+              Placeholder = "Default path when neither success nor error conditions match", 
+      Description = "Failed is the default fallback path" }
+        }
             },
 
             ["DelayNode"] = new()

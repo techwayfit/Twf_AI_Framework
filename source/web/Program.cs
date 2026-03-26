@@ -5,7 +5,12 @@ using TwfAiFramework.Web.Repositories;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews()
+    .AddJsonOptions(options =>
+    {
+        // Serialize enums as strings instead of integers
+        options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
 
 // Configure workflow storage - choose between JSON file or SQLite
 var useDatabase = builder.Configuration.GetValue<bool>("UseDatabase", false);

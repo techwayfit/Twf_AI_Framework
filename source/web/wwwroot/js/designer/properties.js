@@ -17,13 +17,13 @@ function renderProperties() {
    // Fall through to legacy rendering
      }
   }
-    
+ 
   // Legacy rendering for plain objects
     const schema = nodeSchemas[selectedNode.type];
     
     if (!schema) {
 panel.innerHTML = `
-       <div class="alert alert-warning small">
+     <div class="alert alert-warning small">
    <i class="bi bi-exclamation-triangle"></i> No schema available for ${selectedNode.type}
     </div>
         `;
@@ -47,12 +47,13 @@ return;
    <input type="text" class="form-control form-control-sm" 
      value="${selectedNode.type}" disabled />
    </div>
-        
-    <hr />
+     
+ <hr />
 <h6 class="small fw-bold mb-3">Parameters</h6>
     `;
  
-    // Render each parameter based on its type
+    // Standard parameter rendering for all nodes (including ConditionNode)
+    // No special handling needed - ConditionNode now uses simple text fields
   schema.parameters.forEach(param => {
     html += renderParameterField(param, selectedNode.parameters[param.name]);
     });
@@ -62,8 +63,8 @@ return;
      <hr class="mt-4" />
   <div class="d-grid gap-2">
       <button class="btn btn-danger" onclick="deleteSelectedNode()">
-                <i class="bi bi-trash"></i> Delete Node
-            </button>
+    <i class="bi bi-trash"></i> Delete Node
+     </button>
         </div>
     `;
     

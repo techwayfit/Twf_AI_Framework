@@ -1,6 +1,9 @@
 /**
  * Designer Node Styles
  * Workflow node appearance, variants, and states
+ * 
+ * LAST UPDATED: Diamond shape border fix - using ::after pseudo-element
+ * VERSION: 2.0 - Fixed ConditionNode diamond border visibility
  */
 
 /* ???????????????????????????????????????????????????????????????????????????
@@ -66,9 +69,98 @@ position: absolute;
     min-height: 100px;
 }
 
-/* Conditional node special styling */
-.workflow-node[data-node-type="ConditionNode"] {
-    border-left: 4px solid #f39c12;
+/* Conditional node special styling - FIXED VERSION */
+.workflow-node[data-node-type="ConditionNode"],
+.workflow-node.node-condition {
+    position: relative;
+    border: none !important;
+    border-radius: 0 !important;
+    min-width: 120px !important;
+    min-height: 120px !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 8px !important;
+    text-align: center !important;
+    background: white;
+    box-shadow: none !important;
+    /* NO clip-path on main element - this was the issue! */
+}
+
+/* Border layer - rotated square creates visible diamond border */
+.workflow-node[data-node-type="ConditionNode"]::before,
+.workflow-node.node-condition::before {
+    content: '';
+  position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    border: 3px solid #f39c12;
+    background: white;
+    transform: translate(-50%, -50%) rotate(45deg);
+  box-sizing: border-box;
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* Content mask - clips content to diamond shape */
+.workflow-node[data-node-type="ConditionNode"]::after,
+.workflow-node.node-condition::after {
+    content: '';
+position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  z-index: 1;
+    pointer-events: none;
+}
+
+/* Ensure content is above the border and mask */
+.workflow-node[data-node-type="ConditionNode"] .node-header,
+.workflow-node[data-node-type="ConditionNode"] .node-type,
+.workflow-node.node-condition .node-header,
+.workflow-node.node-condition .node-type {
+    position: relative;
+ z-index: 5;
+}
+
+/* Ports must be above everything */
+.workflow-node[data-node-type="ConditionNode"] .port,
+.workflow-node.node-condition .port {
+    z-index: 10 !important;
+}
+
+.workflow-node[data-node-type="ConditionNode"] .node-header,
+.workflow-node.node-condition .node-header {
+    font-size: 0.85rem !important;
+    line-height: 1.2 !important;
+}
+
+.workflow-node[data-node-type="ConditionNode"] .node-type,
+.workflow-node.node-condition .node-type {
+  font-size: 0.65rem !important;
+}
+
+/* Hover state for diamond */
+.workflow-node[data-node-type="ConditionNode"]:hover::before,
+.workflow-node.node-condition:hover::before {
+ border-color: #f39c12;
+    box-shadow: 0 6px 20px rgba(243, 156, 18, 0.3);
+}
+
+/* Selected state for diamond */
+.workflow-node[data-node-type="ConditionNode"].selected::before,
+.workflow-node.node-condition.selected::before {
+    border-color: #c0392b !important;
+    border-style: dashed !important;
+    border-width: 3px !important;
 }
 
 .workflow-node[data-node-type="HttpRequestNode"] {
