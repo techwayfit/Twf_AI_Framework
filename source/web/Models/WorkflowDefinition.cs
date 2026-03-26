@@ -52,8 +52,12 @@ public class NodeDefinition
 
     public string? Color { get; set; }
     
-    // Phase 1: Execution options
+  // Phase 1: Execution options
     public NodeExecutionOptions? ExecutionOptions { get; set; }
+  
+    // Phase 5: Sub-workflow support for container nodes (Loop, Parallel, Branch)
+    public SubWorkflowDefinition? SubWorkflow { get; set; }
+    public bool IsExpanded { get; set; } = false;
 }
 
 /// <summary>
@@ -102,8 +106,19 @@ public class NodePosition
 /// </summary>
 public class WorkflowMetadata
 {
-    public string? Author { get; set; }
+  public string? Author { get; set; }
     public List<string> Tags { get; set; } = new();
     public int Version { get; set; } = 1;
  public bool IsActive { get; set; } = true;
+}
+
+/// <summary>
+/// Defines a sub-workflow within a container node
+/// Phase 5: Loop, Parallel, and Branch node support
+/// </summary>
+public class SubWorkflowDefinition
+{
+    public List<NodeDefinition> Nodes { get; set; } = new();
+    public List<ConnectionDefinition> Connections { get; set; } = new();
+    public Dictionary<string, object> Variables { get; set; } = new();
 }

@@ -3,7 +3,7 @@
   "Name": "New Workflow",
   "Description": "Test",
   "CreatedAt": "2026-03-24T08:05:24.0612054Z",
-  "UpdatedAt": "2026-03-26T08:10:55.578427Z",
+  "UpdatedAt": "2026-03-26T14:40:55.8693001Z",
   "Nodes": [
     {
       "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
@@ -18,7 +18,9 @@
         "Y": 247
       },
       "Color": "#4A90E2",
-      "ExecutionOptions": null
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
     },
     {
       "Id": "5770722b-cbd5-4c28-850e-09087fa4db5b",
@@ -31,7 +33,9 @@
         "Y": 145
       },
       "Color": "#7ED321",
-      "ExecutionOptions": null
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
     },
     {
       "Id": "bd758d98-d761-451c-a391-21e9f18a41cd",
@@ -40,11 +44,13 @@
       "Category": "Control",
       "Parameters": {},
       "Position": {
-        "X": 570,
-        "Y": 97
+        "X": 584,
+        "Y": 91
       },
       "Color": "#F5A623",
-      "ExecutionOptions": null
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
     },
     {
       "Id": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
@@ -57,17 +63,102 @@
         "Y": 411
       },
       "Color": "#4A90E2",
-      "ExecutionOptions": null
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "fbca28e1-3d69-4d66-ac16-efd61665f239",
+      "Name": "Branch (Switch)",
+      "Type": "BranchNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 534,
+        "Y": 577
+      },
+      "Color": "#e67e22",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "0cde1874-eead-42ed-8328-ea1798de0042",
+      "Name": "Transform",
+      "Type": "TransformNode",
+      "Category": "Data",
+      "Parameters": {},
+      "Position": {
+        "X": 910,
+        "Y": 550
+      },
+      "Color": "#7ED321",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "50338ace-28d4-4273-8002-640951cfe67b",
+      "Name": "End",
+      "Type": "EndNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 1208,
+        "Y": 163
+      },
+      "Color": "#e74c3c",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "22b49c20-3945-4821-8e86-1ea99759b96e",
+      "Name": "End",
+      "Type": "EndNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 991,
+        "Y": 538
+      },
+      "Color": "#e74c3c",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "c5de89a7-1a3a-4ccc-9ebf-eb59ebd87fb4",
+      "Name": "Start",
+      "Type": "StartNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 78,
+        "Y": 69
+      },
+      "Color": "#2ecc71",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "284b9721-b01c-41dd-b4f5-24cfa37be23f",
+      "Name": "Loop (ForEach)",
+      "Type": "LoopNode",
+      "Category": "Control",
+      "Parameters": {},
+      "Position": {
+        "X": 215,
+        "Y": 503
+      },
+      "Color": "#f39c12",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
     }
   ],
   "Connections": [
-    {
-      "Id": "b1736987-4f00-437a-b75b-33833631b2fa",
-      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
-      "SourcePort": "output",
-      "TargetNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
-      "TargetPort": "input"
-    },
     {
       "Id": "5fc5a3c1-07eb-469d-a246-c3d5d9890045",
       "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
@@ -90,17 +181,66 @@
       "TargetPort": "input"
     },
     {
-      "Id": "ac2fb65e-fdd0-40e0-a6a7-0a0f3da94094",
-      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
-      "SourcePort": "failed",
-      "TargetNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
-      "TargetPort": "input"
-    },
-    {
       "Id": "dda64194-e12a-4658-b05d-3cc0877d046c",
       "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
       "SourcePort": "success",
       "TargetNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "e3bdf5d6-99ac-471b-b6de-ccbeaf1d4c22",
+      "SourceNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "SourcePort": "output",
+      "TargetNodeId": "fbca28e1-3d69-4d66-ac16-efd61665f239",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "c3d74924-60c6-4fe0-91e4-440331d3eb1f",
+      "SourceNodeId": "fbca28e1-3d69-4d66-ac16-efd61665f239",
+      "SourcePort": "case1",
+      "TargetNodeId": "0cde1874-eead-42ed-8328-ea1798de0042",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "0688d96f-f34c-4cd1-b008-71368c072cab",
+      "SourceNodeId": "0cde1874-eead-42ed-8328-ea1798de0042",
+      "SourcePort": "output",
+      "TargetNodeId": "50338ace-28d4-4273-8002-640951cfe67b",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "189890ca-a765-4626-ae17-92388627a188",
+      "SourceNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
+      "SourcePort": "output",
+      "TargetNodeId": "50338ace-28d4-4273-8002-640951cfe67b",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "7b8bd01a-e67f-4cc4-898d-a23c9c6657f5",
+      "SourceNodeId": "fbca28e1-3d69-4d66-ac16-efd61665f239",
+      "SourcePort": "default",
+      "TargetNodeId": "22b49c20-3945-4821-8e86-1ea99759b96e",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "19f38792-e82f-4ed8-b761-11c03afc3cb6",
+      "SourceNodeId": "c5de89a7-1a3a-4ccc-9ebf-eb59ebd87fb4",
+      "SourcePort": "output",
+      "TargetNodeId": "bbca48a5-394f-48a0-ba27-ef9695540d31",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "3603fa1a-98b6-4600-a5ce-88fdb60de754",
+      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "SourcePort": "success",
+      "TargetNodeId": "75fb05c5-bbee-4eaf-afb8-f46556f2b030",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "1267bccb-64da-43e5-89c0-96146282fbf8",
+      "SourceNodeId": "bd758d98-d761-451c-a391-21e9f18a41cd",
+      "SourcePort": "failure",
+      "TargetNodeId": "5770722b-cbd5-4c28-850e-09087fa4db5b",
       "TargetPort": "input"
     }
   ],

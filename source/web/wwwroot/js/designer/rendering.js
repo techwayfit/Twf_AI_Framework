@@ -76,7 +76,7 @@ function renderNodeLegacy(node, isSelected) {
   const nodeEl = document.createElement('div');
     
     let className = 'workflow-node';
-    if (isSelected) className += ' selected multi-selected';
+if (isSelected) className += ' selected multi-selected';
     if (node.type === 'ConditionNode') className += ' node-condition';
     
     nodeEl.className = className;
@@ -84,22 +84,21 @@ function renderNodeLegacy(node, isSelected) {
     nodeEl.style.top = node.position.y + 'px';
     nodeEl.style.borderColor = node.color || '#3498db';
     
-    // Special handling for ConditionNode - render 3 output ports
+    // Special handling for ConditionNode - render 2 output ports (success, failure)
     if (node.type === 'ConditionNode') {
         nodeEl.innerHTML = `
      <div class="node-header">${node.name}</div>
      <div class="node-type">${node.type}</div>
-          <div class="port input" data-port="input" data-port-type="Data"></div>
-    <div class="port output" data-port="success" data-port-type="Conditional"></div>
-        <div class="port output" data-port="failed" data-port-type="Conditional"></div>
-      <div class="port output" data-port="error" data-port-type="Conditional"></div>
+          <div class="port input" data-port="input" data-port-type="Data" style="position: absolute; left: 50%; top: 15px; transform: translateX(-50%); z-index: 20;"></div>
+    <div class="port output" data-port="success" data-port-type="Conditional" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); z-index: 20;"></div>
+        <div class="port output" data-port="failure" data-port-type="Conditional" style="position: absolute; left: 15px; top: 50%; transform: translateY(-50%); z-index: 20;"></div>
       `;
 } else {
-        // Standard 1 input + 1 output
-    nodeEl.innerHTML = `
-            <div class="node-header">${node.name}</div>
+   // Standard 1 input + 1 output
+  nodeEl.innerHTML = `
+        <div class="node-header">${node.name}</div>
        <div class="node-type">${node.type}</div>
-          <div class="port input" data-port="input"></div>
+     <div class="port input" data-port="input"></div>
      <div class="port output" data-port="output"></div>
         `;
     }

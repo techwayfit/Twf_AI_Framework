@@ -123,21 +123,73 @@ window.workflow.nodes.push(node);
      */
     updateNodeParameterJson(nodeId, paramName, jsonString) {
       const node = window.workflow.nodes.find(n => n.id === nodeId);
-        if (!node) return;
-        
+  if (!node) return;
+
         try {
-            const value = jsonString ? JSON.parse(jsonString) : null;
+       const value = jsonString ? JSON.parse(jsonString) : null;
         if (typeof node.updateParameter === 'function') {
-      node.updateParameter(paramName, value);
+  node.updateParameter(paramName, value);
         } else {
     if (!node.parameters) node.parameters = {};
-        node.parameters[paramName] = value;
-        }
+   node.parameters[paramName] = value;
+      }
     console.log(`Updated ${node.name}.${paramName} =`, value);
      } catch (error) {
             console.error('Invalid JSON:', error);
       alert('Invalid JSON format. Please check your input.');
  }
+    }
+
+    /**
+     * Get a node by ID
+     * @param {string} nodeId
+     * @returns {BaseNode|null}
+     */
+    getNode(nodeId) {
+        return window.workflow?.nodes.find(n => n.id === nodeId) || null;
+    }
+
+    /**
+     * Delete a node by ID
+     * @param {string} nodeId
+     */
+    deleteNode(nodeId) {
+        if (!window.workflow) return;
+
+        // Remove node
+        window.workflow.nodes = window.workflow.nodes.filter(n => n.id !== nodeId);
+        
+        // Remove connections
+        window.workflow.connections = window.workflow.connections.filter(
+  c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
+      );
+        
+// Clear selection
+        this.selectedNode = null;
+        this.selectedNodes.delete(nodeId);
+        window.selectedNode = null;
+   window.selectedNodes.delete(nodeId);
+        
+        // Re-render
+        if (typeof render === 'function') {
+   render();
+        }
+        
+   // Clear properties panel
+   const propertiesPanel = document.getElementById('properties-content');
+     if (propertiesPanel) {
+     propertiesPanel.innerHTML = '<p class="text-muted small">Select a node to edit its properties.</p>';
+        }
+      
+        console.log(`Node ${nodeId} deleted`);
+    }
+
+    /**
+   * Mark workflow as modified
+     */
+    markModified() {
+ // Could implement unsaved changes tracking here
+        console.log('Workflow modified');
     }
 }
 

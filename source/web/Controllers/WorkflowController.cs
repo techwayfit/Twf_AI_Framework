@@ -20,18 +20,18 @@ public class WorkflowController : Controller
     public async Task<IActionResult> Index(string? search)
     {
         IEnumerable<WorkflowDefinition> workflows;
-        
-      if (!string.IsNullOrWhiteSpace(search))
+
+        if (!string.IsNullOrWhiteSpace(search))
         {
-        workflows = await _repository.SearchAsync(search);
+            workflows = await _repository.SearchAsync(search);
             ViewBag.SearchQuery = search;
         }
         else
-   {
+        {
             workflows = await _repository.GetAllAsync();
         }
 
-    return View(workflows);
+        return View(workflows);
     }
 
     // GET: /Workflow/Details/5
@@ -59,23 +59,23 @@ public class WorkflowController : Controller
     {
         if (ModelState.IsValid)
         {
-        await _repository.CreateAsync(workflow);
-     return RedirectToAction(nameof(Designer), new { id = workflow.Id });
-      }
+            await _repository.CreateAsync(workflow);
+            return RedirectToAction(nameof(Designer), new { id = workflow.Id });
+        }
 
-      return View(workflow);
+        return View(workflow);
     }
 
     // GET: /Workflow/Designer/5
     public async Task<IActionResult> Designer(Guid id)
     {
         var workflow = await _repository.GetByIdAsync(id);
-      if (workflow == null)
-      {
- return NotFound();
+        if (workflow == null)
+        {
+            return NotFound();
         }
 
-   return View(workflow);
+        return View(workflow);
     }
 
     // GET: /Workflow/Edit/5
@@ -83,12 +83,12 @@ public class WorkflowController : Controller
     {
         var workflow = await _repository.GetByIdAsync(id);
         if (workflow == null)
- {
-      return NotFound();
-   }
+        {
+            return NotFound();
+        }
 
         return View(workflow);
-  }
+    }
 
     // POST: /Workflow/Edit/5
     [HttpPost]
@@ -96,23 +96,23 @@ public class WorkflowController : Controller
     public async Task<IActionResult> Edit(Guid id, WorkflowDefinition workflow)
     {
         if (id != workflow.Id)
-     {
-   return BadRequest();
+        {
+            return BadRequest();
         }
 
         if (ModelState.IsValid)
-   {
+        {
             try
-      {
-        await _repository.UpdateAsync(workflow);
-           return RedirectToAction(nameof(Index));
+            {
+                await _repository.UpdateAsync(workflow);
+                return RedirectToAction(nameof(Index));
             }
             catch (Exception ex)
-    {
-     _logger.LogError(ex, "Error updating workflow {WorkflowId}", id);
-       ModelState.AddModelError("", "An error occurred while updating the workflow.");
-     }
-}
+            {
+                _logger.LogError(ex, "Error updating workflow {WorkflowId}", id);
+                ModelState.AddModelError("", "An error occurred while updating the workflow.");
+            }
+        }
 
         return View(workflow);
     }
@@ -121,9 +121,9 @@ public class WorkflowController : Controller
     public async Task<IActionResult> Delete(Guid id)
     {
         var workflow = await _repository.GetByIdAsync(id);
-     if (workflow == null)
- {
-      return NotFound();
+        if (workflow == null)
+        {
+            return NotFound();
         }
 
         return View(workflow);
@@ -145,9 +145,9 @@ public class WorkflowController : Controller
     public async Task<IActionResult> GetWorkflow(Guid id)
     {
         var workflow = await _repository.GetByIdAsync(id);
-  if (workflow == null)
+        if (workflow == null)
         {
-    return NotFound();
+            return NotFound();
         }
 
         return Json(workflow);
@@ -159,22 +159,22 @@ public class WorkflowController : Controller
     {
         try
         {
-     if (workflow.Id == Guid.Empty)
-  {
-    await _repository.CreateAsync(workflow);
+            if (workflow.Id == Guid.Empty)
+            {
+                await _repository.CreateAsync(workflow);
             }
             else
-  {
-     await _repository.UpdateAsync(workflow);
-      }
+            {
+                await _repository.UpdateAsync(workflow);
+            }
 
-    return Json(new { success = true, id = workflow.Id });
+            return Json(new { success = true, id = workflow.Id });
         }
         catch (Exception ex)
         {
-  _logger.LogError(ex, "Error saving workflow");
-          return Json(new { success = false, error = ex.Message });
-    }
+            _logger.LogError(ex, "Error saving workflow");
+            return Json(new { success = false, error = ex.Message });
+        }
     }
 
     // GET: /Workflow/GetAvailableNodes
@@ -182,41 +182,48 @@ public class WorkflowController : Controller
     public IActionResult GetAvailableNodes()
     {
         var nodes = new[]
-        {
-            // AI Nodes
+                {
+     // AI Nodes
 new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Language Model API call", color = "#4A90E2" },
    new { type = "PromptBuilderNode", category = "AI", name = "Prompt Builder", description = "Build prompts from {{variable}} templates", color = "#4A90E2" },
       new { type = "EmbeddingNode", category = "AI", name = "Embedding", description = "Generate vector embeddings for RAG", color = "#4A90E2" },
   new { type = "OutputParserNode", category = "AI", name = "Output Parser", description = "Parse JSON from LLM output", color = "#4A90E2" },
+      
+   // Control Nodes
+    new { type = "StartNode", category = "Control", name = "Start", description = "Workflow entry point (required)", color = "#2ecc71" },
+     new { type = "EndNode", category = "Control", name = "End", description = "Workflow exit point", color = "#e74c3c" },
+          new { type = "ConditionNode", category = "Control", name = "Condition", description = "Evaluate conditions and write boolean flags", color = "#F5A623" },
+       new { type = "DelayNode", category = "Control", name = "Delay", description = "Add delay for rate limiting", color = "#F5A623" },
+         new { type = "MergeNode", category = "Control", name = "Merge", description = "Merge multiple keys into one", color = "#F5A623" },
+    new { type = "LogNode", category = "Control", name = "Log", description = "Log workflow state for debugging", color = "#F5A623" },
             
-            // Control Nodes
-         new { type = "ConditionNode", category = "Control", name = "Condition", description = "Evaluate conditions and write boolean flags", color = "#F5A623" },
-            new { type = "DelayNode", category = "Control", name = "Delay", description = "Add delay for rate limiting", color = "#F5A623" },
-            new { type = "MergeNode", category = "Control", name = "Merge", description = "Merge multiple keys into one", color = "#F5A623" },
-            new { type = "LogNode", category = "Control", name = "Log", description = "Log workflow state for debugging", color = "#F5A623" },
-            
+     // Special Control Nodes (Phase 5: Container Nodes)
+        new { type = "LoopNode", category = "Control", name = "Loop (ForEach)", description = "Iterate over collection items", color = "#f39c12" },
+  new { type = "ParallelNode", category = "Control", name = "Parallel", description = "Execute multiple branches simultaneously", color = "#9b59b6" },
+ new { type = "BranchNode", category = "Control", name = "Branch (Switch)", description = "Route based on value matching", color = "#e67e22" },
   // Data Nodes
     new { type = "TransformNode", category = "Data", name = "Transform", description = "Apply custom data transformation", color = "#7ED321" },
-            new { type = "FilterNode", category = "Data", name = "Filter", description = "Validate data with conditions", color = "#7ED321" },
+ new { type = "FilterNode", category = "Data", name = "Filter", description = "Validate data with conditions", color = "#7ED321" },
             new { type = "ChunkTextNode", category = "Data", name = "Chunk Text", description = "Split text into chunks for RAG", color = "#7ED321" },
-            new { type = "MemoryNode", category = "Data", name = "Memory", description = "Read/write from global memory", color = "#7ED321" },
-            
+     new { type = "MemoryNode", category = "Data", name = "Memory", description = "Read/write from global memory", color = "#7ED321" },
+     
             // IO Nodes
-            new { type = "HttpRequestNode", category = "IO", name = "HTTP Request", description = "Make REST API calls", color = "#BD10E0" },
+     new { type = "HttpRequestNode", category = "IO", name = "HTTP Request", description = "Make REST API calls", color = "#BD10E0" },
         };
 
-     return Json(nodes);
+        return Json(nodes);
     }
 
     // GET: /Workflow/GetNodeSchema/{nodeType}
     [HttpGet]
     public IActionResult GetNodeSchema(string nodeType)
     {
-        var schema = NodeSchemaProvider.GetSchema(nodeType);
-      if (schema == null)
+        var schemas = NodeSchemaProvider.GetAllSchemas();
+        var schema = schemas[nodeType];
+        if (schema == null)
         {
- return NotFound(new { error = $"Schema for node type '{nodeType}' not found" });
-      }
+            return NotFound(new { error = $"Schema for node type '{nodeType}' not found" });
+        }
 
         return Json(schema);
     }
@@ -225,7 +232,7 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
     [HttpGet]
     public IActionResult GetAllNodeSchemas()
     {
- var schemas = NodeSchemaProvider.GetAllSchemas();
-      return Json(schemas);
+        var schemas = NodeSchemaProvider.GetAllSchemas();
+        return Json(schemas);
     }
 }

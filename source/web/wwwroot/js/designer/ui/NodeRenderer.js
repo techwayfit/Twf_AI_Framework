@@ -15,50 +15,58 @@ class NodeRenderer {
         
         // Build class list
         let classList = ['workflow-node'];
-        if (isSelected) {
+     if (isSelected) {
             classList.push('selected', 'multi-selected');
         }
-        
+    
         // Add node-type-specific class (fallback for CSS styling)
         if (node.type === 'ConditionNode') {
             classList.push('node-condition');
         }
       
-        nodeEl.className = classList.join(' ');
+    nodeEl.className = classList.join(' ');
         nodeEl.style.left = node.position.x + 'px';
         nodeEl.style.top = node.position.y + 'px';
-        nodeEl.style.borderColor = node.color || '#3498db';
+    nodeEl.style.borderColor = node.color || '#3498db';
         nodeEl.dataset.nodeId = node.id;
 
-     // Set node type for CSS styling (e.g., diamond shape for ConditionNode)
-     nodeEl.dataset.nodeType = node.type;
+      // Set node type for CSS styling
+      nodeEl.dataset.nodeType = node.type;
 
-     // Get port definitions from schema
+        // Get port definitions from schema
         const inputPorts = schema?.inputPorts || [
-      { id: 'input', label: 'Input', type: 'Data', required: true }
-  ];
-        const outputPorts = NodeRenderer.getOutputPorts(node, schema);
+          { id: 'input', label: 'Input', type: 'Data', required: true }
+        ];
+  const outputPorts = NodeRenderer.getOutputPorts(node, schema);
 
-        // Calculate required height based on port count (skip for diamond-shaped nodes)
-        const maxPorts = Math.max(inputPorts.length, outputPorts.length);
-      if (maxPorts > 1 && node.type !== 'ConditionNode') {
-     const requiredHeight = 35 + (maxPorts * 20) + 10; // header + ports + padding
-  nodeEl.style.minHeight = `${requiredHeight}px`;
-      }
+        // Calculate required height based on port count (skip for diamond and circular nodes)
+   const maxPorts = Math.max(inputPorts.length, outputPorts.length);
+    if (maxPorts > 1 && !['ConditionNode', 'StartNode', 'EndNode'].includes(node.type)) {
+ const requiredHeight = 35 + (maxPorts * 20) + 10; // header + ports + padding
+   nodeEl.style.minHeight = `${requiredHeight}px`;
+        }
 
-    // Build node HTML
-        let html = `
-         <div class="node-header">${node.name}</div>
-  <div class="node-type">${node.type}</div>
-        `;
+        // Build node HTML - special handling for Start/End nodes
+ let html = '';
+        
+ if (node.type === 'StartNode' || node.type === 'EndNode') {
+            // Circular nodes - only show name, no node type
+  html = `<div class="node-header">${node.name}</div>`;
+        } else {
+            // Standard nodes - show name and type
+     html = `
+                <div class="node-header">${node.name}</div>
+           <div class="node-type">${node.type}</div>
+            `;
+        }
 
-// Render input ports
-  html += NodeRenderer.renderPorts(inputPorts, 'input', node);
+        // Render input ports
+ html += NodeRenderer.renderPorts(inputPorts, 'input', node);
 
         // Render output ports
-        html += NodeRenderer.renderPorts(outputPorts, 'output', node);
+     html += NodeRenderer.renderPorts(outputPorts, 'output', node);
 
-        nodeEl.innerHTML = html;
+      nodeEl.innerHTML = html;
         return nodeEl;
     }
 

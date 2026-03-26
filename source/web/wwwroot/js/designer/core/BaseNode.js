@@ -109,8 +109,8 @@ const errors = [];
         <input type="text" class="form-control form-control-sm" 
       value="${this.type}" disabled />
             </div>
-            
-            <hr />
+       
+  <hr />
          <h6 class="small fw-bold mb-3">Parameters</h6>
         `;
         
@@ -120,6 +120,22 @@ const errors = [];
                 html += this.renderParameter(param);
     });
     }
+
+        // Render execution options (Phase 4)
+        if (schema.executionOptions && schema.executionOptions.length > 0) {
+       html += '<hr />';
+            html += ExecutionOptionsEditor.render(this, schema.executionOptions);
+        }
+
+        // Add delete button at the bottom
+        html += `
+        <hr class="mt-4" />
+            <div class="d-grid gap-2">
+        <button class="btn btn-danger btn-sm" onclick="window.designerInstance.deleteNode('${this.id}')">
+  <i class="bi bi-trash"></i> Delete Node
+  </button>
+            </div>
+        `;
 
       return html;
     }

@@ -577,3 +577,329 @@ cursor: pointer;
     color: #e83e8c;
     border: 1px solid #dee2e6;
 }
+
+/* ???????????????????????????????????????????????????????????????????????????
+   EXECUTION OPTIONS EDITOR (Phase 4)
+   ??????????????????????????????????????????????????????????????????????????? */
+
+.execution-options-section {
+margin-top: 16px;
+}
+
+.execution-options-section .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    background: #f0f4ff;
+    border: 1px solid #d0d9ff;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+}
+
+.execution-options-section .section-header:hover {
+    background: #e3ebff;
+    border-color: #b8c5ff;
+}
+
+.execution-options-section .section-header h6 {
+    margin: 0;
+ display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.execution-options-section .section-header .bi-gear-fill {
+    color: #667eea;
+}
+
+.execution-options-section .section-header .toggle-icon {
+    font-size: 14px;
+    color: #6c757d;
+    transition: transform 0.2s;
+}
+
+.execution-options-section .section-header .bi-chevron-up {
+    transform: rotate(0deg);
+}
+
+.execution-options-section .section-header .bi-chevron-down {
+    transform: rotate(0deg);
+}
+
+.execution-options-section .section-content {
+    padding: 16px 12px;
+    background: #fafbff;
+    border: 1px solid #d0d9ff;
+    border-top: none;
+  border-radius: 0 0 6px 6px;
+    margin-top: -6px;
+}
+
+.execution-options-section .alert-sm {
+    padding: 10px;
+    font-size: 12px;
+ margin-bottom: 16px;
+}
+
+.execution-options-section .alert-info {
+    background: #e7f3ff;
+    border: 1px solid #b8dcff;
+    color: #004085;
+}
+
+.execution-options-section .form-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 6px;
+}
+
+.execution-options-section .form-control,
+.execution-options-section .form-select {
+    font-size: 13px;
+    background: white;
+}
+
+.execution-options-section .form-text {
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.execution-options-section .form-check-label {
+    font-size: 13px;
+    color: #495057;
+}
+
+/* Execution option specific styling */
+.exec-opt-retry {
+    border-left: 3px solid #28a745;
+}
+
+.exec-opt-timeout {
+    border-left: 3px solid #ffc107;
+}
+
+.exec-opt-error {
+  border-left: 3px solid #dc3545;
+}
+
+/* Execution option badge indicator */
+.exec-option-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: #667eea;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    border-radius: 10px;
+  text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Loop node port badges */
+.badge.bg-purple {
+    background-color: #9b59b6 !important;
+}
+
+/* ???????????????????????????????????????????????????????????????????????????
+   SUB-WORKFLOW EDITOR MODAL (Phase 5)
+   ??????????????????????????????????????????????????????????????????????????? */
+
+.sub-workflow-designer-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #f8f9fa;
+}
+
+.sub-workflow-toolbar {
+    display: flex;
+ justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: white;
+  border-bottom: 2px solid #dee2e6;
+}
+
+.toolbar-section {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.sub-workflow-canvas-wrapper {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Sub-workflow palette (left sidebar) */
+.sub-workflow-palette {
+    width: 200px;
+background: white;
+    border-right: 1px solid #dee2e6;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.palette-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.sub-palette-node-item {
+    background: white;
+    border: 2px solid #dee2e6;
+    border-left: 4px solid #3498db;
+    border-radius: 4px;
+    padding: 10px;
+    margin-bottom: 8px;
+ cursor: grab;
+    transition: all 0.2s;
+}
+
+.sub-palette-node-item:hover {
+    transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.sub-palette-node-item:active {
+  cursor: grabbing;
+}
+
+/* Sub-workflow canvas area */
+.sub-workflow-canvas-area {
+    flex: 1;
+    position: relative;
+    background: 
+        linear-gradient(90deg, rgba(200,200,200,0.1) 1px, transparent 1px),
+        linear-gradient(rgba(200,200,200,0.1) 1px, transparent 1px);
+ background-size: 20px 20px;
+ overflow: auto;
+}
+
+#sub-workflow-canvas {
+    position: absolute;
+    top: 0;
+  left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+#sub-nodes-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#sub-connections-layer,
+#sub-temp-connection-layer {
+    pointer-events: all;
+}
+
+/* Sub-workflow properties (right sidebar) */
+.sub-workflow-properties {
+    width: 250px;
+    background: white;
+    border-left: 1px solid #dee2e6;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.properties-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.properties-content {
+    font-size: 0.875rem;
+}
+
+/* Sub-workflow specific node styling */
+.sub-workflow-node {
+    cursor: move;
+    position: absolute;
+}
+
+.sub-workflow-node.selected {
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+.sub-workflow-node .port {
+    cursor: crosshair;
+    transition: all 0.2s;
+}
+
+.sub-workflow-node .port:hover {
+    transform: scale(1.3);
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.3);
+}
+
+/* Connection lines in sub-workflow */
+.connection-line {
+    cursor: pointer;
+    transition: stroke-width 0.2s;
+}
+
+.connection-line:hover {
+    stroke-width: 4 !important;
+    stroke: #e74c3c !important;
+}
+
+/* Modal customizations */
+#sub-workflow-modal .modal-body {
+    padding: 0;
+}
+
+#sub-workflow-modal .modal-footer {
+    border-top: 2px solid #dee2e6;
+    background: #f8f9fa;
+}
+
+/* Scrollbars for sub-workflow editor */
+.sub-workflow-palette::-webkit-scrollbar,
+.sub-workflow-properties::-webkit-scrollbar,
+.sub-workflow-canvas-area::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.sub-workflow-palette::-webkit-scrollbar-track,
+.sub-workflow-properties::-webkit-scrollbar-track,
+.sub-workflow-canvas-area::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.sub-workflow-palette::-webkit-scrollbar-thumb,
+.sub-workflow-properties::-webkit-scrollbar-thumb,
+.sub-workflow-canvas-area::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.sub-workflow-palette::-webkit-scrollbar-thumb:hover,
+.sub-workflow-properties::-webkit-scrollbar-thumb:hover,
+.sub-workflow-canvas-area::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}

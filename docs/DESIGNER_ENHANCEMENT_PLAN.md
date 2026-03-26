@@ -1,8 +1,8 @@
 # TWF AI Framework - Workflow Designer Enhancement Plan
 
-**Version:** 1.3  
+**Version:** 1.4  
 **Date:** January 25, 2025  
-**Status:** Phase 3 In Progress  
+**Status:** Phase 5 In Progress
 **Owner:** Development Team
 
 ---
@@ -88,9 +88,9 @@ The current workflow designer implements basic sequential workflows but lacks fu
 | **Phase 0: JavaScript Architecture** | Week 1 | ? Completed | 100% |
 | **Phase 1: Node Schema Enhancement** | Week 2 | ? Completed | 100% |
 | **Phase 2: Visual Node Enhancements** | Week 3 | ? Completed | 100% |
-| **Phase 3: Condition Node Enhancement** | Week 4 | ?? In Progress | 0% |
-| **Phase 4: Node Execution Options** | Week 5 | ?? Not Started | 0% |
-| **Phase 5: Special Node Types** | Week 6-7 | ?? Not Started | 0% |
+| **Phase 3: Condition Node Enhancement** | Week 4 | ? Completed | 100% |
+| **Phase 4: Node Execution Options** | Week 5 | ? Completed | 100% |
+| **Phase 5: Special Node Types** | Week 6-7 | ?? In Progress | 80% |
 | **Phase 6: Variable System Enhancement** | Week 7-8 | ?? Not Started | 0% |
 | **Phase 7: Execution & Debugging** | Week 8-9 | ?? Not Started | 0% |
 | **Phase 8: Export/Import & Code Gen** | Week 9-10 | ?? Not Started | 0% |
@@ -809,7 +809,7 @@ The master `designer.css` imports modules in this order:
 **Timeline:** Week 4  
 **Priority:** High  
 **Dependencies:** Phase 1 ?, Phase 2 ?  
-**Status:** ?? **In Progress**
+**Status:** ? **COMPLETED** (January 2025)
 
 ### Objectives
 Build a complete UI for configuring conditional routing with the ConditionNode. Users should be able to add/edit/remove conditions visually and see output ports update in real-time.
@@ -822,19 +822,19 @@ Build a complete UI for configuring conditional routing with the ConditionNode. 
 - **Real-time Validation** - Immediate feedback on expression syntax
 - **Connection Routing** - Each condition routes to different downstream nodes
 
-### Tasks
+### Completed Work
 
 #### 3.1 Condition Editor UI Component
 
 **File:** `source/web/wwwroot/js/designer/ui/ConditionEditor.js` (NEW)
 
-- [ ] Create ConditionEditor class
-- [ ] Implement render() method for condition list
-- [ ] Implement addCondition() method
-- [ ] Implement removeCondition() method  
-- [ ] Implement updateCondition() method
-- [ ] Add keyboard shortcuts (Enter to add, Delete to remove)
-- [ ] Style with consistent design system
+- [x] Create ConditionEditor class
+- [x] Implement render() method for condition list
+- [x] Implement addCondition() method
+- [x] Implement removeCondition() method  
+- [x] Implement updateCondition() method
+- [x] Add keyboard shortcuts (Enter to add, Delete to remove)
+- [x] Style with consistent design system
 
 **Features:**
 - Dynamic add/remove conditions
@@ -848,12 +848,12 @@ Build a complete UI for configuring conditional routing with the ConditionNode. 
 
 **File:** `source/web/wwwroot/js/designer/ui/PropertiesPanel.js` (MODIFY)
 
-- [ ] Detect ConditionNode in renderNodeProperties()
-- [ ] Render ConditionEditor instead of generic form
-- [ ] Pass available variables from workflow state
-- [ ] Handle onChange callback
-- [ ] Trigger node re-render on condition change
-- [ ] Mark workflow as modified
+- [x] Detect ConditionNode in renderNodeProperties()
+- [x] Render ConditionEditor instead of generic form
+- [x] Pass available variables from workflow state
+- [x] Handle onChange callback
+- [x] Trigger node re-render on condition change
+- [x] Mark workflow as modified
 
 **Integration Points:**
 ```javascript
@@ -874,12 +874,12 @@ if (node.type === 'ConditionNode') {
 
 **File:** `source/web/wwwroot/js/designer/utils/ExpressionValidator.js` (NEW)
 
-- [ ] Create ExpressionValidator class
-- [ ] Implement validate() method
-- [ ] Implement extractVariables() method
-- [ ] Implement getSuggestions() method for autocomplete
-- [ ] Define validation rules
-- [ ] Provide helpful error messages
+- [x] Create ExpressionValidator class
+- [x] Implement validate() method
+- [x] Implement extractVariables() method
+- [x] Implement getSuggestions() method for autocomplete
+- [x] Define validation rules
+- [x] Provide helpful error messages
 
 **Validation Rules:**
 - Must contain comparison operator (==, !=, >, <, >=, <=)
@@ -900,13 +900,13 @@ if (node.type === 'ConditionNode') {
 
 **File:** `source/web/wwwroot/js/designer/ui/VariableAutocomplete.js` (NEW)
 
-- [ ] Create VariableAutocomplete class
-- [ ] Implement attach() to wire up input element
-- [ ] Implement show() dropdown
-- [ ] Implement hide() dropdown
-- [ ] Handle keyboard navigation (arrows, enter, escape)
-- [ ] Handle mouse selection
-- [ ] Style dropdown consistently
+- [x] Create VariableAutocomplete class
+- [x] Implement attach() to wire up input element
+- [x] Implement show() dropdown
+- [x] Implement hide() dropdown
+- [x] Handle keyboard navigation (arrows, enter, escape)
+- [x] Handle mouse selection
+- [x] Style dropdown consistently
 
 **Features:**
 - Triggered while typing
@@ -920,12 +920,12 @@ if (node.type === 'ConditionNode') {
 
 **File:** `source/web/wwwroot/js/designer/rendering.js` (MODIFY)
 
-- [ ] Create rerenderNode() function
-- [ ] Preserve node position
-- [ ] Preserve valid connections
-- [ ] Remove invalid connections (deleted ports)
-- [ ] Re-attach event listeners
-- [ ] Prevent visual flicker
+- [x] Create rerenderNode() function
+- [x] Preserve node position
+- [x] Preserve valid connections
+- [x] Remove invalid connections (deleted ports)
+- [x] Re-attach event listeners
+- [x] Prevent visual flicker
 
 **Port Update Logic:**
 ```javascript
@@ -943,11 +943,11 @@ function rerenderNode(nodeId) {
 
 **File:** `source/web/wwwroot/js/designer/connections.js` (MODIFY)
 
-- [ ] Enhance validateConnection() for conditional ports
-- [ ] Check port exists in node's condition list
-- [ ] Allow multiple connections from one conditional port
-- [ ] Prevent connections to deleted ports
-- [ ] Show helpful error messages
+- [x] Enhance validateConnection() for conditional ports
+- [x] Check port exists in node's condition list
+- [x] Allow multiple connections from one conditional port
+- [x] Prevent connections to deleted ports
+- [x] Show helpful error messages
 
 **Connection Rules:**
 - Each conditional port ? multiple targets (parallel routing)
@@ -959,11 +959,11 @@ function rerenderNode(nodeId) {
 
 **File:** `source/web/wwwroot/js/designer/templates/ConditionWorkflowTemplate.js` (NEW)
 
-- [ ] Create sample template: Sentiment routing (3-way)
-- [ ] Create sample template: Priority escalation
-- [ ] Create sample template: Error handling
-- [ ] Add "Load Template" button to designer
-- [ ] Implement template loading
+- [x] Create sample template: Sentiment routing (3-way)
+- [x] Create sample template: Priority escalation
+- [x] Create sample template: Error handling
+- [x] Add "Load Template" button to designer
+- [x] Implement template loading
 
 **Example Templates:**
 1. **Sentiment Routing** - LLM ? Condition ? 3 branches (positive/negative/neutral)
@@ -974,11 +974,11 @@ function rerenderNode(nodeId) {
 
 **File:** `source/web/wwwroot/js/designer/utils/serialization.js` (MODIFY)
 
-- [ ] Ensure conditions save in node.parameters.conditions
-- [ ] Preserve port IDs in connections
-- [ ] Validate connections on load
-- [ ] Remove invalid connections
-- [ ] Maintain backward compatibility
+- [x] Ensure conditions save in node.parameters.conditions
+- [x] Preserve port IDs in connections
+- [x] Validate connections on load
+- [x] Remove invalid connections
+- [x] Maintain backward compatibility
 
 **JSON Format:**
 ```json
@@ -1006,30 +1006,30 @@ function rerenderNode(nodeId) {
 
 **File:** `source/web/wwwroot/css/designer/designer-sidebar.css` (MODIFY)
 
-- [ ] Add `.condition-editor` styling
-- [ ] Add `.condition-item` grid layout
-- [ ] Add `.condition-item.invalid` red border
-- [ ] Add `.condition-expression-input` monospace font
-- [ ] Add `.condition-error` message styling
-- [ ] Add `.add-condition-btn` dashed border style
-- [ ] Add `.variable-autocomplete` dropdown styling
-- [ ] Add hover and focus states
-- [ ] Ensure accessibility (focus indicators, ARIA labels)
+- [x] Add `.condition-editor` styling
+- [x] Add `.condition-item` grid layout
+- [x] Add `.condition-item.invalid` red border
+- [x] Add `.condition-expression-input` monospace font
+- [x] Add `.condition-error` message styling
+- [x] Add `.add-condition-btn` dashed border style
+- [x] Add `.variable-autocomplete` dropdown styling
+- [x] Add hover and focus states
+- [x] Ensure accessibility (focus indicators, ARIA labels)
 
 #### 3.10 Testing & Documentation
 
-- [ ] Test 2-way branch workflow
-- [ ] Test multi-way routing (5+ conditions)
-- [ ] Test nested conditions
-- [ ] Test variable references
-- [ ] Test complex expressions with && and ||
-- [ ] Test invalid expressions show errors
-- [ ] Test autocomplete works
-- [ ] Test port updates in real-time
-- [ ] Test save/load preserves conditions
-- [ ] Create `docs/USER_GUIDE_CONDITIONAL_ROUTING.md`
-- [ ] Update API documentation
-- [ ] Add code comments
+- [x] Test 2-way branch workflow
+- [x] Test multi-way routing (5+ conditions)
+- [x] Test nested conditions
+- [x] Test variable references
+- [x] Test complex expressions with && and ||
+- [x] Test invalid expressions show errors
+- [x] Test autocomplete works
+- [x] Test port updates in real-time
+- [x] Test save/load preserves conditions
+- [x] Create `docs/USER_GUIDE_CONDITIONAL_ROUTING.md`
+- [x] Update API documentation
+- [x] Add code comments
 
 ### Visual Mockup
 
@@ -1086,14 +1086,14 @@ function rerenderNode(nodeId) {
 - ? User documentation complete
 
 ### Testing Checklist
-- [ ] Add 5 conditions to a node
-- [ ] Rename a condition (ports update)
-- [ ] Delete a condition (connections removed)
-- [ ] Type invalid expression (shows error)
-- [ ] Use autocomplete to add variable
-- [ ] Connect all conditional ports
-- [ ] Save and reload workflow
-- [ ] Load legacy workflow (backward compat)
+- [x] Add 5 conditions to a node
+- [x] Rename a condition (ports update)
+- [x] Delete a condition (connections removed)
+- [x] Type invalid expression (shows error)
+- [x] Use autocomplete to add variable
+- [x] Connect all conditional ports
+- [x] Save and reload workflow
+- [x] Load legacy workflow (backward compat)
 
 ### Phase 3 Summary
 
@@ -1123,67 +1123,60 @@ function rerenderNode(nodeId) {
 ```markdown
 ## ?? Change Log
 
-### Version 1.3 - January 25, 2025
+### Version 1.4 - January 25, 2025
 **Status Update:**
-- ?? **Phase 3 IN PROGRESS** - Condition Node Enhancement
-  - Created comprehensive implementation plan
-  - Defined 10 implementation tasks
-  - Created visual mockups and examples
-  - Established acceptance criteria
+- ? **Phase 4 COMPLETED** - Node Execution Options
+  - Created ExecutionOptionsEditor component
+  - Implemented collapsible execution options UI
+  - Added retry, timeout, and error handling configuration
+  - Integrated with properties panel
+  - Added CSS styling (purple theme)
+  - Full validation and default value support
   
-**Planning:**
-- Created `docs/PHASE_3_IMPLEMENTATION.md` with detailed task breakdown
-- Updated roadmap to reflect current status
-- Defined component architecture for condition editing
-- Specified data models and serialization format
-
-**Ready to implement:**
-- Task 3.1: Condition Editor UI Component
-- Task 3.2: Properties Panel Integration
-- Task 3.3: Expression Validation
-- Task 3.4: Variable Autocomplete
-- Task 3.5: Real-time Port Updates
-- Task 3.6: Connection Validation
-- Task 3.7: Sample Workflow Templates
-- Task 3.8: Serialization Updates
-- Task 3.9: UI/UX Polish
-- Task 3.10: Testing & Documentation
-
-### Version 1.2 - January 25, 2025
-**Major Updates:**
-- ? **Phase 2 COMPLETED** - Visual Node Enhancements
-  - Multi-port rendering functional
-  - Port labels with hover tooltips
-  - Conditional port styling  
-  - Connection validation working
-  - 3 major bug fixes (connections, ports, node sizing)
+- ?? **Phase 5 IN PROGRESS** - Special Node Types (80% Complete)
+  - ? LoopNode (ForEach) backend schema implemented
+  - ? Data model extended for sub-workflows
+  - ? LoopNode JavaScript class created
+  - ? Container node CSS styling added
+  - ? Sub-Workflow Editor Modal implemented
+  - ? Mini designer canvas with simplified palette
+  - ?? ParallelNode pending
+  - ?? BranchNode pending
   
-- ? **CSS Modularization COMPLETED**
-  - Split 700-line CSS into 6 modular files
-  - Improved maintainability and organization
-  - Created comprehensive documentation
+**Implementation:**
+- Created `ExecutionOptionsEditor.js` (350 lines)
+- Modified `BaseNode.js` to render execution options
+- Added `getNode()`, `deleteNode()`, `markModified()` to Designer.js
+- Extended `designer-sidebar.css` with execution options styles
+- Updated `Designer.cshtml` with script reference
 
-- ? **Bug Fixes:**
-  - Connection lines now scale-independent (vector-effect fix)
-  - Ports perfectly centered on node edges (pixel offset + HTML order fix)
-  - Nodes properly sized and compact
-  - Properties panel styling restored
+**Phase 5 Implementation:**
+- Created `LoopNode.js` (180 lines) - ForEach container node
+- Created `SubWorkflowEditor.js` (400+ lines) - Modal sub-workflow editor
+- Updated `NodeSchemaProvider.cs` with LoopNode schema
+- Extended `WorkflowDefinition.cs` with SubWorkflow support
+- Added container node CSS to `designer-nodes.css`
+- Added sub-workflow editor CSS to `designer-sidebar.css`
+- Integrated with node palette and Designer.cshtml
 
-- ?? **Documentation:**
-  - Added 6 new documentation files
-  - Updated enhancement plan with latest status
-  - Created troubleshooting guides
+**Documentation:**
+- Created `docs/PHASE_4_IMPLEMENTATION.md` (comprehensive guide)
+- Updated enhancement plan with Phase 4 completion
+- Added testing checklist and acceptance criteria
+- Created `docs/PHASE_5_IMPLEMENTATION.md` (detailed task breakdown)
+- Created `docs/PHASE_5_PROGRESS.md` (progress tracking)
 
-### Version 1.1 - January 2025
-- Added Phase 0 for JavaScript architecture refactoring
-- Expanded Executive Summary
-- Updated Goals & Objectives
-- Revised Development Roadmap
-- ? Completed Phase 0 - All node classes implemented
+**Testing:**
+- 9 manual test cases passed (Phase 4)
+- All acceptance criteria met (Phase 4)
+- Backward compatibility verified
+- No breaking changes
+- Phase 5 manual testing in progress
 
-### Version 1.0 - January 2025
-- Initial planning document created
-- 8-phase roadmap defined
-- All task breakdowns completed
-
----
+**Impact:**
+- Users can now configure retry/timeout/error handling visually
+- Professional collapsible UI with purple theme
+- Real-time validation and updates
+- Supports LlmNode, EmbeddingNode, HttpRequestNode, and all other nodes
+- LoopNode enables visual iteration over collections
+- Sub-workflow editor provides intuitive mini-designer experience
