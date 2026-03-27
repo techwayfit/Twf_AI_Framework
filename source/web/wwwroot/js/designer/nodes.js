@@ -39,26 +39,78 @@ function onPaletteDragStart(event) {
 }
 
 function addNode(type, category, name, color, x, y) {
-    const node = {
-        id: generateGuid(),
-        name: name,
-        type: type,
-        category: category,
-        parameters: {},
-        position: { x: Math.round(x), y: Math.round(y) },
-        color: color
-    };
-    
-    workflow.nodes.push(node);
- render();
+    if (type === 'ErrorNode') {
+        const existingErrorNode = workflow.nodes.find(n => n.type === 'ErrorNode');
+        if (existingErrorNode) {
+            alert('Only one Error Handler node is allowed per workflow.');
+            selectNode(existingErrorNode.id);
+            return;
+        }
+    }
+
+    let node = null;
+
+    // Prefer new architecture node creation so custom node behaviors
+    // (e.g., TryCatch sub-workflow editors) are available immediately.
+    if (window.designerInstance &&
+        typeof window.designerInstance.addNodeFromRegistry === 'function') {
+        try {
+            node = window.designerInstance.addNodeFromRegistry(
+                type,
+                name,
+                Math.max(0, x),
+                Math.max(0, y),
+                color
+            );
+        } catch (error) {
+            console.warn(`Falling back to legacy node creation for ${type}:`, error);
+        }
+    }
+
+    // Secondary fallback: use registry directly even if designerInstance is not ready yet.
+    if (!node && typeof nodeRegistry !== 'undefined' && typeof nodeRegistry.createNode === 'function') {
+        try {
+            node = nodeRegistry.createNode(type, name, Math.max(0, x), Math.max(0, y));
+            node.color = color || node.color;
+            workflow.nodes.push(node);
+        } catch (error) {
+            console.warn(`Registry creation failed for ${type}:`, error);
+        }
+    }
+
+    // Legacy fallback
+    if (!node) {
+        node = {
+            id: generateGuid(),
+            name: name,
+            type: type,
+            category: category,
+            parameters: {},
+            position: { x: Math.round(x), y: Math.round(y) },
+            color: color
+        };
+        workflow.nodes.push(node);
+    }
+
+    if (type === 'ErrorNode') {
+        workflow.errorNodeId = node.id;
+    }
+
+    render();
     selectNode(node.id);
 }
 
 function deleteNode(nodeId) {
+    const deletedNode = workflow.nodes.find(n => n.id === nodeId);
     workflow.nodes = workflow.nodes.filter(n => n.id !== nodeId);
     workflow.connections = workflow.connections.filter(
         c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
     );
+
+    if (deletedNode?.type === 'ErrorNode' || workflow.errorNodeId === nodeId) {
+        workflow.errorNodeId = null;
+    }
+
     deselectAll();
     render();
 }
@@ -100,12 +152,16 @@ function deselectAll() {
 
 function deleteSelected() {
     if (selectedNodes.size > 0) {
-     if (confirm(`Delete ${selectedNodes.size} selected node(s)?`)) {
+        if (confirm(`Delete ${selectedNodes.size} selected node(s)?`)) {
             selectedNodes.forEach(nodeId => {
+     const deletedNode = workflow.nodes.find(n => n.id === nodeId);
      workflow.nodes = workflow.nodes.filter(n => n.id !== nodeId);
      workflow.connections = workflow.connections.filter(
   c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
    );
+     if (deletedNode?.type === 'ErrorNode' || workflow.errorNodeId === nodeId) {
+         workflow.errorNodeId = null;
+     }
      });
   deselectAll();
     render();

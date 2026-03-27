@@ -2,7 +2,7 @@
 // Workflow Designer - Initialization & Data Loading
 // ???????????????????????????????????????????????????????????????????????????
 
-async function initializeDesigner(workflowId) {
+async function initializeDesigner(workflowId, initialSubWorkflowId = null) {
     // Load available node types
     await loadAvailableNodes();
     
@@ -10,7 +10,7 @@ async function initializeDesigner(workflowId) {
     await loadNodeSchemas();
     
   // Load workflow
-    await loadWorkflow(workflowId);
+    await loadWorkflow(workflowId, initialSubWorkflowId);
     
     // Setup event listeners
     setupEventListeners();
@@ -38,15 +38,15 @@ async function loadNodeSchemas() {
     }
 }
 
-async function loadWorkflow(workflowId) {
+async function loadWorkflow(workflowId, initialSubWorkflowId = null) {
     try {
         const response = await fetch(`/Workflow/GetWorkflow/${workflowId}`);
-        workflow = await response.json();
-        document.getElementById('workflow-name').textContent = workflow.name;
-        
-        // Initialize variables if not present
-        if (!workflow.variables) {
-            workflow.variables = {};
+        const loadedWorkflow = await response.json();
+        setRootWorkflowData(loadedWorkflow);
+        setActiveWorkflowContext('main', null, { syncUrl: false });
+
+        if (initialSubWorkflowId) {
+            setActiveWorkflowContext('sub', initialSubWorkflowId, { syncUrl: false });
         }
   
         renderVariablesList();
@@ -57,12 +57,13 @@ async function loadWorkflow(workflowId) {
 
 async function saveWorkflow() {
     try {
+        const workflowToSave = window.rootWorkflow || workflow;
         const response = await fetch('/Workflow/SaveWorkflow', {
           method: 'POST',
      headers: {
         'Content-Type': 'application/json',
           },
-      body: JSON.stringify(workflow)
+      body: JSON.stringify(workflowToSave)
         });
      
       const result = await response.json();

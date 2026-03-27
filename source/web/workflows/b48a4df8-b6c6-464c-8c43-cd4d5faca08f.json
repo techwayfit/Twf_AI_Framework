@@ -3,7 +3,7 @@
   "Name": "New Workflow",
   "Description": "Test",
   "CreatedAt": "2026-03-24T08:05:24.0612054Z",
-  "UpdatedAt": "2026-03-26T14:40:55.8693001Z",
+  "UpdatedAt": "2026-03-27T04:02:10.519236Z",
   "Nodes": [
     {
       "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
@@ -11,7 +11,14 @@
       "Type": "LlmNode",
       "Category": "AI",
       "Parameters": {
-        "apiUrl": "{{api_url}}"
+        "provider": "openai",
+        "model": "gpt-4o",
+        "apiKey": "",
+        "apiUrl": "{{api_url}}",
+        "systemPrompt": "",
+        "temperature": 0.7,
+        "maxTokens": 1000,
+        "maintainHistory": false
       },
       "Position": {
         "X": 259,
@@ -27,7 +34,11 @@
       "Name": "Filter",
       "Type": "FilterNode",
       "Category": "Data",
-      "Parameters": {},
+      "Parameters": {
+        "throwOnFail": true,
+        "requiredKeys": "",
+        "maxLengths": {}
+      },
       "Position": {
         "X": 941,
         "Y": 145
@@ -42,7 +53,9 @@
       "Name": "Condition",
       "Type": "ConditionNode",
       "Category": "Control",
-      "Parameters": {},
+      "Parameters": {
+        "condition": ""
+      },
       "Position": {
         "X": 584,
         "Y": 91
@@ -57,7 +70,11 @@
       "Name": "Embedding",
       "Type": "EmbeddingNode",
       "Category": "AI",
-      "Parameters": {},
+      "Parameters": {
+        "model": "text-embedding-3-small",
+        "apiKey": "",
+        "apiUrl": "https://api.openai.com/v1/embeddings"
+      },
       "Position": {
         "X": 649,
         "Y": 411
@@ -72,7 +89,13 @@
       "Name": "Branch (Switch)",
       "Type": "BranchNode",
       "Category": "Control",
-      "Parameters": {},
+      "Parameters": {
+        "valueKey": "",
+        "case1Value": "",
+        "case2Value": "",
+        "case3Value": "",
+        "caseSensitive": false
+      },
       "Position": {
         "X": 534,
         "Y": 577
@@ -87,7 +110,13 @@
       "Name": "Transform",
       "Type": "TransformNode",
       "Category": "Data",
-      "Parameters": {},
+      "Parameters": {
+        "transformType": "custom",
+        "fromKey": "",
+        "toKey": "",
+        "keys": "",
+        "separator": " "
+      },
       "Position": {
         "X": 910,
         "Y": 550
@@ -102,7 +131,10 @@
       "Name": "End",
       "Type": "EndNode",
       "Category": "Control",
-      "Parameters": {},
+      "Parameters": {
+        "status": "success",
+        "outputKey": ""
+      },
       "Position": {
         "X": 1208,
         "Y": 163
@@ -117,7 +149,10 @@
       "Name": "End",
       "Type": "EndNode",
       "Category": "Control",
-      "Parameters": {},
+      "Parameters": {
+        "status": "success",
+        "outputKey": ""
+      },
       "Position": {
         "X": 991,
         "Y": 538
@@ -132,7 +167,9 @@
       "Name": "Start",
       "Type": "StartNode",
       "Category": "Control",
-      "Parameters": {},
+      "Parameters": {
+        "description": ""
+      },
       "Position": {
         "X": 78,
         "Y": 69
@@ -154,7 +191,11 @@
       },
       "Color": "#f39c12",
       "ExecutionOptions": null,
-      "SubWorkflow": null,
+      "SubWorkflow": {
+        "Nodes": [],
+        "Connections": [],
+        "Variables": {}
+      },
       "IsExpanded": false
     }
   ],
@@ -247,6 +288,18 @@
   "Variables": {
     "api_url": "https://www.google.com"
   },
+  "ErrorNodeId": null,
+  "SubWorkflows": [
+    {
+      "Id": "8b773938-a787-4c0e-b450-9efc25ba5d05",
+      "Name": "Sub Workflow",
+      "Description": "",
+      "Nodes": [],
+      "Connections": [],
+      "Variables": {},
+      "ErrorNodeId": null
+    }
+  ],
   "Metadata": {
     "Author": null,
     "Tags": [],

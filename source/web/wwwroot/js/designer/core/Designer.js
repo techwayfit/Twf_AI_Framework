@@ -30,15 +30,34 @@ class WorkflowDesigner {
    console.log('New architecture initialized');
     }
 
+    /**
+     * Get workflow reference while supporting both legacy global lexical state
+     * and window-bound state used by the new architecture.
+     * @returns {object|null}
+     */
+    _getWorkflow() {
+        if (window.workflow && window.workflow.nodes) {
+            return window.workflow;
+        }
+
+        if (typeof workflow !== 'undefined' && workflow && workflow.nodes) {
+            window.workflow = workflow;
+            return workflow;
+        }
+
+        return null;
+    }
+
   /**
      * Convert plain workflow node objects to class instances
      */
     convertWorkflowNodesToClasses() {
-     if (!window.workflow || !window.workflow.nodes) return;
+        const wf = this._getWorkflow();
+        if (!wf || !wf.nodes) return;
         
         const convertedNodes = [];
         
-        window.workflow.nodes.forEach(nodeData => {
+        wf.nodes.forEach(nodeData => {
     // Check if it's already a class instance
   if (nodeData.constructor && nodeData.constructor !== Object) {
      convertedNodes.push(nodeData);
@@ -56,7 +75,8 @@ class WorkflowDesigner {
           }
         });
      
-        window.workflow.nodes = convertedNodes;
+        wf.nodes = convertedNodes;
+        window.workflow = wf;
       console.log(`Converted ${convertedNodes.length} nodes to class instances`);
   }
 
@@ -70,12 +90,18 @@ class WorkflowDesigner {
      * @returns {BaseNode}
      */
     addNodeFromRegistry(type, name, x, y, color) {
+        const wf = this._getWorkflow();
+        if (!wf) {
+            throw new Error('Workflow is not loaded');
+        }
+
         const node = nodeRegistry.createNode(type, name, x, y);
         if (color) {
   node.color = color;
         }
         
-window.workflow.nodes.push(node);
+        wf.nodes.push(node);
+        window.workflow = wf;
       return node;
  }
 
@@ -86,7 +112,10 @@ window.workflow.nodes.push(node);
      * @param {any} value
      */
     updateNodeProperty(nodeId, property, value) {
-        const node = window.workflow.nodes.find(n => n.id === nodeId);
+        const wf = this._getWorkflow();
+        if (!wf) return;
+
+        const node = wf.nodes.find(n => n.id === nodeId);
         if (node) {
             node[property] = value;
       if (typeof render === 'function') {
@@ -102,7 +131,10 @@ window.workflow.nodes.push(node);
      * @param {any} value
      */
     updateNodeParameter(nodeId, paramName, value) {
-        const node = window.workflow.nodes.find(n => n.id === nodeId);
+        const wf = this._getWorkflow();
+        if (!wf) return;
+
+        const node = wf.nodes.find(n => n.id === nodeId);
         if (node) {
             if (typeof node.updateParameter === 'function') {
       node.updateParameter(paramName, value);
@@ -122,8 +154,11 @@ window.workflow.nodes.push(node);
      * @param {string} jsonString
      */
     updateNodeParameterJson(nodeId, paramName, jsonString) {
-      const node = window.workflow.nodes.find(n => n.id === nodeId);
-  if (!node) return;
+        const wf = this._getWorkflow();
+        if (!wf) return;
+
+        const node = wf.nodes.find(n => n.id === nodeId);
+        if (!node) return;
 
         try {
        const value = jsonString ? JSON.parse(jsonString) : null;
@@ -146,7 +181,8 @@ window.workflow.nodes.push(node);
      * @returns {BaseNode|null}
      */
     getNode(nodeId) {
-        return window.workflow?.nodes.find(n => n.id === nodeId) || null;
+        const wf = this._getWorkflow();
+        return wf?.nodes.find(n => n.id === nodeId) || null;
     }
 
     /**
@@ -154,21 +190,26 @@ window.workflow.nodes.push(node);
      * @param {string} nodeId
      */
     deleteNode(nodeId) {
-        if (!window.workflow) return;
+        const wf = this._getWorkflow();
+        if (!wf) return;
+
+        const deletedNode = wf.nodes.find(n => n.id === nodeId);
 
         // Remove node
-        window.workflow.nodes = window.workflow.nodes.filter(n => n.id !== nodeId);
+        wf.nodes = wf.nodes.filter(n => n.id !== nodeId);
         
         // Remove connections
-        window.workflow.connections = window.workflow.connections.filter(
-  c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId
-      );
+        wf.connections = wf.connections.filter(c => c.sourceNodeId !== nodeId && c.targetNodeId !== nodeId);
+        if (deletedNode?.type === 'ErrorNode' || wf.errorNodeId === nodeId) {
+            wf.errorNodeId = null;
+        }
+        window.workflow = wf;
         
 // Clear selection
         this.selectedNode = null;
         this.selectedNodes.delete(nodeId);
-        window.selectedNode = null;
-   window.selectedNodes.delete(nodeId);
+        if (typeof selectedNode !== 'undefined') selectedNode = null;
+        if (typeof selectedNodes !== 'undefined') selectedNodes.delete(nodeId);
         
         // Re-render
         if (typeof render === 'function') {
@@ -204,12 +245,13 @@ async function initializeNewArchitecture() {
 
 // Hook into existing initialization
 const originalInitializeDesigner = window.initializeDesigner;
-window.initializeDesigner = async function(workflowId) {
+window.initializeDesigner = async function(workflowId, initialSubWorkflowId = null) {
     window.workflowId = workflowId;
+    window.initialSubWorkflowId = initialSubWorkflowId;
     
     // Call original initialization
  if (originalInitializeDesigner && originalInitializeDesigner !== window.initializeDesigner) {
-   await originalInitializeDesigner(workflowId);
+   await originalInitializeDesigner(workflowId, initialSubWorkflowId);
     }
     
 // Then initialize new architecture

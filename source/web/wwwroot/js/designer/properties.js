@@ -6,6 +6,26 @@ function renderProperties() {
     if (!selectedNode) return;
     
     const panel = document.getElementById('properties-content');
+
+    // Auto-upgrade legacy/plain node objects to class instances when possible.
+    if ((typeof selectedNode.renderProperties !== 'function') &&
+        typeof nodeRegistry !== 'undefined' &&
+        nodeRegistry.nodeTypes &&
+        nodeRegistry.nodeTypes.has(selectedNode.type)) {
+        const NodeClass = nodeRegistry.nodeTypes.get(selectedNode.type);
+        if (NodeClass && typeof NodeClass.fromJSON === 'function') {
+            try {
+                const upgraded = NodeClass.fromJSON(selectedNode);
+                const idx = workflow.nodes.findIndex(n => n.id === selectedNode.id);
+                if (idx !== -1) {
+                    workflow.nodes[idx] = upgraded;
+                    selectedNode = upgraded;
+                }
+            } catch (error) {
+                console.warn(`Could not upgrade node ${selectedNode.type} to class instance:`, error);
+            }
+        }
+    }
  
     // Check if node has its own renderProperties method (new architecture)
     if (typeof selectedNode.renderProperties === 'function') {

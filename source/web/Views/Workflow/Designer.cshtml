@@ -55,6 +55,9 @@
                 <button class="btn-toolbar btn-danger" onclick="deleteSelected()">
                     <i class="bi bi-trash-fill"></i> Delete
                 </button>
+                <button id="header-back-main-workflow" class="btn-toolbar" style="display: none;" onclick="openMainWorkflowDesigner()">
+                    <i class="bi bi-arrow-return-left"></i> Main Flow
+                </button>
                 <a href="@Url.Action("Index")" class="btn-toolbar">
                     <i class="bi bi-arrow-left-circle-fill"></i> Back
                 </a>
@@ -94,6 +97,25 @@
                         </div>
                         <div id="variables-list">
                             <!-- Variables will be rendered here -->
+                        </div>
+
+                        <hr />
+
+                        <div class="subworkflows-header">
+                            <h6 style="margin: 0; font-size: 0.9rem; color: #495057;">
+                                <i class="bi bi-diagram-3"></i> Sub Workflows
+                            </h6>
+                            <div class="subworkflows-actions">
+                                <button class="btn-add-var btn-add-subworkflow" onclick="promptCreateSubWorkflow(true)">
+                                    <i class="bi bi-plus-circle"></i> Add
+                                </button>
+                                <button id="btn-back-main-workflow" class="btn-back-main" onclick="openMainWorkflowDesigner()">
+                                    <i class="bi bi-arrow-return-left"></i> Main
+                                </button>
+                            </div>
+                        </div>
+                        <div id="subworkflows-list">
+                            <!-- Sub workflows will be rendered here -->
                         </div>
                     </div>
                 </div>
@@ -165,6 +187,10 @@
 
     <!-- Phase 0: Node Classes - Control -->
     <script src="~/js/designer/nodes/control/ConditionNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/ErrorNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/SubWorkflowNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/ErrorRouteNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/control/TryCatchNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/control/DelayNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/control/MergeNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/control/LogNode.js" asp-append-version="true"></script>
@@ -174,6 +200,7 @@
 
     <!-- Phase 0: Node Classes - Data -->
     <script src="~/js/designer/nodes/data/TransformNode.js" asp-append-version="true"></script>
+    <script src="~/js/designer/nodes/data/DataMapperNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/data/FilterNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/data/ChunkTextNode.js" asp-append-version="true"></script>
     <script src="~/js/designer/nodes/data/MemoryNode.js" asp-append-version="true"></script>
@@ -221,8 +248,9 @@
     <script src="~/js/designer/core/Designer.js?v=20240101-2" asp-append-version="true"></script>
     
     <script>
-            const workflowId = '@Model.Id';
-    initializeDesigner(workflowId);
+    const workflowId = '@Model.Id';
+    const initialSubWorkflowId = '@(ViewBag.InitialSubWorkflowId ?? "")';
+    initializeDesigner(workflowId, initialSubWorkflowId || null);
     </script>
 </body>
 </html>

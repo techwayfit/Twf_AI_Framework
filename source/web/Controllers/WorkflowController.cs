@@ -66,13 +66,23 @@ public class WorkflowController : Controller
         return View(workflow);
     }
 
-    // GET: /Workflow/Designer/5
-    public async Task<IActionResult> Designer(Guid id)
+    // GET: /Workflow/Designer/{id}
+    // GET: /{id}/{subWorkflowId}
+    public async Task<IActionResult> Designer(Guid id, Guid? subWorkflowId = null)
     {
         var workflow = await _repository.GetByIdAsync(id);
         if (workflow == null)
         {
             return NotFound();
+        }
+
+        if (subWorkflowId.HasValue)
+        {
+            var exists = workflow.SubWorkflows.Any(sw => sw.Id == subWorkflowId.Value);
+            if (exists)
+            {
+                ViewBag.InitialSubWorkflowId = subWorkflowId.Value;
+            }
         }
 
         return View(workflow);
@@ -192,7 +202,9 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
    // Control Nodes
     new { type = "StartNode", category = "Control", name = "Start", description = "Workflow entry point (required)", color = "#2ecc71" },
      new { type = "EndNode", category = "Control", name = "End", description = "Workflow exit point", color = "#e74c3c" },
-          new { type = "ConditionNode", category = "Control", name = "Condition", description = "Evaluate conditions and write boolean flags", color = "#F5A623" },
+      new { type = "ErrorNode", category = "Control", name = "Error Handler", description = "Workflow-level error entry point (max 1 per workflow)", color = "#e74c3c" },
+       new { type = "ConditionNode", category = "Control", name = "Condition", description = "Evaluate conditions and write boolean flags", color = "#F5A623" },
+       new { type = "SubWorkflowNode", category = "Control", name = "Sub Workflow", description = "Execute a child workflow and branch success/error", color = "#8e44ad" },
        new { type = "DelayNode", category = "Control", name = "Delay", description = "Add delay for rate limiting", color = "#F5A623" },
          new { type = "MergeNode", category = "Control", name = "Merge", description = "Merge multiple keys into one", color = "#F5A623" },
     new { type = "LogNode", category = "Control", name = "Log", description = "Log workflow state for debugging", color = "#F5A623" },
@@ -200,9 +212,10 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
      // Special Control Nodes (Phase 5: Container Nodes)
         new { type = "LoopNode", category = "Control", name = "Loop (ForEach)", description = "Iterate over collection items", color = "#f39c12" },
   new { type = "ParallelNode", category = "Control", name = "Parallel", description = "Execute multiple branches simultaneously", color = "#9b59b6" },
- new { type = "BranchNode", category = "Control", name = "Branch (Switch)", description = "Route based on value matching", color = "#e67e22" },
+  new { type = "BranchNode", category = "Control", name = "Branch (Switch)", description = "Route based on value matching", color = "#e67e22" },
   // Data Nodes
     new { type = "TransformNode", category = "Data", name = "Transform", description = "Apply custom data transformation", color = "#7ED321" },
+ new { type = "DataMapperNode", category = "Data", name = "Data Mapper", description = "Map output fields/paths to explicit input keys", color = "#7ED321" },
  new { type = "FilterNode", category = "Data", name = "Filter", description = "Validate data with conditions", color = "#7ED321" },
             new { type = "ChunkTextNode", category = "Data", name = "Chunk Text", description = "Split text into chunks for RAG", color = "#7ED321" },
      new { type = "MemoryNode", category = "Data", name = "Memory", description = "Read/write from global memory", color = "#7ED321" },

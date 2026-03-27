@@ -5,6 +5,8 @@
  */
 class SubWorkflowEditor {
     static currentContainerNode = null;
+    static currentWorkflowKey = 'subWorkflow';
+    static currentEditorOptions = {};
     static miniDesignerState = null;
     static isDraggingConnection = false;
     static connectionStart = null;
@@ -13,8 +15,10 @@ class SubWorkflowEditor {
     /**
      * Open the sub-workflow editor modal
      * @param {string} containerNodeId - ID of the container node (LoopNode, ParallelNode, etc.)
+     * @param {string} workflowKey - Property name on node that stores workflow data
+     * @param {object} options - UI options ({ title, hint })
      */
-    static openEditor(containerNodeId) {
+    static openEditor(containerNodeId, workflowKey = 'subWorkflow', options = {}) {
         const node = window.designerInstance?.getNode(containerNodeId);
         if (!node) {
      console.error(`Container node ${containerNodeId} not found`);
@@ -22,12 +26,19 @@ class SubWorkflowEditor {
         }
 
         this.currentContainerNode = node;
+        this.currentWorkflowKey = workflowKey;
+        this.currentEditorOptions = options || {};
+
+        if (!node[workflowKey]) {
+            node[workflowKey] = { nodes: [], connections: [], variables: {} };
+        }
         
         // Initialize mini designer state with sub-workflow data
+        const workflowData = node[workflowKey] || {};
    this.miniDesignerState = {
-     nodes: [...(node.subWorkflow?.nodes || [])],
-       connections: [...(node.subWorkflow?.connections || [])],
-variables: { ...(node.subWorkflow?.variables || {}) }
+     nodes: [...(workflowData.nodes || [])],
+       connections: [...(workflowData.connections || [])],
+variables: { ...(workflowData.variables || {}) }
  };
 
         // Create modal
@@ -42,6 +53,12 @@ variables: { ...(node.subWorkflow?.variables || {}) }
      * @param {BaseNode} node - Container node
      */
     static createModal(node) {
+        const modalTitle = this.currentEditorOptions.title || `Edit Sub-Workflow: ${node.name}`;
+        const hint = this.currentEditorOptions.hint ||
+            (node.type === 'LoopNode'
+                ? `Loop variable: <code>{{${node.parameters?.loopItemKey || '__loop_item__'}}}</code>`
+                : 'Edit nested workflow logic');
+
         const modalHtml = `
             <div class="modal fade show" id="sub-workflow-modal" style="display: block;" tabindex="-1">
       <div class="modal-dialog modal-xl modal-fullscreen-lg-down">
@@ -49,18 +66,18 @@ variables: { ...(node.subWorkflow?.variables || {}) }
        <div class="modal-header bg-light">
               <h5 class="modal-title">
         <i class="bi bi-diagram-3"></i> 
-             Edit Sub-Workflow: ${node.name}
+             ${modalTitle}
          </h5>
           <button type="button" class="btn-close" onclick="SubWorkflowEditor.closeEditor()"></button>
           </div>
    <div class="modal-body p-0" style="height: 70vh;">
             <div class="sub-workflow-designer-container">
  <!-- Toolbar -->
-       <div class="sub-workflow-toolbar">
+      <div class="sub-workflow-toolbar">
       <div class="toolbar-section">
        <span class="small text-muted">
              <i class="bi bi-info-circle"></i> 
-        Loop variable: <code>{{${node.parameters?.loopItemKey || '__loop_item__'}}}</code>
+        ${hint}
         </span>
   </div>
    <div class="toolbar-section">
@@ -623,13 +640,13 @@ this.showMiniNodeProperties(node);
   if (!this.currentContainerNode) return;
 
         // Update container node's sub-workflow
-        this.currentContainerNode.subWorkflow = {
+        this.currentContainerNode[this.currentWorkflowKey] = {
   nodes: this.miniDesignerState.nodes,
             connections: this.miniDesignerState.connections,
          variables: this.miniDesignerState.variables
         };
 
-        console.log('Saved sub-workflow:', this.currentContainerNode.subWorkflow);
+        console.log(`Saved nested workflow '${this.currentWorkflowKey}':`, this.currentContainerNode[this.currentWorkflowKey]);
 
    // Close modal
         this.closeEditor();
@@ -658,6 +675,8 @@ this.showMiniNodeProperties(node);
         if (backdrop) backdrop.remove();
 
         this.currentContainerNode = null;
+        this.currentWorkflowKey = 'subWorkflow';
+        this.currentEditorOptions = {};
         this.miniDesignerState = null;
         this.isDraggingConnection = false;
         this.connectionStart = null;
@@ -676,3 +695,6 @@ this.showMiniNodeProperties(node);
  });
     }
 }
+
+// Expose globally for inline event handlers in modal HTML.
+window.SubWorkflowEditor = SubWorkflowEditor;

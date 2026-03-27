@@ -27,6 +27,17 @@ public class WorkflowDefinition
 
     public Dictionary<string, object> Variables { get; set; } = new();
 
+    /// <summary>
+    /// Workflow-level error handler node reference (optional, max one in UI).
+    /// </summary>
+    public Guid? ErrorNodeId { get; set; }
+
+    /// <summary>
+    /// Child workflows that belong to this root workflow.
+    /// Each child workflow can be called from SubWorkflowNode.
+    /// </summary>
+    public List<ChildWorkflowDefinition> SubWorkflows { get; set; } = new();
+
     public WorkflowMetadata Metadata { get; set; } = new();
 }
 
@@ -121,4 +132,26 @@ public class SubWorkflowDefinition
     public List<NodeDefinition> Nodes { get; set; } = new();
     public List<ConnectionDefinition> Connections { get; set; } = new();
     public Dictionary<string, object> Variables { get; set; } = new();
+}
+
+/// <summary>
+/// Defines a reusable child workflow under a root workflow.
+/// </summary>
+public class ChildWorkflowDefinition
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+
+    [Required]
+    [StringLength(200)]
+    public string Name { get; set; } = "Sub Workflow";
+
+    [StringLength(1000)]
+    public string? Description { get; set; }
+
+    public List<NodeDefinition> Nodes { get; set; } = new();
+    public List<ConnectionDefinition> Connections { get; set; } = new();
+    public Dictionary<string, object> Variables { get; set; } = new();
+
+    // Workflow-level error handler node reference (optional, max one in UI).
+    public Guid? ErrorNodeId { get; set; }
 }

@@ -41,7 +41,7 @@ class NodeRenderer {
 
         // Calculate required height based on port count (skip for diamond and circular nodes)
    const maxPorts = Math.max(inputPorts.length, outputPorts.length);
-    if (maxPorts > 1 && !['ConditionNode', 'StartNode', 'EndNode'].includes(node.type)) {
+    if (maxPorts > 1 && !['ConditionNode', 'StartNode', 'EndNode', 'ErrorNode'].includes(node.type)) {
  const requiredHeight = 35 + (maxPorts * 20) + 10; // header + ports + padding
    nodeEl.style.minHeight = `${requiredHeight}px`;
         }
@@ -49,7 +49,7 @@ class NodeRenderer {
         // Build node HTML - special handling for Start/End nodes
  let html = '';
         
- if (node.type === 'StartNode' || node.type === 'EndNode') {
+ if (node.type === 'StartNode' || node.type === 'EndNode' || node.type === 'ErrorNode') {
             // Circular nodes - only show name, no node type
   html = `<div class="node-header">${node.name}</div>`;
         } else {

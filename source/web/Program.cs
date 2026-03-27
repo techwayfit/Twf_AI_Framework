@@ -64,6 +64,11 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllerRoute(
+    name: "workflow_subflow_designer",
+    pattern: "{id:guid}/{subWorkflowId:guid}",
+    defaults: new { controller = "Workflow", action = "Designer" });
+
+app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Workflow}/{action=Index}/{id?}")
     .WithStaticAssets();

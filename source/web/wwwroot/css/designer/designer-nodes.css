@@ -361,7 +361,8 @@ min-width:50px;
 
 /* Hide port labels and containers for circular nodes */
 .workflow-node[data-node-type="StartNode"] .port-label,
-.workflow-node[data-node-type="EndNode"] .port-label {
+.workflow-node[data-node-type="EndNode"] .port-label,
+.workflow-node[data-node-type="ErrorNode"] .port-label {
     display: none;
 }
 
@@ -436,6 +437,46 @@ min-width:50px;
     display:none;
 }
 
+/* Error node styling (workflow-level handler start point) */
+.workflow-node[data-node-type="ErrorNode"] {
+    border-radius: 50%;
+    width: 25px;
+    height: 25px;
+    border-color: #c0392b;
+    border-width: 3px;
+    box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    position: relative;
+    min-width: 50px;
+}
+
+.workflow-node[data-node-type="ErrorNode"] .node-header {
+    background: linear-gradient(135deg, #c0392b 0%, #922b21 100%);
+    font-weight: 600;
+    border-radius: 50%;
+    text-align: center;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    font-size: 14px;
+    line-height: 1.2;
+    word-wrap: break-word;
+}
+
+.workflow-node[data-node-type="ErrorNode"] .port.output {
+    position: absolute;
+    right: -7px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
 /* Parallel node specific styling */
 .workflow-node[data-node-type="ParallelNode"] {
     border-color: #9b59b6;
@@ -495,6 +536,35 @@ min-width:50px;
   color: white;
 }
 
+/* Sub workflow call node styling */
+.workflow-node[data-node-type="SubWorkflowNode"] {
+    border-color: #8e44ad;
+    border-width: 2px;
+}
+
+.workflow-node[data-node-type="SubWorkflowNode"] .node-header {
+    background: linear-gradient(135deg, #8e44ad 0%, #6c3483 100%);
+}
+
+.workflow-node[data-node-type="SubWorkflowNode"] .port[data-port="success"] {
+    background: #27ae60;
+}
+
+.workflow-node[data-node-type="SubWorkflowNode"] .port[data-port="error"] {
+    background: #c0392b;
+}
+
+.workflow-node[data-node-type="SubWorkflowNode"] .port-container[data-port="success"] .port-label {
+    background: #27ae60;
+    color: white;
+}
+
+.workflow-node[data-node-type="SubWorkflowNode"] .port-container[data-port="error"] .port-label {
+    background: #c0392b;
+    color: white;
+}
+
 /* Container nodes (Loop, Parallel) when expanded */
 .workflow-node-container[data-expanded="true"] {
-   
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}

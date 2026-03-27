@@ -176,6 +176,41 @@ new() { Name = "model", Label = "Embedding Model", Type = ParameterType.Select, 
   }
             },
 
+            ["ErrorRouteNode"] = new()
+            {
+                NodeType = "ErrorRouteNode",
+                Description = "Routes to success/error outputs based on error indicators",
+                InputPorts = new()
+                {
+                    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true }
+                },
+                OutputPorts = new()
+                {
+                    new() { Id = "success", Label = "Success", Type = PortType.Conditional, Condition = "success", Description = "No error detected" },
+                    new() { Id = "error", Label = "Error", Type = PortType.Conditional, Condition = "error", Description = "Error detected" }
+                },
+                Capabilities = new()
+                {
+                    SupportsConditionalRouting = true,
+                    SupportsMultipleOutputs = true
+                },
+                ExecutionOptions = new()
+                {
+                    new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
+                },
+                Parameters = new()
+                {
+                    new() { Name = "errorMessageKey", Label = "Error Message Key", Type = ParameterType.Text, Required = false, DefaultValue = "error_message",
+                        Placeholder = "e.g., error_message, last_error",
+                        Description = "WorkflowData key containing an error message" },
+                    new() { Name = "statusCodeKey", Label = "Status Code Key", Type = ParameterType.Text, Required = false, DefaultValue = "http_status_code",
+                        Placeholder = "e.g., http_status_code",
+                        Description = "WorkflowData key containing a status code" },
+                    new() { Name = "errorStatusThreshold", Label = "Error Status Threshold", Type = ParameterType.Number, Required = false, DefaultValue = 400, MinValue = 100, MaxValue = 599,
+                        Description = "Status codes >= threshold are treated as error" }
+                }
+            },
+
             ["DelayNode"] = new()
             {
                 NodeType = "DelayNode",
@@ -291,6 +326,38 @@ new() { Name = "model", Label = "Embedding Model", Type = ParameterType.Select, 
     new() { Name = "keys", Label = "Keys (comma-separated)", Type = ParameterType.Text, Required = false, Placeholder = "For concat: key1, key2, key3" },
 new() { Name = "separator", Label = "Separator", Type = ParameterType.Text, Required = false, DefaultValue = " " }
         }
+            },
+
+            ["DataMapperNode"] = new()
+            {
+                NodeType = "DataMapperNode",
+                Description = "Explicitly maps source fields/paths to target input keys",
+                InputPorts = new()
+                {
+                    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true }
+                },
+                OutputPorts = new()
+                {
+                    new() { Id = "output", Label = "Output", Type = PortType.Data }
+                },
+                Capabilities = new(),
+                ExecutionOptions = new()
+                {
+                    new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
+                },
+                Parameters = new()
+                {
+                    new() { Name = "mappings", Label = "Mappings (JSON)", Type = ParameterType.Json, Required = true,
+                        Placeholder = "{\"prompt\": \"llm_response\", \"customer_id\": \"http_response.data.id\"}",
+                        Description = "Map target keys to source paths. Example: target_key -> source.path" },
+                    new() { Name = "defaultValues", Label = "Default Values (JSON)", Type = ParameterType.Json, Required = false,
+                        Placeholder = "{\"system_prompt\": \"You are a helpful assistant\"}",
+                        Description = "Optional fallback values applied when a source path is missing" },
+                    new() { Name = "throwOnMissing", Label = "Throw on Missing Mapping", Type = ParameterType.Boolean, Required = false, DefaultValue = false,
+                        Description = "If enabled, node fails when a mapped source path is missing and no default exists" },
+                    new() { Name = "removeUnmapped", Label = "Output Only Mapped Keys", Type = ParameterType.Boolean, Required = false, DefaultValue = false,
+                        Description = "If enabled, starts with empty data and writes only mapped/default keys" }
+                }
             },
 
             ["FilterNode"] = new()
@@ -474,6 +541,59 @@ new() { Value = "finished", Label = "Finished" }
     }
             },
 
+            ["ErrorNode"] = new()
+            {
+                NodeType = "ErrorNode",
+                Description = "Workflow-level error entry point. One allowed per workflow.",
+                InputPorts = new(), // No input ports
+                OutputPorts = new()
+                {
+                    new() { Id = "output", Label = "On Error", Type = PortType.Control, Description = "Runs when workflow error handling starts" }
+                },
+                Capabilities = new()
+                {
+                    SupportsMultipleOutputs = false
+                },
+                ExecutionOptions = new(),
+                Parameters = new()
+                {
+                    new() { Name = "description", Label = "Description", Type = ParameterType.Text, Required = false,
+                        Placeholder = "Optional notes about this error handler",
+                        Description = "Use this branch to define error handling behavior" }
+                }
+            },
+
+            ["SubWorkflowNode"] = new()
+            {
+                NodeType = "SubWorkflowNode",
+                Description = "Calls a reusable child workflow and routes success/error outcomes",
+                InputPorts = new()
+                {
+                    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true, Description = "Input data for child workflow" }
+                },
+                OutputPorts = new()
+                {
+                    new() { Id = "success", Label = "Success", Type = PortType.Conditional, Condition = "success", Description = "Child workflow completed successfully" },
+                    new() { Id = "error", Label = "Error", Type = PortType.Conditional, Condition = "error", Description = "Child workflow failed" }
+                },
+                Capabilities = new()
+                {
+                    SupportsSubWorkflow = true,
+                    SupportsConditionalRouting = true,
+                    SupportsMultipleOutputs = true
+                },
+                ExecutionOptions = new()
+                {
+                    new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
+                },
+                Parameters = new()
+                {
+                    new() { Name = "subWorkflowId", Label = "Sub Workflow", Type = ParameterType.Text, Required = true,
+                        Placeholder = "Select from node properties",
+                        Description = "Identifier of the child workflow to execute" }
+                }
+            },
+
         ["LoopNode"] = new()
     {
     NodeType = "LoopNode",
@@ -597,6 +717,38 @@ new() { Name = "case2Value", Label = "Case 2 Value", Type = ParameterType.Text, 
        new() { Name = "caseSensitive", Label = "Case Sensitive", Type = ParameterType.Boolean, Required = false,
   DefaultValue = false,
            Description = "Whether value matching is case-sensitive" }
+     }
+        }
+        ,
+
+       ["TryCatchNode"] = new()
+            {
+       NodeType = "TryCatchNode",
+   Description = "Container node with try/catch sub-workflows",
+     InputPorts = new()
+         {
+    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true, Description = "Input data for try block" }
+       },
+   OutputPorts = new()
+        {
+       new() { Id = "success", Label = "Success", Type = PortType.Conditional, Condition = "success", Description = "Try block succeeds" },
+     new() { Id = "error", Label = "Error", Type = PortType.Conditional, Condition = "error", Description = "Try block fails and catch handles error" }
+   },
+                Capabilities = new()
+             {
+      SupportsConditionalRouting = true,
+      SupportsMultipleOutputs = true,
+      SupportsSubWorkflow = true
+       },
+    ExecutionOptions = new()
+     {
+     new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
+     },
+     Parameters = new()
+              {
+ new() { Name = "rethrowOnCatchFailure", Label = "Rethrow on Catch Failure", Type = ParameterType.Boolean, Required = false,
+  DefaultValue = true,
+           Description = "If enabled, node fails when catch workflow also fails" }
      }
         }
         };
