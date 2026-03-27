@@ -83,10 +83,24 @@ function renderSubWorkflowsList() {
         const nodeCount = Array.isArray(sw.nodes) ? sw.nodes.length : 0;
         const connCount = Array.isArray(sw.connections) ? sw.connections.length : 0;
         const hasErrorHandler = !!sw.errorNodeId || (sw.nodes || []).some(n => n.type === 'ErrorNode');
+        const safeName = escapeHtml(sw.name || 'Sub Workflow');
 
         html += `
             <div class="subworkflow-list-item ${active ? 'active' : ''}" onclick="openSubWorkflowDesigner('${sw.id}')">
-                <div class="subworkflow-name">${sw.name}</div>
+                <div class="subworkflow-row">
+                    <div class="subworkflow-name">${safeName}</div>
+                    <div class="subworkflow-item-actions">
+                        <button class="subworkflow-action-btn" title="Open in new tab" onclick="openSubWorkflowInNewTab('${sw.id}', event)">
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </button>
+                        <button class="subworkflow-action-btn" title="Rename" onclick="renameSubWorkflow('${sw.id}', event)">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                        <button class="subworkflow-action-btn subworkflow-action-btn-danger" title="Delete" onclick="deleteSubWorkflow('${sw.id}', event)">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
                 <div class="subworkflow-meta">${nodeCount} node(s), ${connCount} connection(s)</div>
                 <div class="subworkflow-meta">Error Handler: ${hasErrorHandler ? 'Yes' : 'No'}</div>
             </div>
@@ -151,6 +165,158 @@ function createSubWorkflowByName(name, openAfterCreate = false) {
     }
 
     return child;
+}
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function getSubWorkflowById(subWorkflowId) {
+    const root = getRootWorkflow();
+    if (!root || !Array.isArray(root.subWorkflows)) {
+        return null;
+    }
+
+    return root.subWorkflows.find(sw => sw.id === subWorkflowId) || null;
+}
+
+function getAllWorkflowScopes() {
+    const root = getRootWorkflow();
+    if (!root) {
+        return [];
+    }
+
+    const scopes = [{ workflowId: root.id, workflowName: root.name || 'Main', nodes: root.nodes || [] }];
+    (root.subWorkflows || []).forEach(sw => {
+        scopes.push({ workflowId: sw.id, workflowName: sw.name || 'Sub Workflow', nodes: sw.nodes || [] });
+    });
+    return scopes;
+}
+
+function getSubWorkflowReferences(subWorkflowId) {
+    const references = [];
+    const scopes = getAllWorkflowScopes();
+
+    scopes.forEach(scope => {
+        (scope.nodes || []).forEach(node => {
+            if (node?.type !== 'SubWorkflowNode') {
+                return;
+            }
+
+            const mappedId = node?.parameters?.subWorkflowId || '';
+            if (mappedId === subWorkflowId) {
+                references.push({
+                    workflowId: scope.workflowId,
+                    workflowName: scope.workflowName,
+                    nodeId: node.id,
+                    nodeName: node.name || 'Sub Workflow'
+                });
+            }
+        });
+    });
+
+    return references;
+}
+
+function openSubWorkflowInNewTab(subWorkflowId, event) {
+    event?.stopPropagation();
+    event?.preventDefault();
+
+    if (!getSubWorkflowById(subWorkflowId)) {
+        return;
+    }
+
+    const url = typeof buildSubWorkflowUrl === 'function'
+        ? buildSubWorkflowUrl(subWorkflowId)
+        : window.location.href;
+    window.open(url, '_blank', 'noopener');
+}
+
+function renameSubWorkflow(subWorkflowId, event) {
+    event?.stopPropagation();
+    event?.preventDefault();
+
+    const subWorkflow = getSubWorkflowById(subWorkflowId);
+    if (!subWorkflow) {
+        return;
+    }
+
+    const proposed = prompt('Rename sub workflow:', subWorkflow.name || 'Sub Workflow');
+    if (proposed === null) {
+        return;
+    }
+
+    const cleanName = (proposed || '').trim();
+    if (!cleanName) {
+        alert('Sub workflow name is required.');
+        return;
+    }
+
+    const root = getRootWorkflow();
+    const normalized = cleanName.toLowerCase();
+    const duplicate = (root?.subWorkflows || []).find(sw =>
+        sw.id !== subWorkflowId &&
+        (sw.name || '').trim().toLowerCase() === normalized);
+    if (duplicate) {
+        alert(`Sub workflow "${cleanName}" already exists.`);
+        return;
+    }
+
+    subWorkflow.name = cleanName;
+    renderSubWorkflowsList();
+    updateWorkflowTitle();
+
+    if (typeof saveWorkflow === 'function') {
+        saveWorkflow().catch(error => {
+            console.error('Auto-save failed after sub workflow rename:', error);
+        });
+    }
+}
+
+function deleteSubWorkflow(subWorkflowId, event) {
+    event?.stopPropagation();
+    event?.preventDefault();
+
+    const subWorkflow = getSubWorkflowById(subWorkflowId);
+    if (!subWorkflow) {
+        return;
+    }
+
+    const references = getSubWorkflowReferences(subWorkflowId);
+    if (references.length > 0) {
+        const first = references[0];
+        alert(
+            `Cannot delete "${subWorkflow.name}". It is used by ${references.length} SubWorkflowNode(s).\n\n` +
+            `First reference: workflow "${first.workflowName}", node "${first.nodeName}".`
+        );
+        return;
+    }
+
+    const confirmed = confirm(`Delete sub workflow "${subWorkflow.name}"?\n\nThis action cannot be undone.`);
+    if (!confirmed) {
+        return;
+    }
+
+    const root = getRootWorkflow();
+    root.subWorkflows = (root.subWorkflows || []).filter(sw => sw.id !== subWorkflowId);
+
+    const context = getActiveWorkflowContext();
+    if (context.type === 'sub' && context.subWorkflowId === subWorkflowId) {
+        openMainWorkflowDesigner();
+    } else {
+        renderSubWorkflowsList();
+    }
+
+    if (typeof saveWorkflow === 'function') {
+        saveWorkflow().catch(error => {
+            console.error('Auto-save failed after sub workflow delete:', error);
+        });
+    }
 }
 
 function selectVariable(name) {

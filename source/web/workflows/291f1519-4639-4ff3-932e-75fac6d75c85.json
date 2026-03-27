@@ -3,7 +3,7 @@
   "Name": "New Workflow",
   "Description": null,
   "CreatedAt": "2026-03-27T02:58:33.629338Z",
-  "UpdatedAt": "2026-03-27T03:07:15.787778Z",
+  "UpdatedAt": "2026-03-27T04:39:45.576629Z",
   "Nodes": [
     {
       "Id": "5b046669-46bc-4fcf-9e15-2e19f34423c9",
@@ -32,6 +32,18 @@
   ],
   "Connections": [],
   "Variables": {},
+  "ErrorNodeId": null,
+  "SubWorkflows": [
+    {
+      "Id": "4c5c8652-23c4-4a12-8fcc-e4fab15876a5",
+      "Name": "Sub Workflow",
+      "Description": "",
+      "Nodes": [],
+      "Connections": [],
+      "Variables": {},
+      "ErrorNodeId": null
+    }
+  ],
   "Metadata": {
     "Author": null,
     "Tags": [],

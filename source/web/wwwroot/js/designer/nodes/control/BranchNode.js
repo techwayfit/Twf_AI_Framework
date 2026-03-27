@@ -193,6 +193,12 @@ class BranchNode extends BaseNode {
         // Add case summary
   html += this.renderCaseSummary();
 
+        // Generic upstream/context mapping
+        if (this.supportsInputMapping()) {
+            html += '<hr />';
+            html += this.renderInputMappingSection();
+        }
+
         // Render execution options
   if (schema.executionOptions && schema.executionOptions.length > 0) {
   html += '<hr />';

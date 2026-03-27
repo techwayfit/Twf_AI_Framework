@@ -95,6 +95,12 @@ class LoopNode extends BaseNode {
    html += this.renderParameter(param);
        });
    }
+
+        // Generic upstream/context mapping
+        if (this.supportsInputMapping()) {
+            html += '<hr />';
+            html += this.renderInputMappingSection();
+        }
         
         // Sub-workflow management
         const nodeCount = this.subWorkflow.nodes?.length || 0;

@@ -115,6 +115,9 @@ class SubWorkflowNode extends BaseNode {
                     : 'No sub workflow selected yet.'}
             </div>
 
+            <hr />
+            ${this.renderInputMappingSection()}
+
             <hr class="mt-4" />
             <div class="d-grid gap-2">
                 <button class="btn btn-danger btn-sm" onclick="window.designerInstance.deleteNode('${this.id}')">

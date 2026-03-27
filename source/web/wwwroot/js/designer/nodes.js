@@ -51,7 +51,7 @@ function addNode(type, category, name, color, x, y) {
     let node = null;
 
     // Prefer new architecture node creation so custom node behaviors
-    // (e.g., TryCatch sub-workflow editors) are available immediately.
+    // (e.g., custom property renderers/editors) are available immediately.
     if (window.designerInstance &&
         typeof window.designerInstance.addNodeFromRegistry === 'function') {
         try {

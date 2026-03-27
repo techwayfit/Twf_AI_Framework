@@ -77,6 +77,10 @@ return;
   schema.parameters.forEach(param => {
     html += renderParameterField(param, selectedNode.parameters[param.name]);
     });
+
+    if (supportsLegacyInputMapping(schema)) {
+        html += renderLegacyInputMappingField(selectedNode, schema);
+    }
     
     // Add delete button at the bottom
     html += `
@@ -224,6 +228,91 @@ workflow.variables && Object.keys(workflow.variables).length > 0) {
     }
     
     return fieldHtml;
+}
+
+function supportsLegacyInputMapping(schema) {
+    return Array.isArray(schema?.inputPorts) && schema.inputPorts.length > 0;
+}
+
+function renderLegacyInputMappingField(node, schema) {
+    const inputId = `input-mapping-${node.id}`;
+    const mappingValue = node?.parameters?.inputMapping;
+    const mappingText = formatLegacyJsonForInput(mappingValue);
+    const hasVariables = mappingText.includes('{{');
+    const inputClass = hasVariables ? 'has-variables' : '';
+    const sourceHint = renderLegacyInputSourceHint(node);
+
+    setTimeout(() => {
+        const input = document.getElementById(inputId);
+        if (input) {
+            setupVariableAutocomplete(input, inputId);
+        }
+    }, 0);
+
+    return `
+        <hr />
+        <h6 class="small fw-bold mb-3">
+            <i class="bi bi-arrow-down-square"></i> Data Input
+        </h6>
+        <div class="mb-3">
+            <label class="form-label small fw-bold">Input Mapping (JSON)</label>
+            <textarea id="${inputId}" class="form-control form-control-sm font-monospace ${inputClass}"
+                rows="5"
+                placeholder='{"prompt":"prev.output","tenant":"@context.tenantId"}'
+                onchange="updateNodeParameterJson('inputMapping', this.value)">${mappingText}</textarea>
+            <small class="form-text text-muted">
+                Map this node's logical input fields to upstream output keys or context paths.
+            </small>
+            <small class="form-text text-muted d-block">
+                Example: <code>{"prompt":"prev.output","customerId":"prev.data.id","tenant":"@context.tenantId"}</code>
+            </small>
+            ${sourceHint}
+        </div>
+    `;
+}
+
+function renderLegacyInputSourceHint(node) {
+    if (!workflow || !Array.isArray(workflow.connections)) {
+        return '<small class="form-text text-muted d-block">Use <code>prev.*</code> and <code>@context.*</code> as mapping sources.</small>';
+    }
+
+    const incoming = workflow.connections.filter(c => c.targetNodeId === node.id);
+    if (incoming.length === 0) {
+        return '<small class="form-text text-muted d-block">No upstream node connected yet. After connecting, map from <code>prev.*</code>.</small>';
+    }
+
+    const sourceNames = incoming
+        .map(c => workflow.nodes?.find(n => n.id === c.sourceNodeId)?.name)
+        .filter(Boolean);
+    const uniqueSourceNames = [...new Set(sourceNames)];
+    const namesText = uniqueSourceNames.map(name => `<code>${escapeLegacyHtml(name)}</code>`).join(', ');
+
+    return `<small class="form-text text-muted d-block">Upstream source node(s): ${namesText}. Use <code>prev.*</code> and <code>@context.*</code>.</small>`;
+}
+
+function formatLegacyJsonForInput(value) {
+    if (value === undefined || value === null || value === '') {
+        return '';
+    }
+
+    if (typeof value === 'string') {
+        return value;
+    }
+
+    try {
+        return JSON.stringify(value, null, 2);
+    } catch (error) {
+        return '';
+    }
+}
+
+function escapeLegacyHtml(text) {
+    return String(text)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 function updateNodeParameter(paramName, value) {

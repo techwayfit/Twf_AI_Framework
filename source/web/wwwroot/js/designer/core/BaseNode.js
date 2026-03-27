@@ -121,6 +121,12 @@ const errors = [];
     });
     }
 
+        // Generic data input mapping for nodes with input ports.
+        if (this.supportsInputMapping()) {
+            html += '<hr />';
+            html += this.renderInputMappingSection();
+        }
+
         // Render execution options (Phase 4)
         if (schema.executionOptions && schema.executionOptions.length > 0) {
        html += '<hr />';
@@ -281,6 +287,116 @@ ${param.label} ${requiredLabel}
         
         return fieldHtml;
 }
+
+    /**
+     * Whether this node can expose generic input mapping.
+     * @returns {boolean}
+     */
+    supportsInputMapping() {
+        const inputPorts = this.getInputPorts();
+        return Array.isArray(inputPorts) && inputPorts.length > 0;
+    }
+
+    /**
+     * Render the generic input mapping editor section.
+     * @returns {string}
+     */
+    renderInputMappingSection() {
+        const inputId = `input-mapping-${this.id}`;
+        const currentValue = this.parameters.inputMapping;
+        const mappingText = this.formatJsonParameter(currentValue);
+        const hasVariables = mappingText.includes('{{');
+        const inputClass = hasVariables ? 'has-variables' : '';
+        const sourceHint = this.renderInputSourceHint();
+
+        setTimeout(() => {
+            const input = document.getElementById(inputId);
+            if (input) {
+                setupVariableAutocomplete(input, inputId);
+            }
+        }, 0);
+
+        return `
+            <h6 class="small fw-bold mb-3">
+                <i class="bi bi-arrow-down-square"></i> Data Input
+            </h6>
+            <div class="mb-3">
+                <label class="form-label small fw-bold">Input Mapping (JSON)</label>
+                <textarea id="${inputId}"
+                    class="form-control form-control-sm font-monospace ${inputClass}"
+                    rows="5"
+                    placeholder='{"prompt":"prev.output","tenant":"@context.tenantId"}'
+                    onchange="window.designerInstance.updateNodeParameterJson('${this.id}', 'inputMapping', this.value)">${mappingText}</textarea>
+                <small class="form-text text-muted">
+                    Map this node's logical input fields to upstream output keys or context paths.
+                </small>
+                <small class="form-text text-muted d-block">
+                    Example: <code>{"prompt":"prev.output","customerId":"prev.data.id","tenant":"@context.tenantId"}</code>
+                </small>
+                ${sourceHint}
+            </div>
+        `;
+    }
+
+    /**
+     * Render source hint for input mapping.
+     * @returns {string}
+     */
+    renderInputSourceHint() {
+        if (!workflow || !Array.isArray(workflow.connections)) {
+            return '<small class="form-text text-muted d-block">Use <code>prev.*</code> for upstream data and <code>@context.*</code> for context object values.</small>';
+        }
+
+        const incoming = workflow.connections.filter(c => c.targetNodeId === this.id);
+        if (incoming.length === 0) {
+            return '<small class="form-text text-muted d-block">No upstream node connected yet. After connecting, map from <code>prev.*</code>.</small>';
+        }
+
+        const sourceNames = incoming
+            .map(c => workflow.nodes?.find(n => n.id === c.sourceNodeId)?.name)
+            .filter(Boolean);
+        const uniqueSourceNames = [...new Set(sourceNames)];
+        const sourceNodesText = uniqueSourceNames
+            .map(name => `<code>${this.escapeHtml(name)}</code>`)
+            .join(', ');
+
+        return `<small class="form-text text-muted d-block">Upstream source node(s): ${sourceNodesText}. Use <code>prev.*</code> and <code>@context.*</code>.</small>`;
+    }
+
+    /**
+     * Format object/string JSON parameter for textarea rendering.
+     * @param {any} value
+     * @returns {string}
+     */
+    formatJsonParameter(value) {
+        if (value === undefined || value === null || value === '') {
+            return '';
+        }
+
+        if (typeof value === 'string') {
+            return value;
+        }
+
+        try {
+            return JSON.stringify(value, null, 2);
+        } catch (error) {
+            return '';
+        }
+    }
+
+    /**
+     * Escape text for HTML rendering.
+     * @param {string} text
+     * @returns {string}
+     */
+    escapeHtml(text) {
+        return String(text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
 
     /**
      * Update parameter value

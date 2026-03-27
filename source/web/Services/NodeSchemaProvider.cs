@@ -719,38 +719,6 @@ new() { Name = "case2Value", Label = "Case 2 Value", Type = ParameterType.Text, 
            Description = "Whether value matching is case-sensitive" }
      }
         }
-        ,
-
-       ["TryCatchNode"] = new()
-            {
-       NodeType = "TryCatchNode",
-   Description = "Container node with try/catch sub-workflows",
-     InputPorts = new()
-         {
-    new() { Id = "input", Label = "Input", Type = PortType.Data, Required = true, Description = "Input data for try block" }
-       },
-   OutputPorts = new()
-        {
-       new() { Id = "success", Label = "Success", Type = PortType.Conditional, Condition = "success", Description = "Try block succeeds" },
-     new() { Id = "error", Label = "Error", Type = PortType.Conditional, Condition = "error", Description = "Try block fails and catch handles error" }
-   },
-                Capabilities = new()
-             {
-      SupportsConditionalRouting = true,
-      SupportsMultipleOutputs = true,
-      SupportsSubWorkflow = true
-       },
-    ExecutionOptions = new()
-     {
-     new() { Name = "continueOnError", Label = "Continue on Error", Type = ParameterType.Boolean, DefaultValue = false }
-     },
-     Parameters = new()
-              {
- new() { Name = "rethrowOnCatchFailure", Label = "Rethrow on Catch Failure", Type = ParameterType.Boolean, Required = false,
-  DefaultValue = true,
-           Description = "If enabled, node fails when catch workflow also fails" }
-     }
-        }
         };
     }
 }
