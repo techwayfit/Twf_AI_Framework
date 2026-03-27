@@ -53,3 +53,6 @@ CodeCoverage/
 TestResult.xml
 nunit-*.xml
 /.vs
+
+# Local configuration files (keep sensitive data out of source control)
+appsettings.local.json
