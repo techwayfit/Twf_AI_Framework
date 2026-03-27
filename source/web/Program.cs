@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TwfAiFramework.Web.Data;
 using TwfAiFramework.Web.Repositories;
+using TwfAiFramework.Web.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,6 +12,8 @@ builder.Services.AddControllersWithViews()
         // Serialize enums as strings instead of integers
         options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
     });
+
+builder.Services.AddScoped<WorkflowDefinitionRunner>();
 
 // Configure workflow storage - choose between JSON file or SQLite
 var useDatabase = builder.Configuration.GetValue<bool>("UseDatabase", false);

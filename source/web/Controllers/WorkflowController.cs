@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using TwfAiFramework.Core;
 using TwfAiFramework.Web.Models;
 using TwfAiFramework.Web.Repositories;
 using TwfAiFramework.Web.Services;
@@ -8,12 +9,17 @@ namespace TwfAiFramework.Web.Controllers;
 public class WorkflowController : Controller
 {
     private readonly IWorkflowRepository _repository;
+    private readonly WorkflowDefinitionRunner _runner;
     private readonly ILogger<WorkflowController> _logger;
 
-    public WorkflowController(IWorkflowRepository repository, ILogger<WorkflowController> logger)
+    public WorkflowController(
+        IWorkflowRepository repository,
+        WorkflowDefinitionRunner runner,
+        ILogger<WorkflowController> logger)
     {
         _repository = repository;
-        _logger = logger;
+        _runner     = runner;
+        _logger     = logger;
     }
 
     // GET: /Workflow
@@ -247,5 +253,39 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
     {
         var schemas = NodeSchemaProvider.GetAllSchemas();
         return Json(schemas);
+    }
+
+    // ─── Workflow Execution ───────────────────────────────────────────────────
+
+    // POST: /Workflow/Run/{id}
+    // Body (optional JSON): { "initialData": { "key": "value" } }
+    //
+    // Loads the saved WorkflowDefinition and runs it through the core engine.
+    // Returns a WorkflowRunResult with success/failure, output data, and error details.
+    [HttpPost]
+    public async Task<IActionResult> Run(Guid id, [FromBody] WorkflowRunRequest? request = null)
+    {
+        var workflow = await _repository.GetByIdAsync(id);
+        if (workflow is null)
+            return NotFound(new { error = $"Workflow {id} not found." });
+
+        var initialData = new WorkflowData();
+        if (request?.InitialData is { Count: > 0 } seed)
+        {
+            foreach (var (k, v) in seed)
+                initialData.Set(k, v);
+        }
+
+        try
+        {
+            var result = await _runner.RunAsync(workflow, initialData);
+            var status = result.IsSuccess ? 200 : 422;
+            return StatusCode(status, result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error running workflow {WorkflowId}", id);
+            return StatusCode(500, new { error = ex.Message });
+        }
     }
 }
