@@ -53,14 +53,18 @@ nodesLayer.appendChild(existingRect);
    nodeEl.classList.add('node-condition');
       }
    
-  // Node drag handlers
-        nodeEl.addEventListener('mousedown', (e) => onNodeMouseDown(e, node));
-   
+  // Node drag handlers (events.js may not be loaded in read-only contexts like the runner)
+        if (typeof onNodeMouseDown === 'function') {
+            nodeEl.addEventListener('mousedown', (e) => onNodeMouseDown(e, node));
+        }
+
         // Port connection handlers
         const ports = nodeEl.querySelectorAll('.port');
-        ports.forEach(port => {
-      port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
-   });
+        if (typeof onPortMouseDown === 'function') {
+            ports.forEach(port => {
+                port.addEventListener('mousedown', (e) => onPortMouseDown(e, node));
+            });
+        }
       
    nodesLayer.appendChild(nodeEl);
     });

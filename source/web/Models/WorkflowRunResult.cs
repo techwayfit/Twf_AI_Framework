@@ -37,7 +37,7 @@ public sealed class WorkflowRunResult
 }
 
 /// <summary>
-/// Optional request body for POST /Workflow/Run/{id}.
+/// Optional request body for POST /Workflow/Run/{id} and POST /Workflow/RunStream/{id}.
 /// Lets callers seed initial WorkflowData values before execution starts.
 /// </summary>
 public sealed class WorkflowRunRequest
@@ -47,4 +47,24 @@ public sealed class WorkflowRunRequest
     /// Example: { "user_message": "Hello!", "language": "English" }
     /// </summary>
     public Dictionary<string, object?> InitialData { get; set; } = new();
+}
+
+/// <summary>
+/// Emitted by <see cref="TwfAiFramework.Web.Services.WorkflowDefinitionRunner"/> after
+/// each node starts or finishes executing. Serialised as a Server-Sent Event payload for
+/// the Runner UI.
+/// </summary>
+public sealed class NodeStepEvent
+{
+    /// <summary>"node_start" | "node_done" | "node_error" | "workflow_done" | "workflow_error"</summary>
+    public string EventType { get; init; } = string.Empty;
+    public Guid NodeId { get; init; }
+    public string NodeName { get; init; } = string.Empty;
+    public string NodeType { get; init; } = string.Empty;
+    /// <summary>Snapshot of WorkflowData BEFORE the node executed.</summary>
+    public Dictionary<string, object?> InputData { get; init; } = new();
+    /// <summary>Snapshot of WorkflowData AFTER the node executed (empty for node_start).</summary>
+    public Dictionary<string, object?> OutputData { get; init; } = new();
+    public string? ErrorMessage { get; init; }
+    public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
 }

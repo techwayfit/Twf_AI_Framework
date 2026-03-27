@@ -3,21 +3,108 @@
   "Name": "New Workflow",
   "Description": null,
   "CreatedAt": "2026-03-27T02:58:33.629338Z",
-  "UpdatedAt": "2026-03-27T04:39:45.576629Z",
+  "UpdatedAt": "2026-03-27T07:31:05.431716Z",
   "Nodes": [
     {
-      "Id": "5b046669-46bc-4fcf-9e15-2e19f34423c9",
-      "Name": "Try Catch",
-      "Type": "TryCatchNode",
+      "Id": "959de239-0b29-4efe-9499-f778e7f3d906",
+      "Name": "Start",
+      "Type": "StartNode",
       "Category": "Control",
       "Parameters": {
-        "rethrowOnCatchFailure": true
+        "description": ""
       },
       "Position": {
-        "X": 231,
-        "Y": 138
+        "X": 160,
+        "Y": 264
       },
-      "Color": "#d35400",
+      "Color": "#2ecc71",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "303b1157-226e-4871-b77c-2e09c8aaba3d",
+      "Name": "End",
+      "Type": "EndNode",
+      "Category": "Control",
+      "Parameters": {
+        "status": "success",
+        "outputKey": ""
+      },
+      "Position": {
+        "X": 1123,
+        "Y": 301
+      },
+      "Color": "#e74c3c",
+      "ExecutionOptions": null,
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "605ff485-5c24-435b-af85-c308339f2ec8",
+      "Name": "Condition",
+      "Type": "ConditionNode",
+      "Category": "Control",
+      "Parameters": {
+        "condition": "{{number}} \u003E 4"
+      },
+      "Position": {
+        "X": 601,
+        "Y": 60
+      },
+      "Color": "#F5A623",
+      "ExecutionOptions": {
+        "MaxRetries": 0,
+        "RetryDelayMs": 1000,
+        "TimeoutMs": null,
+        "ContinueOnError": false,
+        "RunCondition": null,
+        "FallbackData": null
+      },
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "34624fc7-a764-4435-90be-307bc4bb4fa3",
+      "Name": "Log",
+      "Type": "LogNode",
+      "Category": "Control",
+      "Parameters": {
+        "label": "",
+        "keysToLog": "",
+        "logLevel": "Information"
+      },
+      "Position": {
+        "X": 389,
+        "Y": 427
+      },
+      "Color": "#F5A623",
+      "ExecutionOptions": {
+        "MaxRetries": 0,
+        "RetryDelayMs": 1000,
+        "TimeoutMs": null,
+        "ContinueOnError": false,
+        "RunCondition": null,
+        "FallbackData": null
+      },
+      "SubWorkflow": null,
+      "IsExpanded": false
+    },
+    {
+      "Id": "8e392ee3-2833-4370-81b2-d047b41f7ace",
+      "Name": "Log",
+      "Type": "LogNode",
+      "Category": "Control",
+      "Parameters": {
+        "label": "",
+        "keysToLog": "",
+        "logLevel": "Information"
+      },
+      "Position": {
+        "X": 862,
+        "Y": 214
+      },
+      "Color": "#F5A623",
       "ExecutionOptions": {
         "MaxRetries": 0,
         "RetryDelayMs": 1000,
@@ -30,8 +117,46 @@
       "IsExpanded": false
     }
   ],
-  "Connections": [],
-  "Variables": {},
+  "Connections": [
+    {
+      "Id": "2374f9bf-d0f2-4366-8251-1f9898977f74",
+      "SourceNodeId": "959de239-0b29-4efe-9499-f778e7f3d906",
+      "SourcePort": "output",
+      "TargetNodeId": "605ff485-5c24-435b-af85-c308339f2ec8",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "c35115d0-c73f-479d-ba9c-6a188422d0db",
+      "SourceNodeId": "605ff485-5c24-435b-af85-c308339f2ec8",
+      "SourcePort": "success",
+      "TargetNodeId": "34624fc7-a764-4435-90be-307bc4bb4fa3",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "653c665b-5628-42e8-a0b5-976e9f69af37",
+      "SourceNodeId": "605ff485-5c24-435b-af85-c308339f2ec8",
+      "SourcePort": "failure",
+      "TargetNodeId": "8e392ee3-2833-4370-81b2-d047b41f7ace",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "36710075-2bd6-40c6-a8af-2ac715734596",
+      "SourceNodeId": "34624fc7-a764-4435-90be-307bc4bb4fa3",
+      "SourcePort": "output",
+      "TargetNodeId": "303b1157-226e-4871-b77c-2e09c8aaba3d",
+      "TargetPort": "input"
+    },
+    {
+      "Id": "6e0da9ea-d105-4298-b50b-152fc5a03c11",
+      "SourceNodeId": "8e392ee3-2833-4370-81b2-d047b41f7ace",
+      "SourcePort": "output",
+      "TargetNodeId": "303b1157-226e-4871-b77c-2e09c8aaba3d",
+      "TargetPort": "input"
+    }
+  ],
+  "Variables": {
+    "number": "5"
+  },
   "ErrorNodeId": null,
   "SubWorkflows": [
     {

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using TwfAiFramework.Core;
 using TwfAiFramework.Web.Models;
@@ -256,6 +257,73 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
     }
 
     // ─── Workflow Execution ───────────────────────────────────────────────────
+
+    // GET: /Workflow/Runner/{id}
+    public async Task<IActionResult> Runner(Guid id)
+    {
+        var workflow = await _repository.GetByIdAsync(id);
+        if (workflow is null) return NotFound();
+        return View(workflow);
+    }
+
+    // POST: /Workflow/RunStream/{id}
+    // Streams per-node execution events as Server-Sent Events (text/event-stream).
+    [HttpPost]
+    public async Task RunStream(Guid id, [FromBody] WorkflowRunRequest? request = null)
+    {
+        var workflow = await _repository.GetByIdAsync(id);
+        if (workflow is null)
+        {
+            Response.StatusCode = 404;
+            return;
+        }
+
+        Response.Headers["Content-Type"]      = "text/event-stream";
+        Response.Headers["Cache-Control"]     = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no"; // disable Nginx proxy buffering
+
+        var ct = HttpContext.RequestAborted;
+
+        var initialData = new WorkflowData();
+        if (request?.InitialData is { Count: > 0 } seed)
+        {
+            foreach (var (k, v) in seed)
+                initialData.Set(k, v);
+        }
+
+        async Task WriteEvent(string eventName, object payload)
+        {
+            if (ct.IsCancellationRequested) return;
+            var json = JsonSerializer.Serialize(payload);
+            await Response.WriteAsync($"event: {eventName}\ndata: {json}\n\n", ct);
+            await Response.Body.FlushAsync(ct);
+        }
+
+        try
+        {
+            var result = await _runner.RunWithCallbackAsync(
+                workflow,
+                initialData,
+                step => WriteEvent(step.EventType, step));
+
+            var finalEvent = result.IsSuccess ? "workflow_done" : "workflow_error";
+            await WriteEvent(finalEvent, result);
+        }
+        catch (OperationCanceledException)
+        {
+            // Client disconnected — nothing to emit
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unhandled error streaming workflow {WorkflowId}", id);
+            try
+            {
+                await WriteEvent("workflow_error",
+                    WorkflowRunResult.Failure(workflow.Name, new WorkflowData(), ex.Message, null));
+            }
+            catch { /* response may already be gone */ }
+        }
+    }
 
     // POST: /Workflow/Run/{id}
     // Body (optional JSON): { "initialData": { "key": "value" } }

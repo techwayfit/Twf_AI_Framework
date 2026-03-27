@@ -35,9 +35,14 @@ public sealed class WorkflowDefinitionRunner
 
     // ─── Public API ───────────────────────────────────────────────────────────
 
-    public async Task<WorkflowRunResult> RunAsync(
+    /// <summary>
+    /// Execute the workflow and fire <paramref name="onStep"/> before and after each node.
+    /// Use this overload when streaming real-time progress to a UI (e.g. Server-Sent Events).
+    /// </summary>
+    public async Task<WorkflowRunResult> RunWithCallbackAsync(
         WorkflowDefinition definition,
-        WorkflowData? initialData = null)
+        WorkflowData? initialData,
+        Func<NodeStepEvent, Task> onStep)
     {
         var startNode = definition.Nodes.FirstOrDefault(n => n.Type == "StartNode")
             ?? throw new InvalidOperationException(
@@ -48,7 +53,6 @@ public sealed class WorkflowDefinitionRunner
         var routing   = BuildRouting(definition.Connections);
         var context   = new WorkflowContext(definition.Name, _logger);
 
-        // Seed workflow-level variables into context global state
         foreach (var (k, v) in definition.Variables)
             context.SetState(k, v);
 
@@ -57,7 +61,7 @@ public sealed class WorkflowDefinitionRunner
         _logger.LogInformation("▶ Running workflow '{Name}' from JSON definition", definition.Name);
 
         var (resultData, success, error, failedNode) = await WalkGraphAsync(
-            startNode.Id, data, context, nodeMap, routing, definition);
+            startNode.Id, data, context, nodeMap, routing, definition, onStep);
 
         if (success)
         {
@@ -72,6 +76,12 @@ public sealed class WorkflowDefinitionRunner
         }
     }
 
+    /// <summary>Execute the workflow without a step callback (single-shot JSON result).</summary>
+    public Task<WorkflowRunResult> RunAsync(
+        WorkflowDefinition definition,
+        WorkflowData? initialData = null)
+        => RunWithCallbackAsync(definition, initialData, _ => Task.CompletedTask);
+
     // ─── Graph Walker ─────────────────────────────────────────────────────────
 
     private async Task<(WorkflowData data, bool success, string? error, string? failedNode)>
@@ -81,7 +91,8 @@ public sealed class WorkflowDefinitionRunner
             WorkflowContext context,
             Dictionary<Guid, NodeDefinition> nodeMap,
             Dictionary<(Guid, string), Guid> routing,
-            WorkflowDefinition definition)
+            WorkflowDefinition definition,
+            Func<NodeStepEvent, Task> onStep)
     {
         // Find error node ID for this workflow (used for fallback routing)
         var errorNodeId = definition.ErrorNodeId;
@@ -157,7 +168,7 @@ public sealed class WorkflowDefinitionRunner
 
                             var (childData, childSuccess, childError, childFailed) =
                                 await WalkGraphAsync(childStart.Id, data.Clone(), context,
-                                    childNodeMap, childRouting, childWrapDef);
+                                    childNodeMap, childRouting, childWrapDef, onStep);
 
                             data = childData;
                             var selectedPort = childSuccess ? "success" : "error";
@@ -196,6 +207,19 @@ public sealed class WorkflowDefinitionRunner
 
             var opts = BuildNodeOptions(nodeDef.ExecutionOptions);
 
+            // ── Notify UI: node is starting ───────────────────────────────────
+            var inputSnapshot = Snapshot(data);
+            await onStep(new NodeStepEvent
+            {
+                EventType = "node_start",
+                NodeId    = nodeDef.Id,
+                NodeName  = nodeDef.Name,
+                NodeType  = nodeDef.Type,
+                InputData = inputSnapshot,
+                OutputData = new Dictionary<string, object?>(),
+                Timestamp = DateTimeOffset.UtcNow
+            });
+
             WorkflowData resultData;
             string activatedPort;
 
@@ -203,16 +227,50 @@ public sealed class WorkflowDefinitionRunner
             {
                 resultData    = await ExecuteWithOptionsAsync(node, data, context, opts);
                 activatedPort = GetActivatedPort(nodeDef, resultData);
+
+                // ── Notify UI: node completed ─────────────────────────────────
+                await onStep(new NodeStepEvent
+                {
+                    EventType  = "node_done",
+                    NodeId     = nodeDef.Id,
+                    NodeName   = nodeDef.Name,
+                    NodeType   = nodeDef.Type,
+                    InputData  = inputSnapshot,
+                    OutputData = Snapshot(resultData),
+                    Timestamp  = DateTimeOffset.UtcNow
+                });
             }
             catch (Exception ex) when (opts.ContinueOnError)
             {
                 _logger.LogWarning(ex, "  ⚠ Node '{Name}' failed but ContinueOnError=true.", nodeDef.Name);
+                await onStep(new NodeStepEvent
+                {
+                    EventType    = "node_error",
+                    NodeId       = nodeDef.Id,
+                    NodeName     = nodeDef.Name,
+                    NodeType     = nodeDef.Type,
+                    InputData    = inputSnapshot,
+                    OutputData   = new Dictionary<string, object?>(),
+                    ErrorMessage = ex.Message,
+                    Timestamp    = DateTimeOffset.UtcNow
+                });
                 resultData    = opts.FallbackData ?? data;
                 activatedPort = "output";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "  ✘ Node '{Name}' failed.", nodeDef.Name);
+                await onStep(new NodeStepEvent
+                {
+                    EventType    = "node_error",
+                    NodeId       = nodeDef.Id,
+                    NodeName     = nodeDef.Name,
+                    NodeType     = nodeDef.Type,
+                    InputData    = inputSnapshot,
+                    OutputData   = new Dictionary<string, object?>(),
+                    ErrorMessage = ex.Message,
+                    Timestamp    = DateTimeOffset.UtcNow
+                });
 
                 // Try the node's own "error" port first
                 if (routing.TryGetValue((currentId, "error"), out var nodeErrorId))
@@ -496,6 +554,11 @@ public sealed class WorkflowDefinitionRunner
             _ => "output"
         };
     }
+
+    // ─── WorkflowData snapshot helper ──────────────────────────────────────────
+
+    private static Dictionary<string, object?> Snapshot(WorkflowData data)
+        => data.Keys.ToDictionary(k => k, k => data.Get<object?>(k));
 
     // ─── Routing table ─────────────────────────────────────────────────────────
 

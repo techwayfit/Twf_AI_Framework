@@ -52,6 +52,9 @@
                 <button class="btn-toolbar btn-success" onclick="saveWorkflow()">
                     <i class="bi bi-save-fill"></i> Save
                 </button>
+                <a href="@Url.Action("Runner", new { id = Model.Id })" class="btn-toolbar btn-run" target="_blank" title="Open workflow runner in new tab">
+                    <i class="bi bi-play-circle-fill"></i> Run
+                </a>
                 <button class="btn-toolbar btn-danger" onclick="deleteSelected()">
                     <i class="bi bi-trash-fill"></i> Delete
                 </button>
