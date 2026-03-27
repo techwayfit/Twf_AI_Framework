@@ -48,7 +48,7 @@ Provide a helpful, professional response. Use formatting:
 
 Format your response in a clear, well-structured way.";
 
-            public const string EscalationPrompt = "You are a senior support agent. The customer's issue may require escalation. Provide a warm, empathetic response and offer to escalate if needed.";
+  //          public const string EscalationPrompt = "You are a senior support agent. The customer's issue may require escalation. Provide a warm, empathetic response and offer to escalate if needed.";
 
         }
 

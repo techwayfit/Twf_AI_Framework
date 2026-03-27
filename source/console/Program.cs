@@ -116,7 +116,7 @@ class Program
     }
 
     static string? GetApiKey(string provider)
-    {        
+    {
         Console.WriteLine($"\n🔑 This example requires an API key for {provider}");
         Console.WriteLine("   You can:");
         Console.WriteLine("   1. Enter it now");

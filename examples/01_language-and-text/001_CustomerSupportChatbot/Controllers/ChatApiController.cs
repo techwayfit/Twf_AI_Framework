@@ -55,8 +55,7 @@ public class ChatApiController : ControllerBase
             var workflow = botType == "basic" ?
                 BuildSimpleWorkFlow(apiKey) :
                 botType == "safetycheck" ? BuildWorkFlowWithSafetyCheck(apiKey) :
-                botType == "sentiment" ? BuildWorkFlowWithSentimentAnalyzer(apiKey) :
-                BuildCustomerSupportWorkflow(apiKey);
+                 BuildWorkFlowWithSentimentAnalyzer(apiKey);
 
             // Prepare input data
             var input = WorkflowData.From("user_message", request.Message)
@@ -235,105 +234,6 @@ public class ChatApiController : ControllerBase
 
 
         return workflow;
-    }
-
-    private Workflow BuildCustomerSupportWorkflow(string apiKey)
-    {
-        var llm = LlmConfig.OpenAI(apiKey);
-
-        return Workflow.Create("CustomerSupportBot")
-                  .UseLogger(_logger)
-           // 1. Validate input
-           .AddNode(new FilterNode("ValidateInput")
-          .RequireNonEmpty("user_message")
-            .MaxLength("user_message", 2000))
-
-          // 2. Safety check
-          .AddNode(new PromptBuilderNode(
-                      name: "SafetyCheckPrompt",
-         promptTemplate: """Classify if this customer message is safe to respond to. Message: "{{user_message}}" Respond ONLY with JSON: {"is_safe": true/false, "reason": "brief reason"}""",
-            systemTemplate: "You are a content safety classifier. Be concise."
-                  ))
-                  .AddNode(new LlmNode("SafetyChecker", llm with { MaxTokens = 100 }),
-                 NodeOptions.WithRetry(2))
-      .AddNode(OutputParserNode.WithMapping("SafetyParser",
-            ("is_safe", "is_safe"),
-                      ("reason", "safety_reason")))
-
-                  // 3. Branch: safe vs unsafe
-                  .Branch(data => data.Get<bool>("is_safe"),
-              trueBranch: safe => safe
-                 // Sentiment analysis
-                 .AddNode(new PromptBuilderNode(
-            name: "SentimentAnalyzer",
-           promptTemplate: "Analyze the sentiment: \"{{user_message}}\". " +
-          "JSON: {\"sentiment\": \"positive|neutral|negative|angry\", \"score\": 1-10}"))
-          .AddNode(new LlmNode("SentimentAnalyzer", llm with { MaxTokens = 100 }))
-                    .AddNode(OutputParserNode.WithMapping("SentimentParser",
-                ("sentiment", "sentiment"),
-                    ("score", "anger_score")))
-
-              // Branch by sentiment
-              .Branch(data => data.GetString("sentiment") == "angry" || data.Get<int>("anger_score") >= 7,
-           trueBranch: angry => angry
-                 .AddNode(new PromptBuilderNode(
-              name: "EscalationPrompt",
-               promptTemplate: @"
-Customer is angry. Be empathetic and offer concrete help.
-Company: {{company_name}}
-Message: {{user_message}}
-
-Provide a warm, empathetic response. Use formatting:
-- Use **bold** for important points
-- Use bullet points (-) to list action items or options
-- Be conversational and understanding
-- Offer to escalate if needed
-
-Format your response in a clear, well-structured way.",
-               systemTemplate: "You are an empathetic senior support agent. Format responses clearly with markdown-like syntax."
-              ))
-             .AddNode(new LlmNode("EscalationResponder", llm with
-             {
-                 MaintainHistory = true,
-                 MaxTokens = 500
-             }))
-           .AddStep("TagEscalation", (data, _) =>
-           Task.FromResult(data.Set("response_type", "escalation"))),
-
-                   falseBranch: normal => normal
-                    .AddNode(new PromptBuilderNode(
-       name: "StandardResponsePrompt",
-            promptTemplate: @"
-Help this customer professionally.
-Company: {{company_name}}
-Message: {{user_message}}
-
-Provide a helpful, professional response. Use formatting:
-- Use **bold** for key information or product names
-- Use bullet points (-) to list features, steps, or options
-- Use numbered lists (1., 2., 3.) for sequential instructions
-- Keep it conversational and friendly
-
-Format your response in a clear, well-structured way.",
-            systemTemplate: "You are a helpful support agent for {{company_name}}. Format responses clearly with markdown-like syntax."
-             ))
-           .AddNode(new LlmNode("StandardResponder", llm with
-           {
-               MaintainHistory = true,
-               MaxTokens = 500
-           }))
-           .AddStep("TagStandard", (data, _) =>
-                 Task.FromResult(data.Set("response_type", "standard")))
-          ),
-
-        falseBranch: unsafeBranch => unsafeBranch
-           .AddStep("RejectUnsafe", (data, _) =>
-        Task.FromResult(
-         data.Set("llm_response",
-            "I'm unable to process that request. Please contact **support@techflow.com** for assistance.")
-       .Set("response_type", "rejected")))
-                )
-                .AddNode(MemoryNode.Write("last_response_type"));
     }
 }
 
