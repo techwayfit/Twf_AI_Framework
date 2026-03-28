@@ -51,3 +51,22 @@ export const CIRCULAR_NODE_TYPES = new Set(['StartNode', 'EndNode', 'ErrorNode',
 
 // Nodes rendered as a diamond
 export const DIAMOND_NODE_TYPES = new Set(['ConditionNode']);
+
+/**
+ * Returns the fill colour for a port handle based on its ID and direction.
+ *   input      → blue   (target/inbound)
+ *   output     → grey   (source/outbound, generic)
+ *   success    → green
+ *   failure/error → red
+ *   case*      → amber  (BranchNode cases)
+ *   default    → muted purple
+ */
+export function portColor(portId, handleType) {
+  if (portId === 'input')                           return '#3b82f6'; // blue
+  if (portId === 'output')                          return '#6c757d'; // grey
+  if (portId === 'success')                         return '#22c55e'; // green
+  if (portId === 'failure' || portId === 'error')   return '#ef4444'; // red
+  if (portId.startsWith('case'))                    return '#f59e0b'; // amber
+  if (portId === 'default')                         return '#8b5cf6'; // purple
+  return handleType === 'target' ? '#3b82f6' : '#6c757d'; // fallback by direction
+}

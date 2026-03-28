@@ -1,10 +1,12 @@
 import { useContext } from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { SchemaContext } from '../../context/SchemaContext';
+import { portColor } from '../../nodeConfig';
 
 /**
  * Standard rectangular node used for most node types.
  * Reads schema from context to render the correct number of port handles.
+ * Port labels appear as CSS tooltips on hover (no overlap with node text).
  */
 export default function GenericNode({ data, selected }) {
   const schemas = useContext(SchemaContext);
@@ -33,7 +35,7 @@ export default function GenericNode({ data, selected }) {
         backgroundColor: selected ? '#f0f4ff' : '#fff',
         minWidth: 160,
         minHeight: 64,
-        padding: '10px 18px 10px 18px',
+        padding: '10px 18px',
         boxShadow: selected
           ? `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.18)`
           : '0 1px 4px rgba(0,0,0,0.12)',
@@ -49,12 +51,12 @@ export default function GenericNode({ data, selected }) {
           type="target"
           position={Position.Left}
           id={port.id}
-          style={{ top: portTop(i, inputPorts.length) }}
+          style={{ top: portTop(i, inputPorts.length), background: portColor(port.id, 'target') }}
           title={port.label}
         />
       ))}
 
-      <div style={{ fontWeight: 600, fontSize: 13, color: '#212529', marginBottom: 2, paddingRight: 4 }}>
+      <div style={{ fontWeight: 600, fontSize: 13, color: '#212529', marginBottom: 2 }}>
         {data.label}
       </div>
       <div style={{ fontSize: 11, color, fontWeight: 500, opacity: 0.85 }}>
@@ -67,7 +69,7 @@ export default function GenericNode({ data, selected }) {
           type="source"
           position={Position.Right}
           id={port.id}
-          style={{ top: portTop(i, outputPorts.length) }}
+          style={{ top: portTop(i, outputPorts.length), background: portColor(port.id, 'source') }}
           title={port.label}
         />
       ))}

@@ -1,26 +1,35 @@
 import { Handle, Position } from '@xyflow/react';
 
-const SIZE = 110;
+// INNER: side of the rotated square.
+// OUTER: full diamond span = INNER * √2.  The outer container is OUTER×OUTER so
+// that each edge midpoint of the container coincides exactly with a diamond tip.
+// PAD: offset so the inner square sits centred inside the outer container.
+const INNER = 110;
+const OUTER = Math.round(INNER * Math.SQRT2); // ≈ 156
+const PAD   = (OUTER - INNER) / 2;            // ≈ 23
 
 /**
  * Diamond-shaped node for ConditionNode.
- * Two output handles: "success" (right) and "failure" (bottom).
+ * Handles are placed at the real corner tips of the diamond:
+ *   input   → left tip
+ *   success → right tip
+ *   failure → bottom tip
  */
 export default function DiamondNode({ data, selected }) {
   const color = data.color ?? '#F5A623';
 
   return (
-    <div style={{ position: 'relative', width: SIZE, height: SIZE }}>
-      {/* Rotated square for the diamond shape */}
+    <div style={{ position: 'relative', width: OUTER, height: OUTER }}>
+      {/* Rotated square centred inside the OUTER container */}
       <div
         style={{
           position: 'absolute',
-          top: 0,
-          left: 0,
-          width: SIZE,
-          height: SIZE,
-          backgroundColor: selected ? '#fff8ee' : '#fff',
-          border: `2px solid ${color}`,
+          top: PAD,
+          left: PAD,
+          width: INNER,
+          height: INNER,
+          backgroundColor: selected ? '#fff8ee' : '#fdf6ec',
+          border: `3px solid ${color}`,
           transform: 'rotate(45deg)',
           boxShadow: selected
             ? `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.18)`
@@ -28,7 +37,7 @@ export default function DiamondNode({ data, selected }) {
         }}
       />
 
-      {/* Label sits on top of the rotated square, NOT rotated */}
+      {/* Label — centred over the full OUTER area, not rotated */}
       <div
         style={{
           position: 'absolute',
@@ -50,32 +59,14 @@ export default function DiamondNode({ data, selected }) {
         </div>
       </div>
 
-      {/* Input – left edge of the diamond */}
-      <Handle
-        type="target"
-        position={Position.Left}
-        id="input"
-        style={{ top: '50%', zIndex: 2 }}
-        title="Input"
-      />
+      {/* Input — LEFT tip */}
+      <Handle type="target" position={Position.Left} id="input" style={{ top: '50%', zIndex: 2, background: '#3b82f6' }} title="Input" />
 
-      {/* Success output – right edge */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="success"
-        style={{ top: '50%', zIndex: 2 }}
-        title="Success"
-      />
+      {/* Success — RIGHT tip */}
+      <Handle type="source" position={Position.Right} id="success" style={{ top: '50%', zIndex: 2, background: '#22c55e' }} title="Success" />
 
-      {/* Failure output – bottom edge */}
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        id="failure"
-        style={{ left: '50%', zIndex: 2 }}
-        title="Failure"
-      />
+      {/* Failure — BOTTOM tip */}
+      <Handle type="source" position={Position.Bottom} id="failure" style={{ left: '50%', zIndex: 2, background: '#ef4444' }} title="Failure" />
     </div>
   );
 }

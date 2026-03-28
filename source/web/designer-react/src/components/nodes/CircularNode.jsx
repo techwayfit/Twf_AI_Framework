@@ -42,6 +42,7 @@ export default function CircularNode({ data, selected }) {
           : '0 2px 6px rgba(0,0,0,0.2)',
         cursor: 'default',
         userSelect: 'none',
+        position: 'relative',
       }}
     >
       {hasInput && (
@@ -49,7 +50,8 @@ export default function CircularNode({ data, selected }) {
           type="target"
           position={Position.Left}
           id="input"
-          style={{ background: 'rgba(255,255,255,0.8)', border: '2px solid #fff' }}
+          style={{ background: '#3b82f6', border: '2px solid #fff' }}
+          title="Input"
         />
       )}
 
@@ -60,7 +62,8 @@ export default function CircularNode({ data, selected }) {
           type="source"
           position={Position.Right}
           id="output"
-          style={{ background: 'rgba(255,255,255,0.8)', border: '2px solid #fff' }}
+          style={{ background: '#6c757d', border: '2px solid #fff' }}
+          title="Output"
         />
       )}
     </div>

@@ -3,7 +3,7 @@
   "Name": "New Workflow",
   "Description": "Test",
   "CreatedAt": "2026-03-24T08:05:24.0612054Z",
-  "UpdatedAt": "2026-03-27T04:02:10.519236Z",
+  "UpdatedAt": "2026-03-28T03:40:50.367069Z",
   "Nodes": [
     {
       "Id": "bbca48a5-394f-48a0-ba27-ef9695540d31",
@@ -154,8 +154,8 @@
         "outputKey": ""
       },
       "Position": {
-        "X": 991,
-        "Y": 538
+        "X": 864,
+        "Y": 656
       },
       "Color": "#e74c3c",
       "ExecutionOptions": null,
@@ -191,11 +191,7 @@
       },
       "Color": "#f39c12",
       "ExecutionOptions": null,
-      "SubWorkflow": {
-        "Nodes": [],
-        "Connections": [],
-        "Variables": {}
-      },
+      "SubWorkflow": null,
       "IsExpanded": false
     }
   ],
