@@ -1,6 +1,7 @@
 import GenericNode from './GenericNode';
 import CircularNode from './CircularNode';
 import DiamondNode from './DiamondNode';
+import ParallelNode from './ParallelNode';
 
 /**
  * Registry mapping backend node type strings → React Flow node components.
@@ -28,7 +29,7 @@ export const nodeTypes = {
   MergeNode: GenericNode,
   LogNode: GenericNode,
   LoopNode: GenericNode,
-  ParallelNode: GenericNode,
+  ParallelNode: ParallelNode,
   BranchNode: GenericNode,
 
   // Data
