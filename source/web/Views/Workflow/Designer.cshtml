@@ -2,7 +2,7 @@
 
 @{
     ViewData["Title"] = "Workflow Designer - " + Model.Name;
-    Layout = null; // Use no layout for full-screen designer
+    Layout = null; // Full-screen, no shared layout
 }
 
 <!DOCTYPE html>
@@ -11,248 +11,32 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"]</title>
-    
-    <!-- Bootstrap & Icons -->
+
+    <!-- Bootstrap (used by the React components for form controls and buttons) -->
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
-    
-    <!-- Designer Stylesheets (Modular Architecture) -->
-    <!-- Note: designer.css imports all modules in correct order -->
-  @* <link rel="stylesheet" href="~/css/designer.css?v=20240101-5" asp-append-version="true" /> *@
-    
- <!-- Alternative: Import individual modules (uncomment if you need granular control) -->
 
-    <link rel="stylesheet" href="~/css/designer/designer-base.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/designer/designer-sidebar.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/designer/designer-nodes.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/designer/designer-ports.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/designer/designer-connections.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/css/designer/designer-interactions.css" asp-append-version="true" />
+    <!-- Bootstrap Icons (used inside React components with className="bi bi-*") -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" crossorigin="anonymous" />
 
+    <!-- React Flow + designer styles (output of: cd designer-react && npm run build) -->
+    <link rel="stylesheet" href="~/js/designer-app/designer.css" asp-append-version="true" />
+
+    <style>
+        html, body { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+    </style>
 </head>
 <body>
-    <div id="designer-container">
-        <div id="toolbar">
-            <div>
-                <h5>
-                    <i class="bi bi-diagram-3-fill"></i>
-                    <span id="workflow-name">@Model.Name</span>
-                </h5>
-            </div>
-            <div id="toolbar-buttons">
-                <button class="btn-toolbar" onclick="zoomIn()">
-                    <i class="bi bi-zoom-in"></i> Zoom In
-                </button>
-                <button class="btn-toolbar" onclick="zoomOut()">
-                    <i class="bi bi-zoom-out"></i> Zoom Out
-                </button>
-                <button class="btn-toolbar" onclick="resetZoom()">
-                    <i class="bi bi-arrows-fullscreen"></i> Reset
-                </button>
-                <button class="btn-toolbar btn-success" onclick="saveWorkflow()">
-                    <i class="bi bi-save-fill"></i> Save
-                </button>
-                <a href="@Url.Action("Runner", new { id = Model.Id })" class="btn-toolbar btn-run" target="_blank" title="Open workflow runner in new tab">
-                    <i class="bi bi-play-circle-fill"></i> Run
-                </a>
-                <button class="btn-toolbar btn-danger" onclick="deleteSelected()">
-                    <i class="bi bi-trash-fill"></i> Delete
-                </button>
-                <button id="header-back-main-workflow" class="btn-toolbar" style="display: none;" onclick="openMainWorkflowDesigner()">
-                    <i class="bi bi-arrow-return-left"></i> Main Flow
-                </button>
-                <a href="@Url.Action("Index")" class="btn-toolbar">
-                    <i class="bi bi-arrow-left-circle-fill"></i> Back
-                </a>
-            </div>
-        </div>
+    <!-- React mounts here -->
+    <div id="designer-root"></div>
 
-        <div id="main-area">
-            <div id="node-palette">
-                <!-- Sidebar Tabs -->
-                <div class="sidebar-tabs">
-                    <div class="sidebar-tab active" onclick="switchSidebarTab('nodes')">
-                        <i class="bi bi-box-seam-fill"></i> Nodes
-                    </div>
-                    <div class="sidebar-tab" onclick="switchSidebarTab('variables')">
-                        <i class="bi bi-braces"></i> Variables
-                    </div>
-                </div>
-
-                <!-- Sidebar Content -->
-                <div class="sidebar-content">
-                    <!-- Nodes Panel -->
-                    <div id="nodes-panel" class="sidebar-panel active">
-                        <div id="palette-nodes">
-                            <!-- Nodes will be loaded here -->
-                        </div>
-                    </div>
-
-                    <!-- Variables Panel -->
-                    <div id="variables-panel-sidebar" class="sidebar-panel">
-                        <div class="variables-header">
-                            <h6 style="margin: 0; font-size: 0.9rem; color: #495057;">
-                                <i class="bi bi-list-ul"></i> All Variables
-                            </h6>
-                            <button class="btn-add-var" onclick="showAddVariableForm()">
-                                <i class="bi bi-plus-circle"></i> Add
-                            </button>
-                        </div>
-                        <div id="variables-list">
-                            <!-- Variables will be rendered here -->
-                        </div>
-
-                        <hr />
-
-                        <div class="subworkflows-header">
-                            <h6 style="margin: 0; font-size: 0.9rem; color: #495057;">
-                                <i class="bi bi-diagram-3"></i> Sub Workflows
-                            </h6>
-                            <div class="subworkflows-actions">
-                                <button class="btn-add-var btn-add-subworkflow" onclick="promptCreateSubWorkflow(true)">
-                                    <i class="bi bi-plus-circle"></i> Add
-                                </button>
-                                <button id="btn-back-main-workflow" class="btn-back-main" onclick="openMainWorkflowDesigner()">
-                                    <i class="bi bi-arrow-return-left"></i> Main
-                                </button>
-                            </div>
-                        </div>
-                        <div id="subworkflows-list">
-                            <!-- Sub workflows will be rendered here -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="canvas-area">
-                <svg id="workflow-canvas" xmlns="http://www.w3.org/2000/svg">
-                    <defs>
-                        <!-- Default arrowhead (blue) -->
-                        <marker id="arrowhead" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#3498db" />
-                        </marker>
-
-                        <!-- Selected arrowhead (dark red) -->
-                        <marker id="arrowhead-selected" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#c0392b" />
-                        </marker>
-
-                        <!-- Hover arrowhead (red) -->
-                        <marker id="arrowhead-hover" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#e74c3c" />
-                        </marker>
-
-                        <!-- Dragging source arrowhead (orange) -->
-                        <marker id="arrowhead-dragging-source" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#f39c12" />
-                        </marker>
-
-                        <!-- Dragging target arrowhead (purple) -->
-                        <marker id="arrowhead-dragging-target" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#9b59b6" />
-                        </marker>
-
-                        <!-- Temporary connection arrowhead (gray) -->
-                        <marker id="arrowhead-temp" markerWidth="10" markerHeight="6" refX="5" refY="3" orient="auto" markerUnits="strokeWidth">
-                            <polygon points="0 0, 10 3, 0 6" fill="#95a5a6" />
-                        </marker>
-                    </defs>
-                    <g id="connections-layer"></g>
-                    <g id="temp-connection-layer"></g>
-                </svg>
-                <div id="nodes-layer"></div>
-            </div>
-
-            <div id="properties-panel">
-                <h6 style="margin-bottom: 16px; color: #495057; font-weight: 600;">
-                    <i class="bi bi-sliders"></i> Properties
-                </h6>
-                <div id="properties-content">
-                    <p class="text-muted small">Select a node to edit its properties.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    
-    <!-- Phase 0: New Architecture - Core Classes -->
-    <script src="~/js/designer/core/Constants.js" asp-append-version="true"></script>
-    <script src="~/js/designer/core/WorkflowData.js" asp-append-version="true"></script>
-    <script src="~/js/designer/core/BaseNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/core/NodeRegistry.js" asp-append-version="true"></script>
-
-    <!-- Phase 0: Node Classes - AI -->
-    <script src="~/js/designer/nodes/ai/LlmNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/ai/PromptBuilderNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/ai/EmbeddingNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/ai/OutputParserNode.js" asp-append-version="true"></script>
-
-    <!-- Phase 0: Node Classes - Control -->
-    <script src="~/js/designer/nodes/control/ConditionNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/ErrorNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/SubWorkflowNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/ErrorRouteNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/DelayNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/MergeNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/LogNode.js" asp-append-version="true"></script>
-    
-    <!-- Phase 5: Special Container Nodes -->
-    <script src="~/js/designer/nodes/control/LoopNode.js?v=20250125-1" asp-append-version="true"></script>
-
-    <!-- Phase 0: Node Classes - Data -->
-    <script src="~/js/designer/nodes/data/TransformNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/data/DataMapperNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/data/FilterNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/data/ChunkTextNode.js" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/data/MemoryNode.js" asp-append-version="true"></script>
-
-    <!-- Phase 0: Node Classes - IO -->
-    <script src="~/js/designer/nodes/io/HttpRequestNode.js" asp-append-version="true"></script>
-
-    <!-- Phase 2: Enhanced Node Renderer (multi-port support) -->
-    <script src="~/js/designer/ui/NodeRenderer.js?v=20240101-4" asp-append-version="true"></script>
-
-    <!-- Phase 3: Condition Node Enhancement (Task 3.1, 3.3, 3.4, 3.6, 3.7) -->
-    <script src="~/js/designer/utils/ExpressionValidator.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/utils/ConnectionValidator.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/utils/WorkflowTemplates.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/ui/VariableAutocomplete.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/ui/ConditionEditor.js?v=20240101-2" asp-append-version="true"></script>
-
-    <!-- Phase 4: Execution Options (Task 4.1) -->
-    <script src="~/js/designer/ui/ExecutionOptionsEditor.js?v=20240101-3" asp-append-version="true"></script>
-
-    <!-- Phase 5: Sub-Workflow Editor (Task 5.6) -->
-    <script src="~/js/designer/ui/SubWorkflowEditor.js?v=20250125-2" asp-append-version="true"></script>
-
-    <!-- Phase 5: Start and End Nodes -->
-    <script src="~/js/designer/nodes/control/StartNode.js?v=20250125-3" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/EndNode.js?v=20250125-3" asp-append-version="true"></script>
-
-    <!-- Phase 5: Container Nodes -->
-    <script src="~/js/designer/nodes/control/ParallelNode.js?v=20250125-4" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes/control/BranchNode.js?v=20250125-5" asp-append-version="true"></script>
-
-    <!-- Existing architecture (backward compatibility) -->
-    <script src="~/js/designer/state.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/utils.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/initialization.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/variables.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/autocomplete.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/nodes.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/connections.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/rendering.js?v=20240101-3" asp-append-version="true"></script>
-    <script src="~/js/designer/properties.js?v=20240101-2" asp-append-version="true"></script>
-    <script src="~/js/designer/events.js?v=20240101-2" asp-append-version="true"></script>
-    
-    <!-- Phase 0: Main Orchestrator (loads last) -->
-    <script src="~/js/designer/core/Designer.js?v=20240101-2" asp-append-version="true"></script>
-    
+    <!-- Inject server-side config for the React app -->
     <script>
-    const workflowId = '@Model.Id';
-    const initialSubWorkflowId = '@(ViewBag.InitialSubWorkflowId ?? "")';
-    initializeDesigner(workflowId, initialSubWorkflowId || null);
+        window.__DESIGNER_CONFIG__ = {
+            workflowId: '@Model.Id'
+        };
     </script>
+
+    <!-- React Flow designer bundle (output of: cd designer-react && npm run build) -->
+    <script src="~/js/designer-app/designer.js" asp-append-version="true"></script>
 </body>
 </html>

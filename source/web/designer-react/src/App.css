@@ -1,0 +1,126 @@
+/* ── Layout shell ──────────────────────────────────────────────────────── */
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#designer-root {
+  height: 100vh;
+}
+
+.designer-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.designer-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── Left sidebar ─────────────────────────────────────────────────────── */
+
+.designer-sidebar {
+  width: 220px;
+  min-width: 220px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #dee2e6;
+  background: #f8f9fa;
+  overflow: hidden;
+}
+
+.sidebar-tabs {
+  display: flex;
+  border-bottom: 1px solid #dee2e6;
+  flex-shrink: 0;
+}
+
+.sidebar-tab-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  color: #6c757d;
+  transition: background 0.1s;
+}
+
+.sidebar-tab-btn:hover {
+  background: #e9ecef;
+}
+
+.sidebar-tab-btn.active {
+  background: #fff;
+  font-weight: 600;
+  color: #212529;
+  border-bottom-color: #0d6efd;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ── Canvas ───────────────────────────────────────────────────────────── */
+
+.designer-canvas {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Right properties panel ───────────────────────────────────────────── */
+
+.designer-properties {
+  width: 280px;
+  min-width: 280px;
+  border-left: 1px solid #dee2e6;
+  background: #fff;
+  overflow-y: auto;
+}
+
+/* ── React Flow overrides ─────────────────────────────────────────────── */
+
+.react-flow__node {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.react-flow__handle {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+}
+
+.react-flow__handle-target {
+  background: #e74c3c;
+}
+
+.react-flow__handle-source {
+  background: #2ecc71;
+}
+
+.react-flow__edge-path {
+  stroke-width: 2;
+}
+
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #c0392b;
+  stroke-width: 2.5;
+}
+
+.react-flow__controls {
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}

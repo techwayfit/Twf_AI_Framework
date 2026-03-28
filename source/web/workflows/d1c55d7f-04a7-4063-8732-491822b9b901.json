@@ -1,0 +1,18 @@
+{
+  "Id": "d1c55d7f-04a7-4063-8732-491822b9b901",
+  "Name": "New Workflow",
+  "Description": null,
+  "CreatedAt": "2026-03-28T02:34:42.606868Z",
+  "UpdatedAt": "2026-03-28T02:34:42.606868Z",
+  "Nodes": [],
+  "Connections": [],
+  "Variables": {},
+  "ErrorNodeId": null,
+  "SubWorkflows": [],
+  "Metadata": {
+    "Author": null,
+    "Tags": [],
+    "Version": 1,
+    "IsActive": true
+  }
+}
