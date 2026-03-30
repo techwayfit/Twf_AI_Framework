@@ -3,6 +3,7 @@ const CATEGORY_ICONS = {
   Control: 'bi-signpost-split-fill',
   Data: 'bi-table',
   IO: 'bi-plug-fill',
+  Visual: 'bi-bounding-box',
 };
 
 /**

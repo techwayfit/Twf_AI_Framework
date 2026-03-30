@@ -116,5 +116,6 @@ public enum ParameterType
     Select,         // Dropdown
   Json,           // JSON editor
     KeyValueList,   // List of key-value pairs
-    StringList      // List of strings
+    StringList,     // List of strings
+    Color,          // Colour picker
 }

@@ -2,6 +2,8 @@
  * Toolbar – top bar with workflow name, zoom controls, and action buttons.
  * When editing a sub-workflow, shows the sub-workflow name and a "Back to Main" button.
  */
+import { useState, useRef, useEffect } from 'react';
+
 export default function Toolbar({
   workflowName,
   workflowId,
@@ -10,6 +12,7 @@ export default function Toolbar({
   onZoomOut,
   onFitView,
   saving,
+  onExport,
   // Sub-workflow context
   activeSubWorkflow,  // null | { id, name }
   onBackToMain,       // () => void
@@ -17,6 +20,30 @@ export default function Toolbar({
   const contextLabel = activeSubWorkflow
     ? `${workflowName}  ›  ${activeSubWorkflow.name}`
     : workflowName;
+
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportRef = useRef(null);
+  const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+
+  const toggleExport = () => {
+    if (!exportOpen && exportRef.current) {
+      const rect = exportRef.current.getBoundingClientRect();
+      setDropPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+    }
+    setExportOpen((o) => !o);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    if (!exportOpen) return;
+    const handler = (e) => {
+      if (exportRef.current && !exportRef.current.contains(e.target)) {
+        setExportOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportOpen]);
 
   return (
     <div
@@ -60,6 +87,54 @@ export default function Toolbar({
         <button className="btn btn-sm btn-success" onClick={onSave} disabled={saving}>
           <i className="bi bi-save-fill" /> {saving ? 'Saving…' : 'Save'}
         </button>
+        <div style={{ flexShrink: 0, position: 'relative' }} ref={exportRef}>
+          <button
+            className="btn btn-sm btn-outline-light"
+            onClick={toggleExport}
+            title="Export canvas"
+          >
+            <i className="bi bi-download" /> Export
+          </button>
+          {exportOpen && (
+            <ul
+              style={{
+                position: 'fixed',
+                top: dropPos.top,
+                right: dropPos.right,
+                zIndex: 99999,
+                background: '#fff',
+                border: '1px solid #dee2e6',
+                borderRadius: 6,
+                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                listStyle: 'none',
+                padding: '4px 0',
+                margin: 0,
+                minWidth: 170,
+              }}
+            >
+              <li>
+                <button
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                  onClick={() => { onExport('png'); setExportOpen(false); }}
+                >
+                  <i className="bi bi-file-image" style={{ marginRight: 8 }} />Export as PNG
+                </button>
+              </li>
+              <li>
+                <button
+                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
+                  onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                  onClick={() => { onExport('svg'); setExportOpen(false); }}
+                >
+                  <i className="bi bi-filetype-svg" style={{ marginRight: 8 }} />Export as SVG
+                </button>
+              </li>
+            </ul>
+          )}
+        </div>
         {!activeSubWorkflow && (
           <>
             <a

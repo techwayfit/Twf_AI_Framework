@@ -101,6 +101,8 @@ public class ConnectionDefinition
     public Guid TargetNodeId { get; set; }
 
     public string TargetPort { get; set; } = "input";
+
+    public string? Label { get; set; }
 }
 
 /// <summary>

@@ -172,8 +172,11 @@ public class WorkflowController : Controller
 
     // POST: /Workflow/SaveWorkflow
     [HttpPost]
-    public async Task<IActionResult> SaveWorkflow([FromBody] WorkflowDefinition workflow)
+    public async Task<IActionResult> SaveWorkflow([FromBody] WorkflowDefinition? workflow)
     {
+        if (workflow == null)
+            return Json(new { success = false, error = "Invalid workflow payload. Node and connection IDs must be valid GUIDs." });
+
         try
         {
             if (workflow.Id == Guid.Empty)
@@ -229,6 +232,9 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
      
             // IO Nodes
      new { type = "HttpRequestNode", category = "IO", name = "HTTP Request", description = "Make REST API calls", color = "#BD10E0" },
+
+            // Visual Nodes
+            new { type = "ContainerNode", category = "Visual", name = "Container", description = "Logically group nodes (visual only, no ports)", color = "#6366f1" },
         };
 
         return Json(nodes);

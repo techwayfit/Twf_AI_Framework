@@ -718,7 +718,27 @@ new() { Name = "case2Value", Label = "Case 2 Value", Type = ParameterType.Text, 
   DefaultValue = false,
            Description = "Whether value matching is case-sensitive" }
      }
-        }
+        },
+
+            // Visual Nodes
+            ["ContainerNode"] = new()
+            {
+                NodeType = "ContainerNode",
+                Description = "Visually groups nodes on the canvas. No execution effect.",
+                InputPorts = new(),
+                OutputPorts = new(),
+                Capabilities = new(),
+                ExecutionOptions = new(),
+                Parameters = new()
+                {
+                    new() { Name = "backgroundColor", Label = "Background Color", Type = ParameterType.Color,
+                        Required = false, DefaultValue = "#6366f1",
+                        Description = "Background fill colour for the group" },
+                    new() { Name = "opacity", Label = "Opacity (0 – 1)", Type = ParameterType.Number,
+                        Required = false, DefaultValue = 0.12, MinValue = 0, MaxValue = 1,
+                        Description = "Transparency of the background fill" },
+                }
+            },
         };
     }
 }

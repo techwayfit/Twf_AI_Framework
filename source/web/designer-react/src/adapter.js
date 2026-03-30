@@ -9,19 +9,30 @@ import { MarkerType } from '@xyflow/react';
  * ReactFlow edge:                 id, source, sourceHandle, target, targetHandle
  */
 export function toReactFlow(workflowDef) {
-  const nodes = (workflowDef.nodes ?? []).map((n) => ({
-    id: n.id,
-    type: n.type,
-    position: { x: n.position?.x ?? 0, y: n.position?.y ?? 0 },
-    data: {
-      label: n.name,
+  // ContainerNodes must come first so they render behind all other nodes
+  const sorted = [...(workflowDef.nodes ?? [])].sort((a, b) =>
+    a.type === 'ContainerNode' ? -1 : b.type === 'ContainerNode' ? 1 : 0,
+  );
+
+  const nodes = sorted.map((n) => {
+    const isContainer = n.type === 'ContainerNode';
+    const w = n.parameters?.width ?? 300;
+    const h = n.parameters?.height ?? 200;
+    return {
+      id: n.id,
       type: n.type,
-      category: n.category ?? '',
-      color: n.color ?? null,
-      parameters: { ...(n.parameters ?? {}) },
-      executionOptions: n.executionOptions ?? null,
-    },
-  }));
+      position: { x: n.position?.x ?? 0, y: n.position?.y ?? 0 },
+      ...(isContainer ? { style: { width: w, height: h } } : {}),
+      data: {
+        label: n.name,
+        type: n.type,
+        category: n.category ?? '',
+        color: n.color ?? null,
+        parameters: { ...(n.parameters ?? {}) },
+        executionOptions: n.executionOptions ?? null,
+      },
+    };
+  });
 
   const edges = (workflowDef.connections ?? []).map((c) => {
     const hasLabel = !!c.label;

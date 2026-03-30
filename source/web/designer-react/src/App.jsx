@@ -21,14 +21,14 @@ import NodePalette from './components/NodePalette';
 import PropertiesPanel from './components/PropertiesPanel';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import VariablesPanel from './components/VariablesPanel';
+import { toPng } from 'html-to-image';
 import { loadWorkflow, saveWorkflow, loadAvailableNodes, loadAllSchemas } from './api';
 import { toReactFlow, getContextData, applyContextData } from './adapter';
 import { NODE_DEFAULT_PARAMS } from './nodeConfig';
 import './App.css';
 
-let _idSeq = 1;
-const genId = () => `n_${Date.now()}_${_idSeq++}`;
-const genSubId = () => `sw_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const genId = () => crypto.randomUUID();
+const genSubId = () => crypto.randomUUID();
 
 // ─── Inner component (needs ReactFlowProvider ancestor) ───────────────────────
 function DesignerInner({ workflowId }) {
@@ -142,6 +142,7 @@ function DesignerInner({ workflowId }) {
         addEdge(
           {
             ...connection,
+            id: crypto.randomUUID(),
             type: 'smoothstep',
             markerEnd: { type: MarkerType.ArrowClosed },
           },
@@ -173,22 +174,24 @@ function DesignerInner({ workflowId }) {
         return;
       }
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
-      setNodes((ns) => [
-        ...ns,
-        {
-          id: genId(),
+      const isContainer = nodeInfo.type === 'ContainerNode';
+      const defaultParams = { ...(NODE_DEFAULT_PARAMS[nodeInfo.type] ?? {}) };
+      const newNode = {
+        id: genId(),
+        type: nodeInfo.type,
+        position,
+        ...(isContainer ? { style: { width: defaultParams.width ?? 300, height: defaultParams.height ?? 200 } } : {}),
+        data: {
+          label: nodeInfo.name,
           type: nodeInfo.type,
-          position,
-          data: {
-            label: nodeInfo.name,
-            type: nodeInfo.type,
-            category: nodeInfo.category,
-            color: nodeInfo.color,
-            parameters: { ...(NODE_DEFAULT_PARAMS[nodeInfo.type] ?? {}) },
-            executionOptions: null,
-          },
+          category: nodeInfo.category,
+          color: nodeInfo.color,
+          parameters: defaultParams,
+          executionOptions: null,
         },
-      ]);
+      };
+      // ContainerNodes go at the front so they render behind other nodes
+      setNodes((ns) => isContainer ? [newNode, ...ns] : [...ns, newNode]);
     },
     [screenToFlowPosition, setNodes],
   );
@@ -306,6 +309,70 @@ function DesignerInner({ workflowId }) {
     }
   }, [workflowDef, context, nodes, edges]);
 
+  // ── Export ────────────────────────────────────────────────────────────────
+  const handleExport = useCallback(async (format) => {
+    if (nodes.length === 0) return;
+
+    const name = (workflowDef?.name ?? 'workflow').replace(/[^a-z0-9_-]/gi, '_');
+
+    // Fit all nodes into view instantly (no animation) so nothing is off-screen
+    fitView({ padding: 0.12, duration: 0 });
+
+    // Wait two animation frames for the viewport transform to settle in the DOM
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+    // Capture the whole ReactFlow element — includes nodes, edges SVG, edge labels
+    const flowEl = wrapperRef.current?.querySelector('.react-flow');
+    if (!flowEl) return;
+
+    const { width, height } = flowEl.getBoundingClientRect();
+
+    const filter = (node) => {
+      if (!node.classList) return true;
+      return (
+        !node.classList.contains('react-flow__minimap') &&
+        !node.classList.contains('react-flow__controls') &&
+        !node.classList.contains('react-flow__attribution') &&
+        !node.classList.contains('react-flow__panel')
+      );
+    };
+
+    try {
+      const pngDataUrl = await toPng(flowEl, {
+        backgroundColor: '#f8f9fa',
+        pixelRatio: 3,
+        width,
+        height,
+        filter,
+      });
+
+      if (format === 'png') {
+        const a = document.createElement('a');
+        a.download = `${name}.png`;
+        a.href = pngDataUrl;
+        a.click();
+      } else {
+        // Embed high-res PNG inside SVG — reliable cross-browser vector container
+        const svgContent = [
+          '<?xml version="1.0" encoding="UTF-8"?>',
+          `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
+          `     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+          `  <image href="${pngDataUrl}" x="0" y="0" width="${width}" height="${height}"/>`,
+          '</svg>',
+        ].join('\n');
+        const blob = new Blob([svgContent], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.download = `${name}.svg`;
+        a.href = url;
+        a.click();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+      }
+    } catch (err) {
+      alert(`Export failed: ${err.message}`);
+    }
+  }, [workflowDef, fitView, nodes]);
+
   // Ctrl+S shortcut
   useEffect(() => {
     const handler = (e) => {
@@ -373,6 +440,7 @@ function DesignerInner({ workflowId }) {
           saving={saving}
           activeSubWorkflow={activeSubWorkflow}
           onBackToMain={() => switchContext({ type: 'main' })}
+          onExport={handleExport}
         />
 
         <div className="designer-body">

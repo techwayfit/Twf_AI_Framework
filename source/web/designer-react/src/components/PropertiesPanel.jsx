@@ -150,6 +150,25 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
             />
           </div>
         );
+
+      case 'Color':
+        return (
+          <div key={param.name} className="mb-2">
+            <label htmlFor={id} className="form-label small fw-bold mb-1">
+              {param.label}
+            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                id={id}
+                type="color"
+                style={{ width: 40, height: 30, padding: 2, border: '1px solid #ced4da', borderRadius: 4, cursor: 'pointer' }}
+                value={String(value)}
+                onChange={(e) => commitParam(param.name, e.target.value)}
+              />
+              <span className="text-muted small">{String(value)}</span>
+            </div>
+          </div>
+        );
     }
   };
 

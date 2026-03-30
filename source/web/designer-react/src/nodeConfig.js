@@ -44,6 +44,7 @@ export const NODE_DEFAULT_PARAMS = {
   ChunkTextNode: { textKey: '', chunkSize: 500, chunkOverlap: 50, outputKey: 'chunks' },
   MemoryNode: { action: 'read', key: '', scope: 'global' },
   HttpRequestNode: { url: '', method: 'GET', headers: '{}', body: '', outputKey: 'response' },
+  ContainerNode: { backgroundColor: '#6366f1', opacity: 0.12, width: 300, height: 200 },
 };
 
 // Nodes rendered as circles (no rectangular box)

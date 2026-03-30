@@ -108,7 +108,7 @@ public sealed class LlmNode : BaseNode
     {
         return _config.Provider switch
         {
-            LlmProvider.OpenAI or LlmProvider.AzureOpenAI or LlmProvider.Ollama => new
+            LlmProvider.OpenAI or LlmProvider.AzureOpenAI or LlmProvider.Ollama or LlmProvider.Custom => new
             {
                 model = _config.Model,
                 messages = messages.Select(m => new { role = m.Role, content = m.Content }),
@@ -232,5 +232,13 @@ public sealed record LlmConfig
         Provider = LlmProvider.Ollama,
         Model = model,
         ApiEndpoint = $"{host}/v1/chat/completions"
+    };
+
+    public static LlmConfig LmServer(string model, string apiKey, string apiEndpoint) => new()
+    {
+        Provider = LlmProvider.Custom,
+        Model = model,
+        ApiKey = apiKey,
+        ApiEndpoint = apiEndpoint
     };
 }
