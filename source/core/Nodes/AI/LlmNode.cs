@@ -46,10 +46,20 @@ public sealed class LlmNode : BaseNode
         nodeCtx.Log($"Last message: {messages.Last().Content[..Math.Min(100, messages.Last().Content.Length)]}...");
 
         var requestBody = BuildRequestBody(messages);
-        var response = await CallApiAsync(requestBody, context.CancellationToken);
 
-        var llmResponse = ExtractResponse(response);
-        var usage = ExtractUsage(response);
+        string llmResponse;
+        (int PromptTokens, int CompletionTokens) usage;
+
+        if (_config.Stream)
+        {
+            (llmResponse, usage) = await StreamApiAsync(requestBody, nodeCtx, context.CancellationToken);
+        }
+        else
+        {
+            var response = await CallApiAsync(requestBody, context.CancellationToken);
+            llmResponse = ExtractResponse(response);
+            usage = ExtractUsage(response);
+        }
 
         nodeCtx.SetMetadata("model", _config.Model);
         nodeCtx.SetMetadata("prompt_tokens", usage.PromptTokens);
@@ -104,29 +114,46 @@ public sealed class LlmNode : BaseNode
         return messages;
     }
 
-    private object BuildRequestBody(List<(string Role, string Content)> messages)
+    private Dictionary<string, object?> BuildRequestBody(List<(string Role, string Content)> messages)
     {
         return _config.Provider switch
         {
-            LlmProvider.OpenAI or LlmProvider.AzureOpenAI or LlmProvider.Ollama or LlmProvider.Custom => new
-            {
-                model = _config.Model,
-                messages = messages.Select(m => new { role = m.Role, content = m.Content }),
-                temperature = _config.Temperature,
-                max_tokens = _config.MaxTokens,
-                stream = false
-            },
-            LlmProvider.Anthropic => new
-            {
-                model = _config.Model,
-                max_tokens = _config.MaxTokens,
-                temperature = _config.Temperature,
-                system = messages.FirstOrDefault(m => m.Role == "system").Content ?? "",
-                messages = messages
-                    .Where(m => m.Role != "system")
-                    .Select(m => new { role = m.Role, content = m.Content })
-            },
+            LlmProvider.OpenAI or LlmProvider.AzureOpenAI or LlmProvider.Ollama or LlmProvider.Custom =>
+                BuildOpenAiStyleBody(messages),
+            LlmProvider.Anthropic =>
+                BuildAnthropicBody(messages),
             _ => throw new NotSupportedException($"Provider {_config.Provider} not supported")
+        };
+    }
+
+    private Dictionary<string, object?> BuildOpenAiStyleBody(List<(string Role, string Content)> messages)
+    {
+        var body = new Dictionary<string, object?>
+        {
+            ["model"] = _config.Model,
+            ["messages"] = messages.Select(m => new { role = m.Role, content = m.Content }),
+            ["temperature"] = _config.Temperature,
+            ["max_tokens"] = _config.MaxTokens,
+            ["stream"] = _config.Stream
+        };
+        // include_usage in the final chunk — supported by OpenAI and AzureOpenAI only
+        if (_config.Stream && _config.Provider is LlmProvider.OpenAI or LlmProvider.AzureOpenAI)
+            body["stream_options"] = new { include_usage = true };
+        return body;
+    }
+
+    private Dictionary<string, object?> BuildAnthropicBody(List<(string Role, string Content)> messages)
+    {
+        return new Dictionary<string, object?>
+        {
+            ["model"] = _config.Model,
+            ["max_tokens"] = _config.MaxTokens,
+            ["temperature"] = _config.Temperature,
+            ["system"] = messages.FirstOrDefault(m => m.Role == "system").Content ?? "",
+            ["messages"] = messages
+                .Where(m => m.Role != "system")
+                .Select(m => new { role = m.Role, content = m.Content }),
+            ["stream"] = _config.Stream
         };
     }
 
@@ -138,25 +165,136 @@ public sealed class LlmNode : BaseNode
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
 
-        // Add auth header
-        if (!string.IsNullOrEmpty(_config.ApiKey))
-        {
-            request.Headers.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
-
-            if (_config.Provider == LlmProvider.Anthropic)
-            {
-                request.Headers.Remove("Authorization");
-                request.Headers.Add("x-api-key", _config.ApiKey);
-                request.Headers.Add("anthropic-version", "2023-06-01");
-            }
-        }
+        AddAuthHeaders(request);
 
         var response = await _httpClient.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync(ct);
         return JsonDocument.Parse(content);
+    }
+
+    private void AddAuthHeaders(HttpRequestMessage request)
+    {
+        if (string.IsNullOrEmpty(_config.ApiKey)) return;
+
+        if (_config.Provider == LlmProvider.Anthropic)
+        {
+            request.Headers.Add("x-api-key", _config.ApiKey);
+            request.Headers.Add("anthropic-version", "2023-06-01");
+        }
+        else
+        {
+            request.Headers.Authorization =
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
+        }
+    }
+
+    private async Task<(string Text, (int PromptTokens, int CompletionTokens) Usage)> StreamApiAsync(
+        object requestBody, NodeExecutionContext nodeCtx, CancellationToken ct)
+    {
+        var json = JsonSerializer.Serialize(requestBody);
+        using var request = new HttpRequestMessage(HttpMethod.Post, _config.ApiEndpoint)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+        AddAuthHeaders(request);
+
+        var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+        response.EnsureSuccessStatusCode();
+
+        var sb = new StringBuilder();
+        int promptTokens = 0, completionTokens = 0;
+
+        using var stream = await response.Content.ReadAsStreamAsync(ct);
+        using var reader = new StreamReader(stream);
+
+        while (!reader.EndOfStream)
+        {
+            ct.ThrowIfCancellationRequested();
+            var line = await reader.ReadLineAsync(ct);
+            if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
+
+            var data = line["data: ".Length..];
+            if (data == "[DONE]") break;
+
+            try
+            {
+                using var doc = JsonDocument.Parse(data);
+                if (_config.Provider == LlmProvider.Anthropic)
+                    ParseAnthropicChunk(doc, sb, ref promptTokens, ref completionTokens);
+                else
+                    ParseOpenAiChunk(doc, sb, ref promptTokens, ref completionTokens);
+            }
+            catch (JsonException) { /* skip malformed SSE chunks */ }
+        }
+
+        nodeCtx.Log($"Stream complete: {sb.Length} chars");
+        return (sb.ToString(), (promptTokens, completionTokens));
+    }
+
+    private void ParseOpenAiChunk(
+        JsonDocument doc, StringBuilder sb, ref int promptTokens, ref int completionTokens)
+    {
+        var root = doc.RootElement;
+
+        if (root.TryGetProperty("choices", out var choices) && choices.GetArrayLength() > 0)
+        {
+            var delta = choices[0].GetProperty("delta");
+            if (delta.TryGetProperty("content", out var contentEl))
+            {
+                var chunk = contentEl.GetString() ?? "";
+                if (chunk.Length > 0)
+                {
+                    sb.Append(chunk);
+                    _config.OnChunk?.Invoke(chunk);
+                }
+            }
+        }
+
+        // Final chunk carries usage when stream_options.include_usage = true
+        if (root.TryGetProperty("usage", out var usage) && usage.ValueKind == JsonValueKind.Object)
+        {
+            if (usage.TryGetProperty("prompt_tokens", out var ptEl)) promptTokens = ptEl.GetInt32();
+            if (usage.TryGetProperty("completion_tokens", out var ctEl)) completionTokens = ctEl.GetInt32();
+        }
+    }
+
+    private void ParseAnthropicChunk(
+        JsonDocument doc, StringBuilder sb, ref int promptTokens, ref int completionTokens)
+    {
+        var root = doc.RootElement;
+        if (!root.TryGetProperty("type", out var typeEl)) return;
+
+        switch (typeEl.GetString())
+        {
+            case "message_start":
+                if (root.TryGetProperty("message", out var msg) &&
+                    msg.TryGetProperty("usage", out var startUsage) &&
+                    startUsage.TryGetProperty("input_tokens", out var it))
+                    promptTokens = it.GetInt32();
+                break;
+
+            case "content_block_delta":
+                if (root.TryGetProperty("delta", out var delta) &&
+                    delta.TryGetProperty("type", out var dt) && dt.GetString() == "text_delta" &&
+                    delta.TryGetProperty("text", out var textEl))
+                {
+                    var chunk = textEl.GetString() ?? "";
+                    if (chunk.Length > 0)
+                    {
+                        sb.Append(chunk);
+                        _config.OnChunk?.Invoke(chunk);
+                    }
+                }
+                break;
+
+            case "message_delta":
+                if (root.TryGetProperty("usage", out var endUsage) &&
+                    endUsage.TryGetProperty("output_tokens", out var ot))
+                    completionTokens = ot.GetInt32();
+                break;
+        }
     }
 
     private string ExtractResponse(JsonDocument doc)
@@ -208,6 +346,10 @@ public sealed record LlmConfig
     public int MaxTokens { get; init; } = 2048;
     public string? DefaultSystemPrompt { get; init; }
     public bool MaintainHistory { get; init; } = false;
+    /// <summary>When true, the node streams the response via SSE and delivers chunks via <see cref="OnChunk"/>.</summary>
+    public bool Stream { get; init; } = false;
+    /// <summary>Called with each text chunk as it arrives during streaming. Ignored when <see cref="Stream"/> is false.</summary>
+    public Action<string>? OnChunk { get; init; }
 
     // ─── Presets ──────────────────────────────────────────────────────────────
 
