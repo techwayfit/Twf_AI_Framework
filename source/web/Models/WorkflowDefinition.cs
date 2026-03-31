@@ -39,6 +39,12 @@ public class WorkflowDefinition
     public List<ChildWorkflowDefinition> SubWorkflows { get; set; } = new();
 
     public WorkflowMetadata Metadata { get; set; } = new();
+
+    /// <summary>
+    /// Raw JSON snapshot produced by the FlowForge visual designer.
+    /// Stores nodes, connections and variable state so the canvas can be restored.
+    /// </summary>
+    public string? FlowForgeLayout { get; set; }
 }
 
 /// <summary>

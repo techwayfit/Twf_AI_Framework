@@ -197,6 +197,44 @@ public class WorkflowController : Controller
         }
     }
 
+    // ─── FlowForge Designer ───────────────────────────────────────────────────
+
+    // GET: /Workflow/FlowForge/{id}
+    public async Task<IActionResult> FlowForgeDesigner(Guid id)
+    {
+        var workflow = await _repository.GetByIdAsync(id);
+        if (workflow == null) return NotFound();
+        return View(workflow);
+    }
+
+    // POST: /Workflow/SaveFlowForge
+    // Body: { workflowId, name, layout }
+    [HttpPost]
+    public async Task<IActionResult> SaveFlowForge([FromBody] FlowForgeSaveRequest? request)
+    {
+        if (request == null || request.WorkflowId == Guid.Empty)
+            return Json(new { success = false, error = "Invalid request" });
+
+        var workflow = await _repository.GetByIdAsync(request.WorkflowId);
+        if (workflow == null)
+            return Json(new { success = false, error = "Workflow not found" });
+
+        workflow.Name = request.Name ?? workflow.Name;
+        workflow.FlowForgeLayout = request.Layout;
+        workflow.UpdatedAt = DateTime.UtcNow;
+
+        try
+        {
+            await _repository.UpdateAsync(workflow);
+            return Json(new { success = true });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error saving FlowForge layout for workflow {WorkflowId}", request.WorkflowId);
+            return Json(new { success = false, error = ex.Message });
+        }
+    }
+
     // GET: /Workflow/GetAvailableNodes
     [HttpGet]
     public IActionResult GetAvailableNodes()
@@ -362,4 +400,13 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Large Lang
             return StatusCode(500, new { error = ex.Message });
         }
     }
+}
+
+/// <summary>Request body for SaveFlowForge endpoint.</summary>
+public sealed class FlowForgeSaveRequest
+{
+    public Guid WorkflowId { get; set; }
+    public string? Name { get; set; }
+    /// <summary>Full FlowForge JSON: { name, nodes, connections, variables }</summary>
+    public string? Layout { get; set; }
 }
