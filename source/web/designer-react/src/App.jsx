@@ -493,7 +493,8 @@ function DesignerInner({ workflowId }) {
               onDragOver={onDragOver}
               fitView
               snapToGrid
-              snapGrid={[16, 16]}
+              snapGrid={[4, 4]}
+              nodeDragThreshold={1}
               deleteKeyCode="Delete"
               multiSelectionKeyCode="Control"
             >

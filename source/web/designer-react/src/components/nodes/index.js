@@ -42,7 +42,54 @@ export const nodeTypes = {
 
   // IO
   HttpRequestNode: GenericNode,
+  HttpResponseNode: GenericNode,
+  DbQueryNode: GenericNode,
+  FileReadNode: GenericNode,
+  FileWriteNode: GenericNode,
+  EmailSendNode: GenericNode,
+  WebhookNode: GenericNode,
+  QueueNode: GenericNode,
+  CacheNode: GenericNode,
+  NotificationNode: GenericNode,
+  StorageNode: GenericNode,
 
-  // Visual
+  // Logic
+  FunctionNode: GenericNode,
+  ProcessNode: GenericNode,
+  StepNode: GenericNode,
+  ScriptNode: GenericNode,
+  RateLimiterNode: GenericNode,
+
+  // Control (new)
+  WaitNode: GenericNode,
+  RetryNode: GenericNode,
+  TimeoutNode: GenericNode,
+  EventTriggerNode: GenericNode,
+  SwitchNode: GenericNode,
+
+  // Data (new)
+  SetVariableNode: GenericNode,
+  ParseJsonNode: GenericNode,
+  AggregateNode: GenericNode,
+  SortNode: GenericNode,
+  JoinNode: GenericNode,
+  SchemaValidateNode: GenericNode,
+  TemplateNode: GenericNode,
+  CsvParseNode: GenericNode,
+  XmlParseNode: GenericNode,
+  Base64Node: GenericNode,
+  HashNode: GenericNode,
+  DateTimeNode: GenericNode,
+  RandomNode: GenericNode,
+
+  // AI (new)
+  VectorSearchNode: GenericNode,
+  AgentNode: GenericNode,
+  TextSplitterNode: GenericNode,
+  SummariseNode: GenericNode,
+
+  // Visual (new)
+  NoteNode: GenericNode,
+  AnchorNode: GenericNode,
   ContainerNode: ContainerNode,
 };
