@@ -5,101 +5,117 @@ namespace TwfAiFramework.Tests.Nodes;
 public class BranchNodeTests
 {
     [Fact]
-    public async Task ExecuteAsync_Should_Select_Case1_With_CaseInsensitive_Matching_By_Default()
+    public async Task ExecuteAsync_Should_Execute_Case1_With_CaseInsensitive_Matching_By_Default()
     {
+        var case1Workflow= Workflow.Create("case1").AddStep("case1_step", (data, ctx) =>
+        {
+            data.Set("case", "case1");
+            return Task.FromResult(data);
+        });
+        var case2Workflow = Workflow.Create("case2").AddStep("case2_step", (data, ctx) =>
+        {
+            data.Set("case", "case2");
+            return Task.FromResult(data);
+        });
+        
         var node = new BranchNode(
             "BranchByStatus",
-            "status",
-            case1Value: "approved",
-            case2Value: "pending",
-            case3Value: "rejected");
+            "status", 
+            new KeyValuePair<string, Workflow> ("case1",case1Workflow),
+            new KeyValuePair<string, Workflow> ("case2",case2Workflow)
+            );
 
-        var input = new WorkflowData().Set("status", "APPROVED");
+        var input = new WorkflowData().Set("status", "case1");
         var context = new WorkflowContext("Test", NullLogger.Instance);
         var result = await node.ExecuteAsync(input, context);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data.Get<string>("branch_selected_port").Should().Be("case1");
-        result.Data.Get<bool>("branch_case1").Should().BeTrue();
-        result.Data.Get<bool>("branch_case2").Should().BeFalse();
-        result.Data.Get<bool>("branch_case3").Should().BeFalse();
-        result.Data.Get<bool>("branch_default").Should().BeFalse();
-        result.Metadata["selected_port"].Should().Be("case1");
-    }
-
+        result.Data.Get<string>("branch_status").Should().Be("success");
+        result.Data.Get<string>("branch_route").Should().Be("case1");
+        result.Data.Get<string>("case").Should().Be("case1");
+    } 
+    
     [Fact]
     public async Task ExecuteAsync_Should_Select_Default_When_CaseSensitive_And_Value_Differs_By_Casing()
     {
+        var case1Workflow= Workflow.Create("case1").AddStep("case1_step", (data, ctx) =>
+        {
+            data.Set("case", "case1");
+            return Task.FromResult(data);
+        });
+        var defaultWorkflow = Workflow.Create("default").AddStep("default_step", (data, ctx) =>
+        {
+            data.Set("case", "default");
+            return Task.FromResult(data);
+        });
+        
         var node = new BranchNode(
-            "BranchCaseSensitive",
-            "status",
-            case1Value: "approved",
-            caseSensitive: true);
+            "BranchByStatus",
+            "status", 
+            new KeyValuePair<string, Workflow> ("case1",case1Workflow),
+            new KeyValuePair<string, Workflow> ("default",defaultWorkflow)
+        );
 
-        var input = new WorkflowData().Set("status", "APPROVED");
+        var input = new WorkflowData().Set("status", "case2");
         var context = new WorkflowContext("Test", NullLogger.Instance);
         var result = await node.ExecuteAsync(input, context);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data.Get<string>("branch_selected_port").Should().Be("default");
-        result.Data.Get<bool>("branch_default").Should().BeTrue();
+        result.Data.Get<string>("branch_status").Should().Be("success");
+        result.Data.Get<string>("branch_route").Should().Be("default");
+        result.Data.Get<string>("case").Should().Be("default");
     }
 
-    [Fact]
-    public async Task ExecuteAsync_Should_Select_Default_When_No_Cases_Match()
-    {
-        var node = new BranchNode(
-            "BranchNoMatch",
-            "priority",
-            case1Value: "high",
-            case2Value: "medium",
-            case3Value: "low");
 
-        var input = new WorkflowData().Set("priority", "urgent");
+    [Fact]
+    public async Task ExecuteAsync_Should_Select_Last_Matching_Case_When_Multiple_Cases_Have_Same_Value()
+    {
+        var case1Workflow= Workflow.Create("case1_wf").AddStep("case1_step", (data, ctx) =>
+        {
+            data.Set("case", "case1");
+            return Task.FromResult(data);
+        });
+        var case2Workflow = Workflow.Create("case2_wf").AddStep("case2_step", (data, ctx) =>
+        {
+            data.Set("case", "case2");
+            return Task.FromResult(data);
+        });
+        
+        var node = new BranchNode(
+            "BranchByStatus",
+            "status", 
+            new KeyValuePair<string, Workflow> ("case1",case1Workflow),
+            new KeyValuePair<string, Workflow> ("case1",case2Workflow)
+        );
+
+        var input = new WorkflowData().Set("status", "case1");//Last Worklflow
         var context = new WorkflowContext("Test", NullLogger.Instance);
         var result = await node.ExecuteAsync(input, context);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data.Get<string>("branch_selected_port").Should().Be("default");
-        result.Data.Get<string?>("branch_selected_value").Should().BeNull();
-        result.Data.Get<bool>("branch_default").Should().BeTrue();
+        result.Data.Get<string>("branch_status").Should().Be("success");
+        result.Data.Get<string>("branch_route").Should().Be("case2_wf");
+        result.Data.Get<string>("case").Should().Be("case2");
     }
 
     [Fact]
-    public async Task ExecuteAsync_Should_Select_First_Matching_Case_When_Multiple_Cases_Have_Same_Value()
+    public async Task ExecuteAsync_Should_Return_Failure_When_ValueKey_Is_Missing()
     {
-        var node = new BranchNode(
-            "BranchFirstMatchWins",
-            "status",
-            case1Value: "same",
-            case2Value: "same",
-            case3Value: "same");
-
-        var input = new WorkflowData().Set("status", "same");
-        var context = new WorkflowContext("Test", NullLogger.Instance);
-        var result = await node.ExecuteAsync(input, context);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Data.Get<string>("branch_selected_port").Should().Be("case1");
-        result.Data.Get<bool>("branch_case1").Should().BeTrue();
-        result.Data.Get<bool>("branch_case2").Should().BeFalse();
-        result.Data.Get<bool>("branch_case3").Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task ExecuteAsync_Should_Select_Default_When_ValueKey_Is_Missing()
-    {
+        var defaultWorkflow = Workflow.Create("default").AddStep("default_step", (data, ctx) =>
+        {
+            data.Set("case", "default");
+            return Task.FromResult(data);
+        });
         var node = new BranchNode(
             "BranchMissingValue",
             "missing_key",
-            case1Value: "x");
-
+            new KeyValuePair<string, Workflow> ("default",defaultWorkflow));
+  
         var input = new WorkflowData();
         var context = new WorkflowContext("Test", NullLogger.Instance);
         var result = await node.ExecuteAsync(input, context);
 
         result.IsSuccess.Should().BeTrue();
-        result.Data.Get<string>("branch_selected_port").Should().Be("default");
-        result.Data.Get<bool>("branch_default").Should().BeTrue();
+        result.Data.Get<string>("branch_route_status").Should().Be("failure");
     }
 }

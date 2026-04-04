@@ -8,7 +8,7 @@ class Program
     static async Task Main(string[] args)
     {
         Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
-        Console.WriteLine("║      TwfAiFramework - Demo Console Application         ║");
+        Console.WriteLine("║      TwfAiFramework - Demo Console Application             ║");
         Console.WriteLine("╚════════════════════════════════════════════════════════════╝\n");
 
         while (true)
@@ -42,23 +42,23 @@ class Program
     static void DisplayMenu()
     {
         Console.WriteLine("╔════════════════════════════════════════════════════════════╗");
-        Console.WriteLine("║          MAIN MENU           ║");
+        Console.WriteLine("║          MAIN MENU                                         ║");
         Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  CONCEPTS - Framework Fundamentals   ║");
+        Console.WriteLine("║  CONCEPTS - Framework Fundamentals                         ║");
         Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  1. WorkflowData Fluent API          ║");
-        Console.WriteLine("║  2. Node Chaining & Branching  ║");
-        Console.WriteLine("║  3. Parallel Execution      ║");
-        Console.WriteLine("║  4. Loop (ForEach)  ║");
-        Console.WriteLine("║  5. Error Handling & Retry       ║");
+        Console.WriteLine("║  1. WorkflowData Fluent API                                ║");
+        Console.WriteLine("║  2. Node Chaining & Branching                              ║");
+        Console.WriteLine("║  3. Parallel Execution                                     ║");
+        Console.WriteLine("║  4. Loop (ForEach)                                         ║");
+        Console.WriteLine("║  5. Error Handling & Retry                                 ║");
         Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  EXAMPLES - Complete AI Workflows      ║");
+        Console.WriteLine("║  EXAMPLES - Complete AI Workflows                          ║");
         Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  6. Customer Support Chatbot    ║");
-        Console.WriteLine("║  7. RAG Document Q&A Pipeline         ║");
-        Console.WriteLine("║8. Content Generation Pipeline ║");
+        Console.WriteLine("║  6. Customer Support Chatbot                               ║");
+        Console.WriteLine("║  7. RAG Document Q&A Pipeline                              ║");
+        Console.WriteLine("║  8. Content Generation Pipeline                              ║");
         Console.WriteLine("╠════════════════════════════════════════════════════════════╣");
-        Console.WriteLine("║  Q. Quit        ║");
+        Console.WriteLine("║  Q. Quit                                                   ║");
         Console.WriteLine("╚════════════════════════════════════════════════════════════╝");
         Console.Write("\nEnter your choice: ");
     }

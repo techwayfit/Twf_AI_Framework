@@ -1,0 +1,38 @@
+{
+  "name": "Sample Workflow",
+  "nodes": {
+    "startNode":{
+      "type": "startNode",
+      "data": [{"key": "value"},{"key2": "value2"}],
+      "ports": ["next"],
+      "portNodes": {
+        "next": ["node129080","node123199"]
+      },
+      "node129080": {
+        "type": "conditionNode",
+        "data": [],
+        "ports": ["true","false"],
+        "portNodes": {
+          "true": ["node12122"],
+          "false": ["node121223"]
+        }
+      },
+      "node123199": {
+        "type": "branchNode",
+        "data": [],
+        "ports": ["case1","case2","default"],
+        "portNodes": {
+          "case1": [],
+          "case2": [],
+          "default": []
+        }
+        
+      }
+    }
+
+    },
+  "nodeFlow": {
+    "start": "startNode",
+    "error": ""
+  }
+}

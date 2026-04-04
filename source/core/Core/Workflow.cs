@@ -24,6 +24,8 @@ public sealed class Workflow
     private Action<string, Exception?>? _onError;
     private GlobalErrorStrategy _errorStrategy = GlobalErrorStrategy.StopOnFirstFailure;
 
+    public string Name => _name;
+
     private Workflow(string name) { _name = name; }
 
     // ─── Entry Point ─────────────────────────────────────────────────────────
