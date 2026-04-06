@@ -335,34 +335,49 @@ function DesignerInner({ workflowId, mode }) {
     // Fixed export canvas size — large enough for any workflow
     const exportW = 1800;
     const exportH = 1100;
-    const padding = 60;
 
-    // Calculate a viewport transform that fits every node into the export canvas.
-    // We target .react-flow__viewport (which contains BOTH nodes div AND edges SVG)
-    // and override its transform via the html-to-image style option.
-    // This is the approach recommended by the ReactFlow team and is the only
-    // reliable way to capture edges — the outer .react-flow div does not work
-    // because html-to-image does not serialize inline SVG paths reliably.
+    // padding is a fraction of the canvas (0.08 = 8% margin on each side).
+    // getViewportForBounds expects a fraction, NOT pixels — passing a large
+    // number here clamps zoom to minZoom and makes everything microscopic.
     const bounds = getNodesBounds(nodes);
-    const { x, y, zoom } = getViewportForBounds(bounds, exportW, exportH, 0.1, 4, padding);
+    const { x, y, zoom } = getViewportForBounds(bounds, exportW, exportH, 0.3, 2, 0.08);
 
     const viewportEl = wrapperRef.current?.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
+    const captureOpts = {
+      backgroundColor: '#f8f9fa',
+      pixelRatio: 1,
+      width: exportW,
+      height: exportH,
+      style: {
+        // Override the live pan/zoom transform so all nodes and edges fit
+        transform: `translate(${x}px, ${y}px) scale(${zoom})`,
+        transformOrigin: '0 0',
+        width: `${exportW}px`,
+        height: `${exportH}px`,
+      },
+    };
+
+    // The edges SVG uses CSS width/height:100% which html-to-image measures
+    // from the live viewport (not the export dimensions), so edges are
+    // invisible in the captured image. Pin explicit pixel dimensions on the
+    // actual DOM element before capture and restore them afterwards.
+    const edgesSvg = viewportEl.querySelector('svg.react-flow__edges');
+    const prevEdgesW = edgesSvg?.style.width ?? '';
+    const prevEdgesH = edgesSvg?.style.height ?? '';
+    if (edgesSvg) {
+      edgesSvg.style.width = `${exportW}px`;
+      edgesSvg.style.height = `${exportH}px`;
+    }
+
     try {
-      const pngDataUrl = await toPng(viewportEl, {
-        backgroundColor: '#f8f9fa',
-        pixelRatio: 2,
-        width: exportW,
-        height: exportH,
-        style: {
-          // Override the live pan/zoom transform so all nodes and edges fit
-          transform: `translate(${x}px, ${y}px) scale(${zoom})`,
-          transformOrigin: '0 0',
-          width: `${exportW}px`,
-          height: `${exportH}px`,
-        },
-      });
+      // Three warm-up passes help the browser's foreignObject / SVG
+      // serialisation pipeline fully resolve before the final capture.
+      for (let i = 0; i < 3; i++) {
+        await toPng(viewportEl, captureOpts).catch(() => {});
+      }
+      const pngDataUrl = await toPng(viewportEl, captureOpts);
 
       if (format === 'png') {
         const a = document.createElement('a');
@@ -388,6 +403,11 @@ function DesignerInner({ workflowId, mode }) {
       }
     } catch (err) {
       alert(`Export failed: ${err.message}`);
+    } finally {
+      if (edgesSvg) {
+        edgesSvg.style.width = prevEdgesW;
+        edgesSvg.style.height = prevEdgesH;
+      }
     }
   }, [workflowDef, nodes]);
 
