@@ -18,6 +18,9 @@ import '@xyflow/react/dist/style.css';
 
 import { SchemaContext } from './context/SchemaContext';
 import { nodeTypes } from './components/nodes';
+import DeletableEdge from './components/edges/DeletableEdge';
+
+const edgeTypes = { deletable: DeletableEdge };
 import Toolbar from './components/Toolbar';
 import NodePalette from './components/NodePalette';
 import PropertiesPanel from './components/PropertiesPanel';
@@ -32,6 +35,100 @@ import './App.css';
 
 const genId = () => crypto.randomUUID();
 const genSubId = () => crypto.randomUUID();
+
+// ─── Export helpers ───────────────────────────────────────────────────────────
+
+/** Promise wrapper for loading an image. */
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Image failed to load'));
+    img.src = src;
+  });
+}
+
+/**
+ * Walk live/clone SVG trees simultaneously and copy computed presentation
+ * attributes (stroke, fill, opacity, …) onto the clone so they survive
+ * serialisation without a live stylesheet.
+ */
+function inlineSvgPresentationStyles(liveRoot, cloneRoot) {
+  const props = [
+    'stroke', 'stroke-width', 'stroke-dasharray', 'stroke-linecap',
+    'stroke-linejoin', 'stroke-opacity', 'fill', 'fill-opacity',
+    'opacity', 'visibility', 'display', 'marker-end', 'marker-start',
+  ];
+  const liveEls  = [liveRoot,  ...liveRoot.querySelectorAll('*')];
+  const cloneEls = [cloneRoot, ...cloneRoot.querySelectorAll('*')];
+
+  liveEls.forEach((live, i) => {
+    const clone = cloneEls[i];
+    if (!clone || live.nodeType !== Node.ELEMENT_NODE) return;
+    try {
+      const cs = window.getComputedStyle(live);
+      props.forEach(prop => {
+        const val = cs.getPropertyValue(prop);
+        if (val !== undefined && val !== '') clone.setAttribute(prop, val);
+      });
+    } catch (_) { /* cross-origin / detached — skip */ }
+  });
+}
+
+/**
+ * Serialize the ReactFlow edges SVG into a data URL with the export viewport
+ * transform baked in.  This sidesteps the Chromium bug where <svg> elements
+ * inside <foreignObject> (what html-to-image uses) are silently dropped.
+ *
+ * @param {SVGElement} edgesEl   – .react-flow__edges
+ * @param {SVGElement|null} markerEl – .react-flow__marker (optional arrowhead defs)
+ * @param {number} w   Export canvas width  (px)
+ * @param {number} h   Export canvas height (px)
+ * @param {number} tx  Viewport translate X (px)
+ * @param {number} ty  Viewport translate Y (px)
+ * @param {number} zoom Viewport scale
+ */
+function buildEdgesDataUrl(edgesEl, markerEl, w, h, tx, ty, zoom) {
+  // Build a fresh SVG element so we control width/height exactly
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  svg.setAttribute('width',  String(w));
+  svg.setAttribute('height', String(h));
+
+  // Inline arrowhead marker defs so url(#…) references resolve after serialisation
+  const defsSource = edgesEl.querySelector('defs') ?? markerEl?.querySelector('defs');
+  if (defsSource) svg.appendChild(defsSource.cloneNode(true));
+
+  // Wrap all non-defs children in a transform group matching the export viewport
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('transform', `translate(${tx} ${ty}) scale(${zoom})`);
+
+  Array.from(edgesEl.children).forEach(child => {
+    const tag = child.tagName.toLowerCase();
+    if (tag === 'defs') return;
+
+    if (tag === 'svg') {
+      // Individual per-edge SVG wrappers — unwrap their contents into the <g>
+      // (nested <svg> inside <g> is invalid in SVG 1.1 and clips in many browsers).
+      // Edge paths use flow coordinates, so they transform correctly via the parent <g>.
+      Array.from(child.children).forEach(inner => {
+        if (inner.tagName.toLowerCase() === 'defs') return;
+        const cloned = inner.cloneNode(true);
+        inlineSvgPresentationStyles(inner, cloned);
+        g.appendChild(cloned);
+      });
+    } else {
+      const cloned = child.cloneNode(true);
+      inlineSvgPresentationStyles(child, cloned);
+      g.appendChild(cloned);
+    }
+  });
+
+  svg.appendChild(g);
+
+  const str = new XMLSerializer().serializeToString(svg);
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(str);
+}
 
 // ─── Inner component (needs ReactFlowProvider ancestor) ───────────────────────
 function DesignerInner({ workflowId, mode }) {
@@ -154,18 +251,29 @@ function DesignerInner({ workflowId, mode }) {
 
   // ── Connections ────────────────────────────────────────────────────────────
   const onConnect = useCallback(
-    (connection) =>
+    (connection) => {
+      const sourceNode = nodesRef.current.find((n) => n.id === connection.source);
+      const isNoteLink = sourceNode?.type === 'NoteNode';
       setEdges((eds) =>
         addEdge(
-          {
-            ...connection,
-            id: crypto.randomUUID(),
-            type: 'smoothstep',
-            markerEnd: { type: MarkerType.ArrowClosed },
-          },
+          isNoteLink
+            ? {
+                ...connection,
+                id: crypto.randomUUID(),
+                type: 'deletable',
+                style: { stroke: '#aaa', strokeWidth: 1.5, strokeDasharray: '5,4' },
+                markerEnd: undefined,
+              }
+            : {
+                ...connection,
+                id: crypto.randomUUID(),
+                type: 'deletable',
+                markerEnd: { type: MarkerType.ArrowClosed },
+              },
           eds,
         ),
-      ),
+      );
+    },
     [setEdges],
   );
 
@@ -203,6 +311,7 @@ function DesignerInner({ workflowId, mode }) {
           type: nodeInfo.type,
           category: nodeInfo.category,
           color: nodeInfo.color,
+          icon: nodeInfo.icon,
           parameters: defaultParams,
           executionOptions: null,
         },
@@ -332,60 +441,82 @@ function DesignerInner({ workflowId, mode }) {
 
     const name = (workflowDef?.name ?? 'workflow').replace(/[^a-z0-9_-]/gi, '_');
 
-    // Fixed export canvas size — large enough for any workflow
     const exportW = 1800;
     const exportH = 1100;
 
-    // padding is a fraction of the canvas (0.08 = 8% margin on each side).
-    // getViewportForBounds expects a fraction, NOT pixels — passing a large
-    // number here clamps zoom to minZoom and makes everything microscopic.
     const bounds = getNodesBounds(nodes);
     const { x, y, zoom } = getViewportForBounds(bounds, exportW, exportH, 0.3, 2, 0.08);
 
     const viewportEl = wrapperRef.current?.querySelector('.react-flow__viewport');
     if (!viewportEl) return;
 
-    const captureOpts = {
-      backgroundColor: '#f8f9fa',
+    // ── Suppress shadows during capture so edges aren't hidden underneath ─
+    const noShadowStyle = document.createElement('style');
+    noShadowStyle.setAttribute('data-export-override', '1');
+    noShadowStyle.textContent = `
+      .react-flow__node * { box-shadow: none !important; filter: none !important; }
+      .react-flow__node { box-shadow: none !important; filter: none !important; }
+      .react-flow__handle { opacity: 0 !important; }
+    `;
+    document.head.appendChild(noShadowStyle);
+
+    // ── Step 1: capture HTML nodes layer (transparent background) ─────────
+    // html-to-image serialises HTML nodes correctly but silently drops SVG
+    // children inside <foreignObject> (Chromium bug) — so edges are NOT
+    // captured here.  We handle edges separately below.
+    const nodesPng = await toPng(viewportEl, {
+      backgroundColor: 'transparent',
       pixelRatio: 1,
       width: exportW,
       height: exportH,
       style: {
-        // Override the live pan/zoom transform so all nodes and edges fit
         transform: `translate(${x}px, ${y}px) scale(${zoom})`,
         transformOrigin: '0 0',
         width: `${exportW}px`,
         height: `${exportH}px`,
       },
-    };
+      // Skip SVG children — they would be blank/clipped anyway
+      filter: el => el.tagName?.toLowerCase() !== 'svg' || el.closest('.react-flow__nodes') != null,
+    });
 
-    // The edges SVG uses CSS width/height:100% which html-to-image measures
-    // from the live viewport (not the export dimensions), so edges are
-    // invisible in the captured image. Pin explicit pixel dimensions on the
-    // actual DOM element before capture and restore them afterwards.
-    const edgesSvg = viewportEl.querySelector('svg.react-flow__edges');
-    const prevEdgesW = edgesSvg?.style.width ?? '';
-    const prevEdgesH = edgesSvg?.style.height ?? '';
-    if (edgesSvg) {
-      edgesSvg.style.width = `${exportW}px`;
-      edgesSvg.style.height = `${exportH}px`;
-    }
+    // ── Step 2: serialize edge SVG directly (bypass html-to-image for SVG) ─
+    const edgesEl  = viewportEl.querySelector('.react-flow__edges');
+    const markerEl = viewportEl.querySelector('.react-flow__marker');
+    const edgesDataUrl = edgesEl
+      ? buildEdgesDataUrl(edgesEl, markerEl, exportW, exportH, x, y, zoom)
+      : null;
 
+    // ── Step 3: composite background + edges + nodes on a Canvas ──────────
     try {
-      // Three warm-up passes help the browser's foreignObject / SVG
-      // serialisation pipeline fully resolve before the final capture.
-      for (let i = 0; i < 3; i++) {
-        await toPng(viewportEl, captureOpts).catch(() => {});
+      const canvas = document.createElement('canvas');
+      canvas.width  = exportW;
+      canvas.height = exportH;
+      const ctx = canvas.getContext('2d');
+
+      // Background fill
+      ctx.fillStyle = '#f8f9fa';
+      ctx.fillRect(0, 0, exportW, exportH);
+
+      // Draw nodes first (edges render on top so connectors are never hidden
+      // behind opaque node backgrounds — e.g. the Start circle)
+      const nodesImg = await loadImage(nodesPng);
+      ctx.drawImage(nodesImg, 0, 0);
+
+      // Draw edges on top
+      if (edgesDataUrl) {
+        const edgesImg = await loadImage(edgesDataUrl);
+        ctx.drawImage(edgesImg, 0, 0);
       }
-      const pngDataUrl = await toPng(viewportEl, captureOpts);
 
       if (format === 'png') {
+        const pngDataUrl = canvas.toDataURL('image/png');
         const a = document.createElement('a');
         a.download = `${name}.png`;
         a.href = pngDataUrl;
         a.click();
       } else {
-        // Embed the high-res PNG inside an SVG container
+        // Embed the composite PNG inside an SVG container
+        const pngDataUrl = canvas.toDataURL('image/png');
         const svgContent = [
           '<?xml version="1.0" encoding="UTF-8"?>',
           `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
@@ -404,10 +535,7 @@ function DesignerInner({ workflowId, mode }) {
     } catch (err) {
       alert(`Export failed: ${err.message}`);
     } finally {
-      if (edgesSvg) {
-        edgesSvg.style.width = prevEdgesW;
-        edgesSvg.style.height = prevEdgesH;
-      }
+      document.head.querySelector('style[data-export-override]')?.remove();
     }
   }, [workflowDef, nodes]);
 
@@ -534,6 +662,7 @@ function DesignerInner({ workflowId, mode }) {
               nodes={nodes}
               edges={edges}
               nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
               onNodesChange={onNodesChange}
               onEdgesChange={isRunner ? undefined : onEdgesChange}
               onConnect={isRunner ? undefined : onConnect}

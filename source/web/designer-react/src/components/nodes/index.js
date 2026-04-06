@@ -3,6 +3,7 @@ import CircularNode from './CircularNode';
 import DiamondNode from './DiamondNode';
 import ParallelNode from './ParallelNode';
 import ContainerNode from './ContainerNode';
+import NoteNode from './NoteNode';
 
 /**
  * Registry mapping backend node type strings → React Flow node components.
@@ -89,7 +90,7 @@ export const nodeTypes = {
   SummariseNode: GenericNode,
 
   // Visual (new)
-  NoteNode: GenericNode,
+  NoteNode: NoteNode,
   AnchorNode: GenericNode,
   ContainerNode: ContainerNode,
 };

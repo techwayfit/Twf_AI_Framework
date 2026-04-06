@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useSchemas } from '../context/SchemaContext';
+import { NODE_ICONS } from '../nodeConfig';
 
 /**
  * Right-side properties panel.
@@ -176,17 +177,41 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
 
   return (
     <div style={{ padding: 14, overflowY: 'auto', height: '100%' }}>
-      <h6
+      {/* Header with icon */}
+      <div
         style={{
-          fontWeight: 600,
-          color: '#495057',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
           marginBottom: 12,
-          paddingBottom: 8,
+          paddingBottom: 10,
           borderBottom: '1px solid #dee2e6',
         }}
       >
-        <i className="bi bi-sliders" /> {label || selectedNode.data.label}
-      </h6>
+        <div
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 7,
+            backgroundColor: `${selectedNode.data.color ?? '#3498db'}20`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+          }}
+        >
+          <i
+            className={`bi ${selectedNode.data.icon ?? NODE_ICONS[selectedNode.type] ?? 'bi-box'}`}
+            style={{ color: selectedNode.data.color ?? '#3498db', fontSize: 15 }}
+          />
+        </div>
+        <div>
+          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14, lineHeight: 1.2 }}>
+            {label || selectedNode.data.label}
+          </div>
+          <div style={{ fontSize: 11, color: '#94a3b8' }}>{selectedNode.type}</div>
+        </div>
+      </div>
 
       {/* Node Name */}
       <div className="mb-2">
@@ -199,23 +224,30 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
         />
       </div>
 
-      {/* Type (read-only) */}
-      <div className="mb-3">
-        <label className="form-label small text-muted mb-1">Type</label>
-        <input
-          type="text"
-          className="form-control form-control-sm"
-          value={selectedNode.type}
-          disabled
-        />
-      </div>
+      {/* Description — always shown, displayed on the canvas */}
+      {selectedNode.type !== 'NoteNode' && selectedNode.type !== 'ContainerNode' && (
+        <div className="mb-3">
+          <label className="form-label small fw-bold mb-1">
+            Description
+            <span className="text-muted fw-normal ms-1" style={{ fontSize: 10 }}>(shown on canvas)</span>
+          </label>
+          <textarea
+            className="form-control form-control-sm"
+            rows={2}
+            value={params.description ?? ''}
+            placeholder="Briefly describe what this node does…"
+            onChange={(e) => commitParam('description', e.target.value)}
+            style={{ fontSize: 12, resize: 'vertical' }}
+          />
+        </div>
+      )}
 
-      {/* Schema-driven parameter fields */}
-      {schema.parameters && schema.parameters.length > 0 && (
+      {/* Schema-driven parameter fields (skip description — already shown above) */}
+      {schema.parameters && schema.parameters.filter(p => p.name !== 'description').length > 0 && (
         <>
           <hr style={{ margin: '8px 0' }} />
           <h6 className="small fw-bold mb-2">Parameters</h6>
-          {schema.parameters.map(renderField)}
+          {schema.parameters.filter(p => p.name !== 'description').map(renderField)}
         </>
       )}
 
