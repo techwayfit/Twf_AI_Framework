@@ -7,6 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 export default function Toolbar({
   workflowName,
   workflowId,
+  mode,
   onSave,
   onZoomIn,
   onZoomOut,
@@ -17,6 +18,7 @@ export default function Toolbar({
   activeSubWorkflow,  // null | { id, name }
   onBackToMain,       // () => void
 }) {
+  const isRunner = mode === 'runner';
   const contextLabel = activeSubWorkflow
     ? `${workflowName}  ›  ${activeSubWorkflow.name}`
     : workflowName;
@@ -65,7 +67,8 @@ export default function Toolbar({
       </div>
 
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        {activeSubWorkflow && (
+        {/* Sub-workflow back button (designer mode only) */}
+        {!isRunner && activeSubWorkflow && (
           <button
             className="btn btn-sm btn-warning"
             onClick={onBackToMain}
@@ -75,6 +78,8 @@ export default function Toolbar({
             <i className="bi bi-arrow-left-short" /> Main Flow
           </button>
         )}
+
+        {/* Zoom / fit — always visible */}
         <button className="btn btn-sm btn-outline-light" onClick={onZoomIn} title="Zoom In">
           <i className="bi bi-zoom-in" /> Zoom In
         </button>
@@ -84,73 +89,88 @@ export default function Toolbar({
         <button className="btn btn-sm btn-outline-light" onClick={onFitView} title="Fit to view">
           <i className="bi bi-arrows-fullscreen" /> Reset
         </button>
-        <button className="btn btn-sm btn-success" onClick={onSave} disabled={saving}>
-          <i className="bi bi-save-fill" /> {saving ? 'Saving…' : 'Save'}
-        </button>
-        <div style={{ flexShrink: 0, position: 'relative' }} ref={exportRef}>
-          <button
-            className="btn btn-sm btn-outline-light"
-            onClick={toggleExport}
-            title="Export canvas"
-          >
-            <i className="bi bi-download" /> Export
-          </button>
-          {exportOpen && (
-            <ul
-              style={{
-                position: 'fixed',
-                top: dropPos.top,
-                right: dropPos.right,
-                zIndex: 99999,
-                background: '#fff',
-                border: '1px solid #dee2e6',
-                borderRadius: 6,
-                boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                listStyle: 'none',
-                padding: '4px 0',
-                margin: 0,
-                minWidth: 170,
-              }}
-            >
-              <li>
-                <button
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                  onClick={() => { onExport('png'); setExportOpen(false); }}
-                >
-                  <i className="bi bi-file-image" style={{ marginRight: 8 }} />Export as PNG
-                </button>
-              </li>
-              <li>
-                <button
-                  style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                  onClick={() => { onExport('svg'); setExportOpen(false); }}
-                >
-                  <i className="bi bi-filetype-svg" style={{ marginRight: 8 }} />Export as SVG
-                </button>
-              </li>
-            </ul>
-          )}
-        </div>
-        {!activeSubWorkflow && (
+
+        {/* Designer-only: Save + Export */}
+        {!isRunner && (
           <>
-            <a
-              href={`/Workflow/Runner/${workflowId}`}
-              className="btn btn-sm btn-primary"
-              target="_blank"
-              rel="noreferrer"
-              title="Open runner in new tab"
-            >
-              <i className="bi bi-play-circle-fill" /> Run
-            </a>
-            <a href="/Workflow" className="btn btn-sm btn-outline-light" title="Back to list">
-              <i className="bi bi-arrow-left-circle-fill" /> Back
-            </a>
+            <button className="btn btn-sm btn-success" onClick={onSave} disabled={saving}>
+              <i className="bi bi-save-fill" /> {saving ? 'Saving…' : 'Save'}
+            </button>
+            <div style={{ flexShrink: 0, position: 'relative' }} ref={exportRef}>
+              <button
+                className="btn btn-sm btn-outline-light"
+                onClick={toggleExport}
+                title="Export canvas"
+              >
+                <i className="bi bi-download" /> Export
+              </button>
+              {exportOpen && (
+                <ul
+                  style={{
+                    position: 'fixed',
+                    top: dropPos.top,
+                    right: dropPos.right,
+                    zIndex: 99999,
+                    background: '#fff',
+                    border: '1px solid #dee2e6',
+                    borderRadius: 6,
+                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
+                    listStyle: 'none',
+                    padding: '4px 0',
+                    margin: 0,
+                    minWidth: 170,
+                  }}
+                >
+                  <li>
+                    <button
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      onClick={() => { onExport('png'); setExportOpen(false); }}
+                    >
+                      <i className="bi bi-file-image" style={{ marginRight: 8 }} />Export as PNG
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      onClick={() => { onExport('svg'); setExportOpen(false); }}
+                    >
+                      <i className="bi bi-filetype-svg" style={{ marginRight: 8 }} />Export as SVG
+                    </button>
+                  </li>
+                </ul>
+              )}
+            </div>
           </>
         )}
+
+        {/* Runner-only: Edit in Designer link */}
+        {isRunner && (
+          <a
+            href={`/Workflow/Designer/${workflowId}`}
+            className="btn btn-sm btn-outline-light"
+            title="Open in designer"
+          >
+            <i className="bi bi-pencil-square" /> Edit
+          </a>
+        )}
+
+        {/* Designer-only: Run link + Back */}
+        {!isRunner && !activeSubWorkflow && (
+          <a
+            href={`/Workflow/Runner/${workflowId}`}
+            className="btn btn-sm btn-primary"
+            title="Open runner"
+          >
+            <i className="bi bi-play-circle-fill" /> Run
+          </a>
+        )}
+        <a href="/Workflow" className="btn btn-sm btn-outline-light" title="Back to list">
+          <i className="bi bi-arrow-left-circle-fill" /> Back
+        </a>
       </div>
     </div>
   );

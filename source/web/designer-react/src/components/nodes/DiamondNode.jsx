@@ -18,8 +18,10 @@ const PAD   = (OUTER - INNER) / 2;            // ≈ 23
 export default function DiamondNode({ data, selected }) {
   const color = data.color ?? '#F5A623';
 
+  const runnerClass = data.runnerState ? `rf-runner-${data.runnerState}` : '';
+
   return (
-    <div style={{ position: 'relative', width: OUTER, height: OUTER }}>
+    <div className={runnerClass} style={{ position: 'relative', width: OUTER, height: OUTER }}>
       {/* Rotated square centred inside the OUTER container */}
       <div
         style={{

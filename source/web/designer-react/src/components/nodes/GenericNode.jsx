@@ -27,8 +27,11 @@ export default function GenericNode({ data, selected }) {
     return `${step * (index + 1)}%`;
   };
 
+  const runnerClass = data.runnerState ? `rf-runner-${data.runnerState}` : '';
+
   return (
     <div
+      className={runnerClass}
       style={{
         border: `2px solid ${color}`,
         borderRadius: 6,

@@ -173,3 +173,45 @@ body {
 .react-flow__controls {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
+
+/* ── Runner sidebar (same width as designer sidebar) ──────────────────── */
+.runner-sidebar {
+  width: 280px;
+  min-width: 280px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid #dee2e6;
+  background: #f8f9fa;
+  overflow: hidden;
+}
+
+/* ── Node runner state overlays ───────────────────────────────────────── */
+
+.rf-runner-pending {
+  opacity: 0.35;
+  filter: grayscale(0.6);
+}
+
+.rf-runner-running {
+  outline: 3px solid #f59e0b;
+  outline-offset: 2px;
+  border-radius: 6px;
+  animation: rf-runner-pulse 1.1s ease-in-out infinite;
+}
+
+.rf-runner-done {
+  outline: 3px solid #22c55e;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.rf-runner-error {
+  outline: 3px solid #ef4444;
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+@keyframes rf-runner-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5); }
+  50%       { box-shadow: 0 0 0 7px rgba(245, 158, 11, 0); }
+}

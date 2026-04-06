@@ -22,8 +22,11 @@ export default function CircularNode({ data, selected }) {
   // No input handle for Start or Error nodes
   const hasInput = !isStart && !isError;
 
+  const runnerClass = data.runnerState ? `rf-runner-${data.runnerState}` : '';
+
   return (
     <div
+      className={runnerClass}
       style={{
         width: 80,
         height: 80,

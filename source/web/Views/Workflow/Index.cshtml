@@ -68,17 +68,20 @@
            </small>
      </div>
              <div class="card-footer bg-transparent">
-       <div class="btn-group w-100" role="group">
-          <a asp-action="Designer" asp-route-id="@workflow.Id" class="btn btn-primary btn-sm">
-     <i class="bi bi-pencil-square"></i> Design
-         </a>
-        <a asp-action="Details" asp-route-id="@workflow.Id" class="btn btn-info btn-sm">
-          <i class="bi bi-eye"></i> View
-        </a>
-          <a asp-action="Delete" asp-route-id="@workflow.Id" class="btn btn-danger btn-sm">
-             <i class="bi bi-trash"></i> Delete
-        </a>
-   </div>
+                        <div class="btn-group w-100" role="group">
+                            <a asp-action="Designer" asp-route-id="@workflow.Id" class="btn btn-primary btn-sm">
+                                <i class="bi bi-pencil-square"></i> Design
+                            </a>
+                            <a asp-action="Runner" asp-route-id="@workflow.Id" class="btn btn-success btn-sm">
+                                <i class="bi bi-play-circle"></i> Run
+                            </a>
+                            <a asp-action="Details" asp-route-id="@workflow.Id" class="btn btn-info btn-sm">
+                                <i class="bi bi-eye"></i> View
+                            </a>
+                            <a asp-action="Delete" asp-route-id="@workflow.Id" class="btn btn-danger btn-sm">
+                                <i class="bi bi-trash"></i> Delete
+                            </a>
+                        </div>
    </div>
   </div>
       </div>

@@ -1,12 +1,22 @@
 # TwfAiFramework
 
-A lightweight, node-based AI workflow engine for .NET 10. Build AI pipelines by chaining reusable nodes — LLM calls, HTTP requests, data transforms, embeddings, conditionals, and more — with built-in retry, timeout, parallel execution, and structured logging.
+[![NuGet](https://img.shields.io/nuget/v/TwfAiFramework)](https://www.nuget.org/packages/TwfAiFramework) [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) [![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/)
+
+A lightweight, node-based AI workflow engine for .NET 10. Build AI pipelines by chaining reusable nodes — LLM calls, HTTP requests, data transforms, text chunking, embeddings, conditionals, and more — with built-in retry, timeout, parallel execution, and structured logging.
 
 Inspired by tools like [n8n](https://n8n.io/), but designed as a C# library you embed directly in your application.
 
 ---
 
-## Getting Started
+## Installation
+
+```bash
+dotnet add package TwfAiFramework
+```
+
+---
+
+## Quick Start
 
 ```csharp
 var result = await Workflow.Create("CustomerSupportBot")
@@ -23,6 +33,7 @@ if (result.IsSuccess)
 ---
 
 ## Core Concepts
+
 
 ### WorkflowData
 
@@ -151,24 +162,47 @@ Per-node configuration for retry, timeout, and conditional execution:
 ### AI Nodes (`TwfAiFramework.Nodes.AI`)
 
 #### `LlmNode`
-Calls any OpenAI-compatible LLM API (OpenAI, Azure OpenAI, Anthropic, Ollama, etc.).
+Calls any OpenAI-compatible LLM API (OpenAI, Azure OpenAI, Anthropic, Ollama, etc.). Supports both standard and streaming (SSE) response modes.
 
 ```csharp
+// Standard response
 new LlmNode("ChatBot", LlmConfig.OpenAI("sk-...", "gpt-4o") with
 {
     DefaultSystemPrompt = "You are a helpful assistant.",
     MaintainHistory     = true,   // enables multi-turn conversation
     Temperature         = 0.7f,
     MaxTokens           = 1000
+})
 
+// Streaming response — invokes OnChunk per text chunk
+new LlmNode("StreamBot", LlmConfig.OpenAI("sk-...", "gpt-4o") with
+{
+    Stream   = true,
+    OnChunk  = chunk => Console.Write(chunk)   // real-time streaming callback
+})
 
-// Or using fluent config
-var config = LlmConfig.Anthropic("sk-ant-...", "claude-sonnet-4-20250514");
-new LlmNode("AssistantNode", config with { Temperature = 0.3f })
+// Anthropic
+new LlmNode("AssistantNode", LlmConfig.Anthropic("sk-ant-...", "claude-sonnet-4-20250514") with
+{
+    Temperature = 0.3f
+})
+
+// Ollama (local)
+new LlmNode("Local", LlmConfig.Ollama("llama3.2"))
+
+// Azure OpenAI
+new LlmNode("Azure", LlmConfig.LmServer("gpt-4o", apiKey, "https://<resource>.openai.azure.com/..."))
 ```
 
 **Reads:** `prompt` or `messages`, `system_prompt`  
 **Writes:** `llm_response`, `llm_model`, `prompt_tokens`, `completion_tokens`
+
+| `LlmConfig` factory | Provider |
+|---|---|
+| `LlmConfig.OpenAI(apiKey, model)` | OpenAI |
+| `LlmConfig.Anthropic(apiKey, model)` | Anthropic |
+| `LlmConfig.Ollama(model, host?)` | Local Ollama |
+| `LlmConfig.LmServer(model, apiKey, endpoint)` | Azure OpenAI / custom endpoint |
 
 ---
 
@@ -266,6 +300,36 @@ Validates `WorkflowData` against conditions — stops the pipeline or sets an `i
 
 ---
 
+#### `ChunkTextNode`
+Splits large text into overlapping chunks for RAG and embedding pipelines.
+
+```csharp
+new ChunkTextNode(new ChunkConfig
+{
+    ChunkSize = 512,
+    Overlap   = 64,
+    Strategy  = ChunkStrategy.Sentence   // Character | Word | Sentence
+})
+```
+
+**Reads:** `text`, `source` (optional label)  
+**Writes:** `chunks` (`List<TextChunk>`), `chunk_count`
+
+---
+
+#### `MemoryNode`
+Reads from or writes to the workflow's global state — useful for session context that persists across multiple pipeline runs.
+
+```csharp
+// Write keys from WorkflowData → global memory
+MemoryNode.Write("user_id", "preferences")
+
+// Read keys from global memory → WorkflowData
+MemoryNode.Read("user_id", "preferences")
+```
+
+---
+
 ### Control Nodes (`TwfAiFramework.Nodes.Control`)
 
 #### `ConditionNode`
@@ -293,6 +357,52 @@ DelayNode.RateLimitDelay(requestsPerMinute: 20)
 
 #### `MergeNode`
 Merges multiple `WorkflowData` keys into a single aggregated value.
+
+---
+
+#### `BranchNode`
+Switch/case router — evaluates a key's value and dispatches to a named sub-workflow.
+
+```csharp
+new BranchNode("RouteIntent", "intent",
+    new KeyValuePair<string, Workflow>("greeting",   greetingWorkflow),
+    new KeyValuePair<string, Workflow>("complaint",  complaintWorkflow),
+    new KeyValuePair<string, Workflow>("returns",    returnsWorkflow))
+```
+
+**Reads:** the key specified in constructor  
+**Writes:** `branch_selected_port`, `branch_input_value`, `branch_case1/2/3/default` flags
+
+---
+
+#### `TryCatchNode`
+Runs an embedded try workflow and, on failure, runs a catch workflow with error context injected.
+
+```csharp
+new TryCatchNode("SafeLlmCall",
+    tryBuilder: t => t
+        .AddNode(new LlmNode("LLM", config)),
+    catchBuilder: c => c
+        .AddNode(new LogNode("LlmFailed"))
+        .AddNode(new FallbackNode()))
+```
+
+**Writes on catch:** `caught_error_message`, `caught_failed_node`, `caught_exception_type`  
+**Always writes:** `try_catch_route` (`"success"` | `"catch"`), `try_success`, `try_error`
+
+---
+
+#### `LogNode`
+Explicit logging checkpoint — dumps selected (or all) `WorkflowData` keys to the logger.
+
+```csharp
+// Log all keys at the current checkpoint
+new LogNode("AfterLLM")
+
+// Log specific keys
+new LogNode("Debug", keysToLog: new[] { "llm_response", "sentiment" },
+            level: LogLevel.Debug)
+```
 
 ---
 
@@ -397,18 +507,20 @@ source/
     │
     ├── Core/                          # namespace TwfAiFramework.Core
     │   ├── INode.cs                   # INode interface, NodeStatus enum
-    │   ├── WorkflowBuilder.cs         # Workflow fluent builder and execution engine
+    │   ├── Workflow.cs                # Workflow fluent builder and execution engine
     │   ├── WorkflowContext.cs         # Runtime context (logger, tracker, global state, chat history)
     │   ├── WorkflowData.cs            # Per-step data packet
     │   ├── WorkflowResult.cs          # Final workflow result
     │   ├── NodeResult.cs              # Per-node result + fluent OnSuccess/OnFailure
-    │   └── NodeOptions.cs             # Per-node retry/timeout/condition config
+    │   ├── NodeOptions.cs             # Per-node retry/timeout/condition config
+    │   └── Models/                    # ChatMessage, GlobalErrorStrategy, StepType
     │
     ├── Nodes/                         # namespace TwfAiFramework.Nodes
     │   ├── BaseNode.cs                # Abstract base + NodeExecutionContext + SimpleTransformNode
+    │   ├── LambdaNode.cs              # Inline lambda node (used by AddStep)
     │   │
     │   ├── AI/                        # namespace TwfAiFramework.Nodes.AI
-    │   │   ├── LlmNode.cs             # LLM API calls (OpenAI-compatible)
+    │   │   ├── LlmNode.cs             # LLM API calls (OpenAI-compatible, streaming SSE)
     │   │   ├── PromptBuilderNode.cs   # Prompt template rendering ({{variable}} substitution)
     │   │   ├── OutputParserNode.cs    # LLM JSON output parsing
     │   │   └── EmbeddingNode.cs       # Vector embedding generation
@@ -417,10 +529,20 @@ source/
     │   │   └── IONodes.cs             # HttpRequestNode — REST API calls
     │   │
     │   ├── Data/                      # namespace TwfAiFramework.Nodes.Data
-    │   │   └── DataNodes.cs           # TransformNode, FilterNode
+    │   │   ├── TransformNode.cs       # Data transformation and key mapping
+    │   │   ├── FilterNode.cs          # Conditional data validation
+    │   │   ├── ChunkTextNode.cs       # Text chunking for RAG (char/word/sentence)
+    │   │   ├── MemoryNode.cs          # Global state read/write
+    │   │   └── DataMapperNode.cs      # Key-to-key data mapping
     │   │
     │   └── Control/                   # namespace TwfAiFramework.Nodes.Control
-    │       └── ControlNodes.cs        # ConditionNode, DelayNode, MergeNode
+    │       ├── ConditionNode.cs       # Boolean condition evaluation
+    │       ├── BranchNode.cs          # Switch/case routing
+    │       ├── TryCatchNode.cs        # Try/catch workflow composition
+    │       ├── DelayNode.cs           # Rate-limit delays
+    │       ├── LogNode.cs             # Logging checkpoint
+    │       ├── MergeNode.cs           # Key aggregation
+    │       └── ErrorRouteNode.cs      # Error routing
     │
     └── Tracking/                      # namespace TwfAiFramework.Tracking
         └── ExecutionTracker.cs        # Node timing recorder + report generator
@@ -432,6 +554,19 @@ source/
 
 - .NET 10
 - `Microsoft.Extensions.Logging` 10.0.5
+
+---
+
+## What's New
+
+### v1.0.1
+- `LlmNode`: streaming response support via SSE for OpenAI, Azure OpenAI, Anthropic, Ollama, and Custom providers
+- `LlmNode`: new `Stream` flag on `LlmConfig` (default `false`, fully backward compatible)
+- `LlmNode`: new `OnChunk` callback on `LlmConfig` — invoked per text chunk during streaming
+- `LlmNode`: `stream_options.include_usage` enabled for OpenAI/Azure OpenAI to capture token counts on streamed responses
+
+### v1.0.0
+- Initial release
 
 ---
 

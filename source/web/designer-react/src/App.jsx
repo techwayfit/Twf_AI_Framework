@@ -11,6 +11,8 @@ import {
   ReactFlowProvider,
   MarkerType,
   Panel,
+  getNodesBounds,
+  getViewportForBounds,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -21,6 +23,7 @@ import NodePalette from './components/NodePalette';
 import PropertiesPanel from './components/PropertiesPanel';
 import EdgePropertiesPanel from './components/EdgePropertiesPanel';
 import VariablesPanel from './components/VariablesPanel';
+import RunnerPanel from './components/RunnerPanel';
 import { toPng } from 'html-to-image';
 import { loadWorkflow, saveWorkflow, loadAvailableNodes, loadAllSchemas } from './api';
 import { toReactFlow, getContextData, applyContextData } from './adapter';
@@ -31,7 +34,8 @@ const genId = () => crypto.randomUUID();
 const genSubId = () => crypto.randomUUID();
 
 // ─── Inner component (needs ReactFlowProvider ancestor) ───────────────────────
-function DesignerInner({ workflowId }) {
+function DesignerInner({ workflowId, mode }) {
+  const isRunner = mode === 'runner';
   const [workflowDef, setWorkflowDef] = useState(null);
   const [nodes, setNodes, onNodesChangeRaw] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -44,7 +48,7 @@ function DesignerInner({ workflowId }) {
   // context: { type: 'main' } | { type: 'sub', id: '<guid>' }
   const [context, setContext] = useState({ type: 'main' });
 
-  const { screenToFlowPosition, zoomIn, zoomOut, fitView } = useReactFlow();
+  const { screenToFlowPosition, zoomIn, zoomOut, fitView, } = useReactFlow();
 
   // Returns the node list, adding a StartNode at (80,200) if none exists
   function ensureStartNode(rfNodes) {
@@ -134,6 +138,19 @@ function DesignerInner({ workflowId }) {
       return updated;
     });
   }, [context]);
+
+  // ── Runner node state ─────────────────────────────────────────────────────
+  const handleNodeStateChange = useCallback((nodeId, state) => {
+    setNodes((ns) =>
+      ns.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, runnerState: state } } : n),
+    );
+  }, [setNodes]);
+
+  const handleResetNodeStates = useCallback(() => {
+    setNodes((ns) =>
+      ns.map((n) => ({ ...n, data: { ...n.data, runnerState: 'pending' } })),
+    );
+  }, [setNodes]);
 
   // ── Connections ────────────────────────────────────────────────────────────
   const onConnect = useCallback(
@@ -315,35 +332,36 @@ function DesignerInner({ workflowId }) {
 
     const name = (workflowDef?.name ?? 'workflow').replace(/[^a-z0-9_-]/gi, '_');
 
-    // Fit all nodes into view instantly (no animation) so nothing is off-screen
-    fitView({ padding: 0.12, duration: 0 });
+    // Fixed export canvas size — large enough for any workflow
+    const exportW = 1800;
+    const exportH = 1100;
+    const padding = 60;
 
-    // Wait two animation frames for the viewport transform to settle in the DOM
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    // Calculate a viewport transform that fits every node into the export canvas.
+    // We target .react-flow__viewport (which contains BOTH nodes div AND edges SVG)
+    // and override its transform via the html-to-image style option.
+    // This is the approach recommended by the ReactFlow team and is the only
+    // reliable way to capture edges — the outer .react-flow div does not work
+    // because html-to-image does not serialize inline SVG paths reliably.
+    const bounds = getNodesBounds(nodes);
+    const { x, y, zoom } = getViewportForBounds(bounds, exportW, exportH, 0.1, 4, padding);
 
-    // Capture the whole ReactFlow element — includes nodes, edges SVG, edge labels
-    const flowEl = wrapperRef.current?.querySelector('.react-flow');
-    if (!flowEl) return;
-
-    const { width, height } = flowEl.getBoundingClientRect();
-
-    const filter = (node) => {
-      if (!node.classList) return true;
-      return (
-        !node.classList.contains('react-flow__minimap') &&
-        !node.classList.contains('react-flow__controls') &&
-        !node.classList.contains('react-flow__attribution') &&
-        !node.classList.contains('react-flow__panel')
-      );
-    };
+    const viewportEl = wrapperRef.current?.querySelector('.react-flow__viewport');
+    if (!viewportEl) return;
 
     try {
-      const pngDataUrl = await toPng(flowEl, {
+      const pngDataUrl = await toPng(viewportEl, {
         backgroundColor: '#f8f9fa',
-        pixelRatio: 3,
-        width,
-        height,
-        filter,
+        pixelRatio: 2,
+        width: exportW,
+        height: exportH,
+        style: {
+          // Override the live pan/zoom transform so all nodes and edges fit
+          transform: `translate(${x}px, ${y}px) scale(${zoom})`,
+          transformOrigin: '0 0',
+          width: `${exportW}px`,
+          height: `${exportH}px`,
+        },
       });
 
       if (format === 'png') {
@@ -352,12 +370,12 @@ function DesignerInner({ workflowId }) {
         a.href = pngDataUrl;
         a.click();
       } else {
-        // Embed high-res PNG inside SVG — reliable cross-browser vector container
+        // Embed the high-res PNG inside an SVG container
         const svgContent = [
           '<?xml version="1.0" encoding="UTF-8"?>',
           `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"`,
-          `     width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
-          `  <image href="${pngDataUrl}" x="0" y="0" width="${width}" height="${height}"/>`,
+          `     width="${exportW}" height="${exportH}" viewBox="0 0 ${exportW} ${exportH}">`,
+          `  <image href="${pngDataUrl}" x="0" y="0" width="${exportW}" height="${exportH}"/>`,
           '</svg>',
         ].join('\n');
         const blob = new Blob([svgContent], { type: 'image/svg+xml' });
@@ -371,7 +389,7 @@ function DesignerInner({ workflowId }) {
     } catch (err) {
       alert(`Export failed: ${err.message}`);
     }
-  }, [workflowDef, fitView, nodes]);
+  }, [workflowDef, nodes]);
 
   // Ctrl+S shortcut
   useEffect(() => {
@@ -433,6 +451,7 @@ function DesignerInner({ workflowId }) {
         <Toolbar
           workflowName={workflowDef?.name ?? ''}
           workflowId={workflowId}
+          mode={mode}
           onSave={handleSave}
           onZoomIn={() => zoomIn()}
           onZoomOut={() => zoomOut()}
@@ -444,41 +463,50 @@ function DesignerInner({ workflowId }) {
         />
 
         <div className="designer-body">
-          {/* Left sidebar */}
-          <div className="designer-sidebar">
-            <div className="sidebar-tabs">
-              {['nodes', 'variables'].map((tab) => (
-                <button
-                  key={tab}
-                  className={`sidebar-tab-btn${sidebarTab === tab ? ' active' : ''}`}
-                  onClick={() => setSidebarTab(tab)}
-                >
-                  {tab === 'nodes' ? (
-                    <><i className="bi bi-box-seam-fill" /> Nodes</>
-                  ) : (
-                    <><i className="bi bi-braces" /> Variables</>
-                  )}
-                </button>
-              ))}
+          {/* Left sidebar — palette in designer mode, runner panel in runner mode */}
+          {isRunner ? (
+            <div className="runner-sidebar">
+              <RunnerPanel
+                workflowId={workflowId}
+                onNodeStateChange={handleNodeStateChange}
+                onResetNodeStates={handleResetNodeStates}
+              />
             </div>
-
-            <div className="sidebar-content">
-              {sidebarTab === 'nodes' ? (
-                <NodePalette availableNodes={availableNodes} disabledTypes={disabledTypes} />
-              ) : (
-                <VariablesPanel
-                  variables={workflowDef?.variables ?? {}}
-                  onChange={handleVariablesChange}
-                  subWorkflows={subWorkflows}
-                  activeSubId={context.type === 'sub' ? context.id : null}
-                  onSubWorkflowOpen={handleSubWorkflowOpen}
-                  onSubWorkflowCreate={handleSubWorkflowCreate}
-                  onSubWorkflowRename={handleSubWorkflowRename}
-                  onSubWorkflowDelete={handleSubWorkflowDelete}
-                />
-              )}
+          ) : (
+            <div className="designer-sidebar">
+              <div className="sidebar-tabs">
+                {['nodes', 'variables'].map((tab) => (
+                  <button
+                    key={tab}
+                    className={`sidebar-tab-btn${sidebarTab === tab ? ' active' : ''}`}
+                    onClick={() => setSidebarTab(tab)}
+                  >
+                    {tab === 'nodes' ? (
+                      <><i className="bi bi-box-seam-fill" /> Nodes</>
+                    ) : (
+                      <><i className="bi bi-braces" /> Variables</>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <div className="sidebar-content">
+                {sidebarTab === 'nodes' ? (
+                  <NodePalette availableNodes={availableNodes} disabledTypes={disabledTypes} />
+                ) : (
+                  <VariablesPanel
+                    variables={workflowDef?.variables ?? {}}
+                    onChange={handleVariablesChange}
+                    subWorkflows={subWorkflows}
+                    activeSubId={context.type === 'sub' ? context.id : null}
+                    onSubWorkflowOpen={handleSubWorkflowOpen}
+                    onSubWorkflowCreate={handleSubWorkflowCreate}
+                    onSubWorkflowRename={handleSubWorkflowRename}
+                    onSubWorkflowDelete={handleSubWorkflowDelete}
+                  />
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Canvas */}
           <div ref={wrapperRef} className="designer-canvas">
@@ -487,15 +515,17 @@ function DesignerInner({ workflowId }) {
               edges={edges}
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
-              onEdgesChange={onEdgesChange}
-              onConnect={onConnect}
-              onDrop={onDrop}
-              onDragOver={onDragOver}
+              onEdgesChange={isRunner ? undefined : onEdgesChange}
+              onConnect={isRunner ? undefined : onConnect}
+              onDrop={isRunner ? undefined : onDrop}
+              onDragOver={isRunner ? undefined : onDragOver}
+              nodesDraggable={!isRunner}
+              nodesConnectable={!isRunner}
+              deleteKeyCode={isRunner ? null : 'Delete'}
               fitView
-              snapToGrid
+              snapToGrid={!isRunner}
               snapGrid={[4, 4]}
               nodeDragThreshold={1}
-              deleteKeyCode="Delete"
               multiSelectionKeyCode="Control"
             >
               <Background gap={16} color="#e9ecef" />
@@ -513,24 +543,26 @@ function DesignerInner({ workflowId }) {
             </ReactFlow>
           </div>
 
-          {/* Right properties panel */}
-          <div className="designer-properties">
-            {selectedEdge && !selectedNode ? (
-              <EdgePropertiesPanel
-                selectedEdge={selectedEdge}
-                sourceNodeName={nodes.find((n) => n.id === selectedEdge.source)?.data.label}
-                targetNodeName={nodes.find((n) => n.id === selectedEdge.target)?.data.label}
-                onChange={handleEdgeLabelChange}
-                onDelete={handleDeleteEdge}
-              />
-            ) : (
-              <PropertiesPanel
-                selectedNode={selectedNode}
-                onChange={handleNodeDataChange}
-                onDelete={handleDeleteNode}
-              />
-            )}
-          </div>
+          {/* Right properties panel — designer mode only */}
+          {!isRunner && (
+            <div className="designer-properties">
+              {selectedEdge && !selectedNode ? (
+                <EdgePropertiesPanel
+                  selectedEdge={selectedEdge}
+                  sourceNodeName={nodes.find((n) => n.id === selectedEdge.source)?.data.label}
+                  targetNodeName={nodes.find((n) => n.id === selectedEdge.target)?.data.label}
+                  onChange={handleEdgeLabelChange}
+                  onDelete={handleDeleteEdge}
+                />
+              ) : (
+                <PropertiesPanel
+                  selectedNode={selectedNode}
+                  onChange={handleNodeDataChange}
+                  onDelete={handleDeleteNode}
+                />
+              )}
+            </div>
+          )}
         </div>
       </div>
     </SchemaContext.Provider>
@@ -538,10 +570,10 @@ function DesignerInner({ workflowId }) {
 }
 
 // ─── Root export (wraps in ReactFlowProvider) ─────────────────────────────────
-export default function App({ workflowId }) {
+export default function App({ workflowId, mode }) {
   return (
     <ReactFlowProvider>
-      <DesignerInner workflowId={workflowId} />
+      <DesignerInner workflowId={workflowId} mode={mode} />
     </ReactFlowProvider>
   );
 }
