@@ -44,9 +44,7 @@ export default function DiamondNode({ id, data, selected }) {
           backgroundColor: selected ? '#fff8ee' : '#fdf6ec',
           border: `3px solid ${color}`,
           transform: 'rotate(45deg)',
-          boxShadow: selected
-            ? `0 0 0 2px ${color}, 0 2px 8px rgba(0,0,0,0.18)`
-            : '0 1px 4px rgba(0,0,0,0.12)',
+          boxShadow: selected ? `0 0 0 2px ${color}` : 'none',
         }} />
         <div style={{
           position: 'absolute', inset: 0,

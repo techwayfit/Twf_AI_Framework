@@ -54,9 +54,7 @@ export default function CircularNode({ id, data, selected }) {
           display: 'flex', flexDirection: 'column',
           alignItems: 'center', justifyContent: 'center', gap: 2,
           color: '#fff',
-          boxShadow: selected
-            ? '0 0 0 3px #1e293b, 0 2px 8px rgba(0,0,0,0.25)'
-            : '0 2px 6px rgba(0,0,0,0.2)',
+          boxShadow: selected ? '0 0 0 3px #1e293b' : 'none',
           cursor: 'default', userSelect: 'none', position: 'relative',
         }}
       >

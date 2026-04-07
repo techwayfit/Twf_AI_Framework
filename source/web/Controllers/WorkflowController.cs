@@ -336,10 +336,12 @@ new { type = "LlmNode", category = "AI", name = "LLM", description = "Send a pro
                 initialData.Set(k, v);
         }
 
+        var sseJsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
+
         async Task WriteEvent(string eventName, object payload)
         {
             if (ct.IsCancellationRequested) return;
-            var json = JsonSerializer.Serialize(payload);
+            var json = JsonSerializer.Serialize(payload, sseJsonOptions);
             await Response.WriteAsync($"event: {eventName}\ndata: {json}\n\n", ct);
             await Response.Body.FlushAsync(ct);
         }

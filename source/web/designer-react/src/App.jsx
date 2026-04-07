@@ -36,6 +36,28 @@ import './App.css';
 const genId = () => crypto.randomUUID();
 const genSubId = () => crypto.randomUUID();
 
+// ─── Bootstrap Icons font cache for export ────────────────────────────────────
+// html-to-image cannot embed cross-origin web fonts. We fetch the woff2 once,
+// convert to base64, and inject a self-contained @font-face at export time.
+let _biFontFaceCSS = null;
+async function getBootstrapIconsFontFace() {
+  if (_biFontFaceCSS) return _biFontFaceCSS;
+  try {
+    const woff2Url = 'https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/fonts/bootstrap-icons.woff2';
+    const res = await fetch(woff2Url);
+    const buf = await res.arrayBuffer();
+    const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    _biFontFaceCSS = `@font-face {
+      font-family: "bootstrap-icons";
+      src: url("data:font/woff2;base64,${b64}") format("woff2");
+      font-weight: normal; font-style: normal;
+    }`;
+  } catch {
+    _biFontFaceCSS = ''; // font unavailable — icons will still show as squares but won't crash
+  }
+  return _biFontFaceCSS;
+}
+
 // ─── Export helpers ───────────────────────────────────────────────────────────
 
 /** Promise wrapper for loading an image. */
@@ -451,9 +473,12 @@ function DesignerInner({ workflowId, mode }) {
     if (!viewportEl) return;
 
     // ── Suppress shadows during capture so edges aren't hidden underneath ─
+    const biFontFace = await getBootstrapIconsFontFace();
+
     const noShadowStyle = document.createElement('style');
     noShadowStyle.setAttribute('data-export-override', '1');
     noShadowStyle.textContent = `
+      ${biFontFace}
       .react-flow__node * { box-shadow: none !important; filter: none !important; }
       .react-flow__node { box-shadow: none !important; filter: none !important; }
       .react-flow__handle { opacity: 0 !important; }
@@ -469,6 +494,7 @@ function DesignerInner({ workflowId, mode }) {
       pixelRatio: 1,
       width: exportW,
       height: exportH,
+      fontEmbedCSS: biFontFace,   // embed the bi font directly into html-to-image's clone
       style: {
         transform: `translate(${x}px, ${y}px) scale(${zoom})`,
         transformOrigin: '0 0',

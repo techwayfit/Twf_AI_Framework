@@ -1,15 +1,11 @@
 import { BaseEdge, EdgeLabelRenderer, getSmoothStepPath, useReactFlow } from '@xyflow/react';
 
-/**
- * Smoothstep edge that shows a delete button at its midpoint when selected.
- * Works for both regular flow edges and note-link edges (straight style override
- * is handled via the `style` prop passed through from onConnect).
- */
 export default function DeletableEdge({
   id, selected,
   sourceX, sourceY, targetX, targetY,
   sourcePosition, targetPosition,
-  style, markerEnd, label, labelStyle, labelBgStyle, labelBgPadding, labelBgBorderRadius,
+  style, markerEnd,
+  label, labelStyle, labelBgStyle, labelBgPadding, labelBgBorderRadius,
 }) {
   const { setEdges } = useReactFlow();
 
@@ -23,27 +19,44 @@ export default function DeletableEdge({
     setEdges((es) => es.filter((e) => e.id !== id));
   };
 
+  // Offset the delete button so it doesn't overlap the label text
+  const deleteOffsetY = label ? -14 : 0;
+
   return (
     <>
-      <BaseEdge
-        path={edgePath}
-        style={style}
-        markerEnd={markerEnd}
-        label={label}
-        labelStyle={labelStyle}
-        labelBgStyle={labelBgStyle}
-        labelBgPadding={labelBgPadding}
-        labelBgBorderRadius={labelBgBorderRadius}
-      />
+      <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
 
-      {selected && (
-        <EdgeLabelRenderer>
+      <EdgeLabelRenderer>
+        {/* Edge label */}
+        {label && (
+          <div
+            style={{
+              position: 'absolute',
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: 'none',
+              padding: '2px 6px',
+              borderRadius: 3,
+              fontSize: 11,
+              fontWeight: 600,
+              color: '#495057',
+              background: 'rgba(255,255,255,0.92)',
+              border: '1px solid #dee2e6',
+              whiteSpace: 'nowrap',
+              ...(labelStyle ?? {}),
+            }}
+          >
+            {label}
+          </div>
+        )}
+
+        {/* Delete button — shown when selected */}
+        {selected && (
           <button
             onClick={deleteEdge}
             title="Delete connection"
             style={{
               position: 'absolute',
-              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              transform: `translate(-50%, -50%) translate(${labelX}px, calc(${labelY}px + ${deleteOffsetY}px))`,
               pointerEvents: 'all',
               width: 20,
               height: 20,
@@ -65,8 +78,8 @@ export default function DeletableEdge({
           >
             <i className="bi bi-x" style={{ fontSize: 12, lineHeight: 1 }} />
           </button>
-        </EdgeLabelRenderer>
-      )}
+        )}
+      </EdgeLabelRenderer>
     </>
   );
 }

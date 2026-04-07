@@ -68,9 +68,7 @@ export default function GenericNode({ id, data, selected }) {
         borderLeft: `4px solid ${color}`,
         minWidth: 180,
         minHeight: 60,
-        boxShadow: selected
-          ? `0 0 0 2px ${color}33, 0 4px 12px rgba(0,0,0,0.12)`
-          : '0 1px 4px rgba(0,0,0,0.08)',
+        boxShadow: selected ? `0 0 0 2px ${color}33` : 'none',
         position: 'relative',
         fontFamily: 'inherit',
         cursor: 'default',
