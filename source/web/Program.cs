@@ -15,47 +15,40 @@ builder.Services.AddControllersWithViews()
 
 builder.Services.AddScoped<WorkflowDefinitionRunner>();
 
-// Configure workflow storage - choose between JSON file or SQLite
-var useDatabase = builder.Configuration.GetValue<bool>("UseDatabase", false);
+// SQLite is the only supported storage backend.
+var connectionString = builder.Configuration.GetConnectionString("WorkflowDb")
+    ?? "Data Source=workflows.db";
 
-if (useDatabase)
-{
-    // SQLite Database option
-    var connectionString = builder.Configuration.GetConnectionString("WorkflowDb") 
-        ?? "Data Source=workflows.db";
-    
-    builder.Services.AddDbContext<WorkflowDbContext>(options =>
-   options.UseSqlite(connectionString));
-    
-    builder.Services.AddScoped<IWorkflowRepository, SqliteWorkflowRepository>();
-}
-else
-{
-    // JSON File option (default)
-    var dataDirectory = builder.Configuration.GetValue<string>("WorkflowDataDirectory") 
-        ?? Path.Combine(Directory.GetCurrentDirectory(), "workflows");
-    
-    builder.Services.AddSingleton<IWorkflowRepository>(
-        sp => new JsonFileWorkflowRepository(dataDirectory));
-}
+builder.Services.AddDbContext<WorkflowDbContext>(options =>
+    options.UseSqlite(connectionString));
+
+builder.Services.AddScoped<IWorkflowRepository, SqliteWorkflowRepository>();
+builder.Services.AddScoped<INodeTypeRepository, SqliteNodeTypeRepository>();
 
 var app = builder.Build();
 
-// Initialize database if using SQLite
-if (useDatabase)
+// Ensure database schema is created and seed data on first run.
+using (var scope = app.Services.CreateScope())
 {
-    using (var scope = app.Services.CreateScope())
-    {
-    var db = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
-   db.Database.EnsureCreated();
-    }
+    var db     = scope.ServiceProvider.GetRequiredService<WorkflowDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
+
+    db.Database.EnsureCreated();
+
+    // Seed built-in node type definitions (runs once when table is empty)
+    var nodeRepo = scope.ServiceProvider.GetRequiredService<INodeTypeRepository>();
+    await NodeTypeSeeder.SeedAsync(nodeRepo);
+
+    // Import any workflow JSON files that have not yet been migrated to SQLite
+    var workflowDir = builder.Configuration.GetValue<string>("WorkflowDataDirectory")
+        ?? Path.Combine(Directory.GetCurrentDirectory(), "workflows");
+    await WorkflowSeeder.SeedFromDirectoryAsync(workflowDir, db, logger);
 }
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
