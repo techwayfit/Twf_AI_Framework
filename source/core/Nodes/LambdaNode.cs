@@ -10,6 +10,9 @@ internal sealed class LambdaNode : INode
     public string Name { get; }
     public string Category => "Lambda";
     public string Description => $"Inline step: {Name}";
+    public string IdPrefix => "lambda";
+    public IReadOnlyList<NodePort> InputPorts  => [];
+    public IReadOnlyList<NodePort> OutputPorts => [];
 
     public LambdaNode(string name, Func<WorkflowData, WorkflowContext, Task<WorkflowData>> func)
     {

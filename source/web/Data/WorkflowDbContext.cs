@@ -12,6 +12,7 @@ public class WorkflowDbContext : DbContext
 
     public DbSet<WorkflowEntity> Workflows { get; set; }
     public DbSet<NodeTypeEntity> NodeTypes { get; set; }
+    public DbSet<WorkflowInstanceEntity> WorkflowInstances { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -40,6 +41,17 @@ public class WorkflowDbContext : DbContext
             entity.HasIndex(e => e.NodeType).IsUnique();
             entity.HasIndex(e => e.Category);
         });
+
+        modelBuilder.Entity<WorkflowInstanceEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.WorkflowName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.JsonData).IsRequired();
+            entity.HasIndex(e => e.WorkflowDefinitionId);
+            entity.HasIndex(e => e.StartedAt);
+            entity.HasIndex(e => e.Status);
+        });
     }
 }
 
@@ -54,6 +66,22 @@ public class WorkflowEntity
     public string JsonData { get; set; } = string.Empty; // Serialized WorkflowDefinition
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>
+/// Entity for storing a single workflow execution run.
+/// The full WorkflowInstance (including step log) is stored as JSON in JsonData.
+/// Key fields are promoted to columns for efficient querying.
+/// </summary>
+public class WorkflowInstanceEntity
+{
+    public Guid Id { get; set; }
+    public Guid WorkflowDefinitionId { get; set; }
+    public string WorkflowName { get; set; } = string.Empty;
+    public string Status { get; set; } = "Pending"; // mirrors WorkflowRunStatus enum
+    public DateTime StartedAt { get; set; }
+    public DateTime? CompletedAt { get; set; }
+    public string JsonData { get; set; } = "{}"; // serialized WorkflowInstance
 }
 
 /// <summary>

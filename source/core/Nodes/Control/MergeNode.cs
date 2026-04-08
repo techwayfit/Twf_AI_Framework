@@ -16,6 +16,20 @@ public sealed class MergeNode : BaseNode
     public override string Category => "Control";
     public override string Description => "Merges multiple keys into a single output";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "merge";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+        _sourceKeys.Select(k => new NodePort(k, typeof(string), Required: false, "Source key to merge"))
+                   .ToList<NodePort>();
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new(_outputKey, typeof(string), Description: "Merged result")
+    ];
+
     private readonly string[] _sourceKeys;
     private readonly string _outputKey;
     private readonly string _separator;

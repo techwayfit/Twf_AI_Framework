@@ -28,6 +28,7 @@ export function toReactFlow(workflowDef) {
         type: n.type,
         category: n.category ?? '',
         color: n.color ?? null,
+        nodeId: n.nodeId ?? '',
         parameters: { ...(n.parameters ?? {}) },
         executionOptions: n.executionOptions ?? null,
       },
@@ -78,6 +79,7 @@ export function getContextData(workflowDef, context) {
 export function applyContextData(workflowDef, context, nodes, edges) {
   const backendNodes = nodes.map((n) => ({
     id: n.id,
+    nodeId: n.data.nodeId ?? '',
     name: n.data.label,
     type: n.type,
     category: n.data.category ?? '',
@@ -117,6 +119,7 @@ export function fromReactFlow(workflowDef, nodes, edges) {
     ...workflowDef,
     nodes: nodes.map((n) => ({
       id: n.id,
+      nodeId: n.data.nodeId ?? '',
       name: n.data.label,
       type: n.type,
       category: n.data.category ?? '',

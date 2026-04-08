@@ -17,6 +17,14 @@ public sealed class LogNode : BaseNode
     public override string Description =>
         $"Logs WorkflowData state at checkpoint '{_label}'";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "log";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+        (_keysToLog ?? []).Select(k => new NodePort(k, typeof(object), Required: false, "Key to log"))
+                          .ToList<NodePort>();
+
     private readonly string _label;
     private readonly string[]? _keysToLog;
     private readonly Microsoft.Extensions.Logging.LogLevel _level;

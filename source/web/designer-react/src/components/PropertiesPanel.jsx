@@ -251,6 +251,68 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
         </>
       )}
 
+      {/* Data Inputs — WorkflowData keys this node reads */}
+      {schema.dataInputs && schema.dataInputs.length > 0 && (
+        <>
+          <hr style={{ margin: '8px 0' }} />
+          <h6 className="small fw-bold mb-1" style={{ color: '#3b82f6' }}>
+            <i className="bi bi-arrow-down-circle me-1" />Reads from WorkflowData
+          </h6>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 4 }}>
+            {schema.dataInputs.map((p) => (
+              <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+                <code style={{
+                  background: p.isDynamic ? '#fef3c7' : '#eff6ff',
+                  color: p.isDynamic ? '#92400e' : '#1d4ed8',
+                  padding: '1px 5px', borderRadius: 3, fontFamily: 'monospace', fontSize: 11,
+                  border: `1px solid ${p.isDynamic ? '#fde68a' : '#bfdbfe'}`,
+                  whiteSpace: 'nowrap',
+                }}>{p.key}</code>
+                {p.required && <span style={{ color: '#ef4444', fontSize: 10 }}>required</span>}
+                {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
+                {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Data Outputs — WorkflowData keys this node writes */}
+      {schema.dataOutputs && schema.dataOutputs.length > 0 && (
+        <>
+          <hr style={{ margin: '8px 0' }} />
+          <h6 className="small fw-bold mb-1" style={{ color: '#22c55e' }}>
+            <i className="bi bi-arrow-up-circle me-1" />Writes to WorkflowData
+          </h6>
+          {selectedNode.data.nodeId && (
+            <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontStyle: 'italic' }}>
+              Reference as <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{{' + selectedNode.data.nodeId + '.key}}'}</code>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 4 }}>
+            {schema.dataOutputs.map((p) => (
+              <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+                <code style={{
+                  background: p.isDynamic ? '#fef3c7' : '#f0fdf4',
+                  color: p.isDynamic ? '#92400e' : '#15803d',
+                  padding: '1px 5px', borderRadius: 3, fontFamily: 'monospace', fontSize: 11,
+                  border: `1px solid ${p.isDynamic ? '#fde68a' : '#bbf7d0'}`,
+                  whiteSpace: 'nowrap',
+                  cursor: selectedNode.data.nodeId ? 'pointer' : 'default',
+                  userSelect: 'text',
+                }}
+                  title={selectedNode.data.nodeId
+                    ? `Copy: {{${selectedNode.data.nodeId}.${p.key}}}`
+                    : p.description}
+                >{p.key}</code>
+                {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
+                {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
       {/* Delete — StartNode is permanent and cannot be removed */}
       <hr style={{ margin: '14px 0 10px' }} />
       {selectedNode.type === 'StartNode' ? (

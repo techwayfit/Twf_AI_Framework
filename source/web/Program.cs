@@ -24,6 +24,7 @@ builder.Services.AddDbContext<WorkflowDbContext>(options =>
 
 builder.Services.AddScoped<IWorkflowRepository, SqliteWorkflowRepository>();
 builder.Services.AddScoped<INodeTypeRepository, SqliteNodeTypeRepository>();
+builder.Services.AddScoped<IWorkflowInstanceRepository, SqliteWorkflowInstanceRepository>();
 
 var app = builder.Build();
 
@@ -34,6 +35,25 @@ using (var scope = app.Services.CreateScope())
     var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("Startup");
 
     db.Database.EnsureCreated();
+
+    // EnsureCreated won't add tables to an existing DB — apply additive DDL manually.
+    db.Database.ExecuteSqlRaw("""
+        CREATE TABLE IF NOT EXISTS WorkflowInstances (
+            Id                   TEXT    NOT NULL PRIMARY KEY,
+            WorkflowDefinitionId TEXT    NOT NULL,
+            WorkflowName         TEXT    NOT NULL,
+            Status               TEXT    NOT NULL,
+            StartedAt            TEXT    NOT NULL,
+            CompletedAt          TEXT    NULL,
+            JsonData             TEXT    NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS IX_WorkflowInstances_WorkflowDefinitionId
+            ON WorkflowInstances (WorkflowDefinitionId);
+        CREATE INDEX IF NOT EXISTS IX_WorkflowInstances_StartedAt
+            ON WorkflowInstances (StartedAt);
+        CREATE INDEX IF NOT EXISTS IX_WorkflowInstances_Status
+            ON WorkflowInstances (Status);
+        """);
 
     // Seed built-in node type definitions (runs once when table is empty)
     var nodeRepo = scope.ServiceProvider.GetRequiredService<INodeTypeRepository>();

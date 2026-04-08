@@ -24,6 +24,20 @@ public sealed class PromptBuilderNode : BaseNode
     public override string Description =>
         "Builds a dynamic prompt from a template with variable substitution";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "prompt";
+
+    /// <inheritdoc/>
+    // Input ports are the {{variable}} placeholders found in the templates at construction time.
+    public override IReadOnlyList<NodePort> InputPorts => ExtractTemplatePorts();
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("prompt",        typeof(string), Description: "Rendered prompt text"),
+        new("system_prompt", typeof(string), Required: false, Description: "Rendered system instruction")
+    ];
+
     private readonly string _promptTemplate;
     private readonly string? _systemTemplate;
     private readonly Dictionary<string, object?> _staticVariables;
@@ -75,6 +89,23 @@ public sealed class PromptBuilderNode : BaseNode
             nodeCtx.Log($"⚠️  Template variable '{{{{key}}}}' not found in data");
             return $"{{{{MISSING:{key}}}}}";
         });
+    }
+
+    // ─── Port helpers ────────────────────────────────────────────────────────
+
+    private IReadOnlyList<NodePort> ExtractTemplatePorts()
+    {
+        var keys = new HashSet<string>();
+        foreach (Match m in Regex.Matches(_promptTemplate, @"\{\{(\w+)\}\}"))
+            keys.Add(m.Groups[1].Value);
+        if (_systemTemplate is not null)
+            foreach (Match m in Regex.Matches(_systemTemplate, @"\{\{(\w+)\}\}"))
+                keys.Add(m.Groups[1].Value);
+
+        return keys
+            .Select(k => new NodePort(k, typeof(string), Required: false,
+                Description: $"Template variable {{{{{k}}}}}"))
+            .ToList();
     }
 
     // ─── Convenience Factory Methods ──────────────────────────────────────────

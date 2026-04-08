@@ -11,17 +11,20 @@ public class WorkflowController : Controller
 {
     private readonly IWorkflowRepository _repository;
     private readonly INodeTypeRepository _nodeTypeRepository;
+    private readonly IWorkflowInstanceRepository _instanceRepository;
     private readonly WorkflowDefinitionRunner _runner;
     private readonly ILogger<WorkflowController> _logger;
 
     public WorkflowController(
         IWorkflowRepository repository,
         INodeTypeRepository nodeTypeRepository,
+        IWorkflowInstanceRepository instanceRepository,
         WorkflowDefinitionRunner runner,
         ILogger<WorkflowController> logger)
     {
         _repository = repository;
         _nodeTypeRepository = nodeTypeRepository;
+        _instanceRepository = instanceRepository;
         _runner = runner;
         _logger = logger;
     }
@@ -270,8 +273,29 @@ public class WorkflowController : Controller
         return View(workflow);
     }
 
+    // GET: /Workflow/Runs/{id}
+    public async Task<IActionResult> Runs(Guid id)
+    {
+        var workflow = await _repository.GetByIdAsync(id);
+        if (workflow is null) return NotFound();
+
+        var instances = await _instanceRepository.GetByWorkflowIdAsync(id);
+        ViewBag.WorkflowName = workflow.Name;
+        ViewBag.WorkflowId   = id;
+        return View(instances);
+    }
+
+    // GET: /Workflow/RunDetail/{instanceId}
+    public async Task<IActionResult> RunDetail(Guid instanceId)
+    {
+        var instance = await _instanceRepository.GetByIdAsync(instanceId);
+        if (instance is null) return NotFound();
+        return View(instance);
+    }
+
     // POST: /Workflow/RunStream/{id}
     // Streams per-node execution events as Server-Sent Events (text/event-stream).
+    // Creates a WorkflowInstance before running and updates it on completion.
     [HttpPost]
     public async Task RunStream(Guid id, [FromBody] WorkflowRunRequest? request = null)
     {
@@ -288,12 +312,25 @@ public class WorkflowController : Controller
 
         var ct = HttpContext.RequestAborted;
 
+        var seedDict = request?.InitialData ?? new Dictionary<string, object?>();
         var initialData = new WorkflowData();
-        if (request?.InitialData is { Count: > 0 } seed)
+        foreach (var (k, v) in seedDict)
+            initialData.Set(k, v);
+
+        // ── Create instance record ────────────────────────────────────────────
+        var instance = new WorkflowInstance
         {
-            foreach (var (k, v) in seed)
-                initialData.Set(k, v);
-        }
+            WorkflowDefinitionId = workflow.Id,
+            WorkflowName         = workflow.Name,
+            Status               = WorkflowRunStatus.Pending,
+            StartedAt            = DateTime.UtcNow,
+            InitialData          = seedDict
+        };
+        await _instanceRepository.CreateAsync(instance);
+
+        instance.Status = WorkflowRunStatus.Running;
+        await _instanceRepository.UpdateAsync(instance);
+        _logger.LogInformation("▶ WorkflowInstance {InstanceId} created for '{Name}'", instance.Id, workflow.Name);
 
         var sseJsonOptions = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 
@@ -310,18 +347,50 @@ public class WorkflowController : Controller
             var result = await _runner.RunWithCallbackAsync(
                 workflow,
                 initialData,
-                step => WriteEvent(step.EventType, step));
+                async step =>
+                {
+                    // Log each step and accumulate in the instance
+                    var level = step.EventType == "node_error" ? "WARN" : "INFO";
+                    _logger.LogInformation(
+                        "[{Level}] {EventType} — {NodeType} '{NodeName}'{Error}",
+                        level, step.EventType, step.NodeType, step.NodeName,
+                        step.ErrorMessage is null ? "" : $" | {step.ErrorMessage}");
+
+                    instance.Steps.Add(step);
+                    await WriteEvent(step.EventType, step);
+                });
+
+            instance.Status      = result.IsSuccess ? WorkflowRunStatus.Completed : WorkflowRunStatus.Failed;
+            instance.CompletedAt = DateTime.UtcNow;
+            instance.OutputData  = result.OutputData;
+            instance.ErrorMessage   = result.ErrorMessage;
+            instance.FailedNodeName = result.FailedNodeName;
+            await _instanceRepository.UpdateAsync(instance);
+
+            _logger.LogInformation(
+                "{Status} WorkflowInstance {InstanceId} for '{Name}'",
+                instance.Status, instance.Id, workflow.Name);
 
             var finalEvent = result.IsSuccess ? "workflow_done" : "workflow_error";
-            await WriteEvent(finalEvent, result);
+            await WriteEvent(finalEvent, new { result, instanceId = instance.Id });
         }
         catch (OperationCanceledException)
         {
-            // Client disconnected — nothing to emit
+            // Client disconnected — mark instance as failed
+            instance.Status      = WorkflowRunStatus.Failed;
+            instance.CompletedAt = DateTime.UtcNow;
+            instance.ErrorMessage = "Client disconnected";
+            await _instanceRepository.UpdateAsync(instance);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unhandled error streaming workflow {WorkflowId}", id);
+
+            instance.Status      = WorkflowRunStatus.Failed;
+            instance.CompletedAt = DateTime.UtcNow;
+            instance.ErrorMessage = ex.Message;
+            await _instanceRepository.UpdateAsync(instance);
+
             try
             {
                 await WriteEvent("workflow_error",
@@ -334,8 +403,8 @@ public class WorkflowController : Controller
     // POST: /Workflow/Run/{id}
     // Body (optional JSON): { "initialData": { "key": "value" } }
     //
-    // Loads the saved WorkflowDefinition and runs it through the core engine.
-    // Returns a WorkflowRunResult with success/failure, output data, and error details.
+    // Loads the saved WorkflowDefinition, creates a WorkflowInstance, runs it,
+    // persists the outcome, and returns a WorkflowRunResult.
     [HttpPost]
     public async Task<IActionResult> Run(Guid id, [FromBody] WorkflowRunRequest? request = null)
     {
@@ -343,23 +412,62 @@ public class WorkflowController : Controller
         if (workflow is null)
             return NotFound(new { error = $"Workflow {id} not found." });
 
+        var seedDict = request?.InitialData ?? new Dictionary<string, object?>();
         var initialData = new WorkflowData();
-        if (request?.InitialData is { Count: > 0 } seed)
+        foreach (var (k, v) in seedDict)
+            initialData.Set(k, v);
+
+        // ── Create instance record ────────────────────────────────────────────
+        var instance = new WorkflowInstance
         {
-            foreach (var (k, v) in seed)
-                initialData.Set(k, v);
-        }
+            WorkflowDefinitionId = workflow.Id,
+            WorkflowName         = workflow.Name,
+            Status               = WorkflowRunStatus.Running,
+            StartedAt            = DateTime.UtcNow,
+            InitialData          = seedDict
+        };
+        await _instanceRepository.CreateAsync(instance);
+        _logger.LogInformation("▶ WorkflowInstance {InstanceId} created for '{Name}'", instance.Id, workflow.Name);
 
         try
         {
-            var result = await _runner.RunAsync(workflow, initialData);
-            var status = result.IsSuccess ? 200 : 422;
-            return StatusCode(status, result);
+            var result = await _runner.RunWithCallbackAsync(
+                workflow,
+                initialData,
+                step =>
+                {
+                    _logger.LogInformation(
+                        "{EventType} — {NodeType} '{NodeName}'{Error}",
+                        step.EventType, step.NodeType, step.NodeName,
+                        step.ErrorMessage is null ? "" : $" | {step.ErrorMessage}");
+
+                    instance.Steps.Add(step);
+                    return Task.CompletedTask;
+                });
+
+            instance.Status         = result.IsSuccess ? WorkflowRunStatus.Completed : WorkflowRunStatus.Failed;
+            instance.CompletedAt    = DateTime.UtcNow;
+            instance.OutputData     = result.OutputData;
+            instance.ErrorMessage   = result.ErrorMessage;
+            instance.FailedNodeName = result.FailedNodeName;
+            await _instanceRepository.UpdateAsync(instance);
+
+            _logger.LogInformation(
+                "{Status} WorkflowInstance {InstanceId} for '{Name}'",
+                instance.Status, instance.Id, workflow.Name);
+
+            var statusCode = result.IsSuccess ? 200 : 422;
+            return StatusCode(statusCode, new { result, instanceId = instance.Id });
         }
         catch (Exception ex)
         {
+            instance.Status      = WorkflowRunStatus.Failed;
+            instance.CompletedAt = DateTime.UtcNow;
+            instance.ErrorMessage = ex.Message;
+            await _instanceRepository.UpdateAsync(instance);
+
             _logger.LogError(ex, "Unhandled error running workflow {WorkflowId}", id);
-            return StatusCode(500, new { error = ex.Message });
+            return StatusCode(500, new { error = ex.Message, instanceId = instance.Id });
         }
     }
 }

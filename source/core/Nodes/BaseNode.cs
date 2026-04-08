@@ -22,6 +22,14 @@ public abstract class BaseNode : INode
     public abstract string Category { get; }
     public virtual string Description => $"{Category}/{Name} node";
 
+    // ─── Port metadata ────────────────────────────────────────────────────────
+    // Subclasses override these to declare their data contract.
+    // Defaults are empty so existing nodes compile without change.
+
+    public virtual string IdPrefix => "node";
+    public virtual IReadOnlyList<NodePort> InputPorts  => [];
+    public virtual IReadOnlyList<NodePort> OutputPorts => [];
+
     // ─── Template Method ─────────────────────────────────────────────────────
 
     /// <summary>

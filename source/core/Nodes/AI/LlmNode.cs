@@ -26,6 +26,25 @@ public sealed class LlmNode : BaseNode
     public override string Description =>
         $"Calls {_config.Provider} ({_config.Model}) with the current prompt";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "llm";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+    [
+        new("prompt",        typeof(string), Required: true,  "Prompt text to send to the model"),
+        new("system_prompt", typeof(string), Required: false, "System instruction (overrides node config)")
+    ];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("llm_response",      typeof(string), Description: "Model's text response"),
+        new("llm_model",         typeof(string), Description: "Model name used"),
+        new("prompt_tokens",     typeof(int),    Description: "Tokens consumed by the prompt"),
+        new("completion_tokens", typeof(int),    Description: "Tokens in the completion")
+    ];
+
     private readonly LlmConfig _config;
     private readonly HttpClient _httpClient;
 

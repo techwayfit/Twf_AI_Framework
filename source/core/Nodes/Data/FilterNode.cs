@@ -13,6 +13,22 @@ public sealed class FilterNode : BaseNode
     public override string Category => "Data";
     public override string Description => $"Data validation filter: {Name}";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "filter";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+        _rules.Select(r => new NodePort(r.Key, typeof(object), Required: false, "Field subject to validation rule"))
+              .DistinctBy(p => p.Key)
+              .ToList<NodePort>();
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("is_valid",          typeof(bool),         Description: "True if all rules passed"),
+        new("validation_errors", typeof(List<string>), Required: false, "List of failure messages")
+    ];
+
     private readonly List<FilterRule> _rules;
     private readonly bool _throwOnFail;
 

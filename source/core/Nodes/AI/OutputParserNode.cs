@@ -26,6 +26,31 @@ public sealed class OutputParserNode : BaseNode
     public override string Description =>
         "Parses structured JSON from LLM responses and maps fields to WorkflowData";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "parser";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+    [
+        new("llm_response", typeof(string), Required: true, "Raw LLM text to parse JSON from")
+    ];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts
+    {
+        get
+        {
+            var ports = new List<NodePort>
+            {
+                new("parsed_output", typeof(Dictionary<string, object?>), Description: "Full parsed JSON object")
+            };
+            if (_fieldMapping is not null)
+                foreach (var (_, dataKey) in _fieldMapping)
+                    ports.Add(new NodePort(dataKey, typeof(object), Required: false, $"Mapped from JSON field"));
+            return ports;
+        }
+    }
+
     private readonly Dictionary<string, string>? _fieldMapping;
     private readonly bool _strict;
 

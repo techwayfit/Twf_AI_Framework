@@ -21,6 +21,9 @@ public sealed class TransformNode : BaseNode
     public override string Category => "Data";
     public override string Description => $"Custom data transformation: {Name}";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "transform";
+
     private readonly Func<WorkflowData, Task<WorkflowData>> _transform;
 
     public TransformNode(string name, Func<WorkflowData, WorkflowData> transform)

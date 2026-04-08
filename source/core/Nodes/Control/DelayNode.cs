@@ -17,6 +17,9 @@ public sealed class DelayNode : BaseNode
     public override string Description =>
         $"Waits for {_delay.TotalMilliseconds}ms before passing data to next node";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "delay";
+
     private readonly TimeSpan _delay;
     private readonly string? _reason;
 

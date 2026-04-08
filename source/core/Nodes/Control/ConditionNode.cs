@@ -23,6 +23,18 @@ public sealed class ConditionNode : BaseNode
     public override string Description =>
         $"Evaluates {_conditions.Count} condition(s) and writes results to WorkflowData";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "cond";
+
+    /// <inheritdoc/>
+    // Inputs are the data keys referenced by predicates — not statically knowable in all cases.
+    public override IReadOnlyList<NodePort> InputPorts => [];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+        _conditions.Select(c => new NodePort(c.Key, typeof(bool), Description: "Condition result flag"))
+                   .ToList<NodePort>();
+
     private readonly List<(string Key, Func<WorkflowData, bool> Predicate)> _conditions;
 
     public ConditionNode(string name,

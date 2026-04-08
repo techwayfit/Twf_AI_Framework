@@ -29,6 +29,35 @@ public sealed class HttpRequestNode : BaseNode
     public override string Description =>
         $"HTTP {_config.Method} {_config.UrlTemplate}";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "http";
+
+    /// <inheritdoc/>
+    // Input ports = {{variable}} placeholders extracted from UrlTemplate at construction time.
+    public override IReadOnlyList<NodePort> InputPorts
+    {
+        get
+        {
+            var ports = System.Text.RegularExpressions.Regex
+                .Matches(_config.UrlTemplate, @"\{\{(\w+)\}\}")
+                .Select(m => new NodePort(m.Groups[1].Value, typeof(string), Required: false,
+                    "URL template variable"))
+                .DistinctBy(p => p.Key)
+                .ToList<NodePort>();
+            if (_config.Method is "POST" or "PUT" or "PATCH")
+                ports.Add(new NodePort("request_body", typeof(object), Required: false, "Request body (if no static body configured)"));
+            return ports;
+        }
+    }
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("http_response",    typeof(object), Description: "Parsed JSON or raw response string"),
+        new("http_status_code", typeof(int),    Description: "HTTP status code"),
+        new("http_headers",     typeof(Dictionary<string,string>), Required: false, "Response headers")
+    ];
+
     private readonly HttpRequestConfig _config;
     private readonly HttpClient _httpClient;
 

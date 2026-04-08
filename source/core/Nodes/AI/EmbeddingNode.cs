@@ -25,6 +25,24 @@ public sealed class EmbeddingNode : BaseNode
     public override string Description =>
         $"Generates vector embeddings using {_config.Model}";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "embed";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+    [
+        new("text",  typeof(string),       Required: false, "Single text to embed"),
+        new("texts", typeof(List<string>), Required: false, "Batch of texts to embed")
+    ];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("embedding",       typeof(float[]),       Required: false, "Single embedding vector"),
+        new("embeddings",      typeof(List<float[]>), Required: false, "Batch embedding vectors"),
+        new("embedding_model", typeof(string),        Description: "Model name used")
+    ];
+
     private readonly EmbeddingConfig _config;
     private readonly HttpClient _httpClient;
 

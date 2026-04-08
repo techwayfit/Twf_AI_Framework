@@ -22,6 +22,22 @@ public sealed class DataMapperNode : BaseNode
     public override string Description =>
         $"Maps {_mappings.Count} field(s) from source paths to target keys";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "mapper";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+        _mappings.Values
+                 .Select(src => new NodePort(src.Split('.')[0], typeof(object), Required: false, "Source path root"))
+                 .DistinctBy(p => p.Key)
+                 .ToList<NodePort>();
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+        _mappings.Keys
+                 .Select(k => new NodePort(k, typeof(object), Description: "Mapped output key"))
+                 .ToList<NodePort>();
+
     private readonly IReadOnlyDictionary<string, string> _mappings;
     private readonly IReadOnlyDictionary<string, object?> _defaultValues;
     private readonly bool _throwOnMissing;

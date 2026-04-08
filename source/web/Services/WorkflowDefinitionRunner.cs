@@ -53,10 +53,16 @@ public sealed class WorkflowDefinitionRunner
         var routing   = BuildRouting(definition.Connections);
         var context   = new WorkflowContext(definition.Name, _logger);
 
-        foreach (var (k, v) in definition.Variables)
-            context.SetState(k, v);
-
         var data = initialData?.Clone() ?? new WorkflowData();
+
+        // Seed workflow-level variables into both WorkflowContext (code-API compat)
+        // and WorkflowData so {{variable}} substitution works in PromptBuilderNode, etc.
+        foreach (var (k, v) in definition.Variables)
+        {
+            context.SetState(k, v);
+            if (!data.Keys.Contains(k)) // initial data takes priority
+                data.Set(k, v);
+        }
 
         _logger.LogInformation("▶ Running workflow '{Name}' from JSON definition", definition.Name);
 
@@ -96,6 +102,15 @@ public sealed class WorkflowDefinitionRunner
     {
         // Find error node ID for this workflow (used for fallback routing)
         var errorNodeId = definition.ErrorNodeId;
+
+        // Resolve {{variable}} placeholders against current WorkflowData.
+        string? Resolve(string? raw, WorkflowData d) =>
+            raw is null ? null
+            : System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
+            {
+                var key = m.Groups[1].Value;
+                return d.TryGet<object>(key, out var val) && val is not null ? val.ToString()! : m.Value;
+            });
 
         var currentId = startNodeId;
         const int maxSteps = 500; // guard against infinite loops
@@ -193,9 +208,87 @@ public sealed class WorkflowDefinitionRunner
                 continue;
             }
 
+            // ── LoopNode — ForEach over a collection ──────────────────────────
+
+            if (nodeDef.Type is "LoopNode")
+            {
+                var itemsKey    = Resolve(GetString(nodeDef.Parameters, "itemsKey") ?? "items", data);
+                var outputKey   = GetString(nodeDef.Parameters, "outputKey")            ?? "results";
+                var loopItemKey = GetString(nodeDef.Parameters, "loopItemKey")          ?? "__item__";
+                var maxIter     = GetInt(nodeDef.Parameters,    "maxIterations");
+
+                var rawItems = data.Get<IEnumerable<object>>(itemsKey!)?.ToList();
+                if (rawItems is null)
+                {
+                    _logger.LogWarning("  ⚠ LoopNode '{Name}': key '{Key}' not found or empty — skipping loop.",
+                        nodeDef.Name, itemsKey);
+                    if (!routing.TryGetValue((currentId, "output"), out var loopSkipId)) break;
+                    currentId = loopSkipId;
+                    continue;
+                }
+
+                if (maxIter > 0 && rawItems.Count > maxIter)
+                    rawItems = rawItems.Take(maxIter).ToList();
+
+                var loopOutputs = new List<WorkflowData>(rawItems.Count);
+                var loopBodyNodes   = nodeDef.SubWorkflow?.Nodes        ?? [];
+                var loopBodyConns   = nodeDef.SubWorkflow?.Connections   ?? [];
+                var loopBodyStart   = loopBodyNodes.FirstOrDefault(n => n.Type == "StartNode");
+
+                for (var loopIdx = 0; loopIdx < rawItems.Count; loopIdx++)
+                {
+                    context.CancellationToken.ThrowIfCancellationRequested();
+
+                    var itemData = data.Clone()
+                        .Set(loopItemKey, rawItems[loopIdx])
+                        .Set("__loop_index__", loopIdx);
+
+                    if (loopBodyStart is not null)
+                    {
+                        var bodyNodeMap  = loopBodyNodes.ToDictionary(n => n.Id);
+                        var bodyRouting  = BuildRouting(loopBodyConns);
+                        var bodyWrapDef  = new WorkflowDefinition
+                        {
+                            Id = nodeDef.Id, Name = $"{nodeDef.Name}/Body",
+                            Nodes = loopBodyNodes, Connections = loopBodyConns,
+                            SubWorkflows = definition.SubWorkflows
+                        };
+
+                        var (iterData, iterOk, iterErr, iterFailed) =
+                            await WalkGraphAsync(loopBodyStart.Id, itemData, context,
+                                bodyNodeMap, bodyRouting, bodyWrapDef, onStep);
+
+                        if (!iterOk)
+                            return (data, false,
+                                $"LoopNode '{nodeDef.Name}' iteration {loopIdx} failed: {iterErr}",
+                                iterFailed ?? nodeDef.Name);
+
+                        loopOutputs.Add(iterData);
+                    }
+                    else
+                    {
+                        loopOutputs.Add(itemData); // no body — collect item data as-is
+                    }
+                }
+
+                data = data.Clone()
+                    .Set(outputKey!, loopOutputs)
+                    .Set("loop_iteration_count", rawItems.Count);
+
+                if (!string.IsNullOrEmpty(nodeDef.NodeId))
+                {
+                    data.Set($"{nodeDef.NodeId}.{outputKey}", loopOutputs);
+                    data.Set($"{nodeDef.NodeId}.loop_iteration_count", rawItems.Count);
+                }
+
+                if (!routing.TryGetValue((currentId, "output"), out var loopNextId)) break;
+                currentId = loopNextId;
+                continue;
+            }
+
             // ── Regular nodes ────────────────────────────────────────────────
 
-            var node = CreateNode(nodeDef, definition);
+            var node = CreateNode(nodeDef, data);
             if (node is null)
             {
                 _logger.LogWarning("  ⚠ Unknown node type '{Type}' — skipping.", nodeDef.Type);
@@ -207,17 +300,32 @@ public sealed class WorkflowDefinitionRunner
 
             var opts = BuildNodeOptions(nodeDef.ExecutionOptions);
 
+            // ── Validate required input ports before executing ────────────────
+            var missingRequired = node.InputPorts
+                .Where(p => p.Required && !data.Keys.Contains(p.Key))
+                .Select(p => p.Key)
+                .ToList();
+
+            if (missingRequired.Count > 0)
+            {
+                var msg = $"Node '{nodeDef.Name}' ({nodeDef.NodeId}) is missing required input(s): " +
+                          string.Join(", ", missingRequired);
+                _logger.LogError("  ✘ {Message}", msg);
+                return (data, false, msg, nodeDef.Name);
+            }
+
             // ── Notify UI: node is starting ───────────────────────────────────
             var inputSnapshot = Snapshot(data);
             await onStep(new NodeStepEvent
             {
-                EventType = "node_start",
-                NodeId    = nodeDef.Id,
-                NodeName  = nodeDef.Name,
-                NodeType  = nodeDef.Type,
-                InputData = inputSnapshot,
+                EventType  = "node_start",
+                NodeId     = nodeDef.Id,
+                NodeName   = nodeDef.Name,
+                NodeType   = nodeDef.Type,
+                NodeRefId  = nodeDef.NodeId,
+                InputData  = inputSnapshot,
                 OutputData = new Dictionary<string, object?>(),
-                Timestamp = DateTimeOffset.UtcNow
+                Timestamp  = DateTimeOffset.UtcNow
             });
 
             WorkflowData resultData;
@@ -226,6 +334,18 @@ public sealed class WorkflowDefinitionRunner
             try
             {
                 resultData    = await ExecuteWithOptionsAsync(node, data, context, opts);
+
+                // ── Write scoped outputs: nodeId.key alongside flat key ───────
+                if (!string.IsNullOrEmpty(nodeDef.NodeId))
+                {
+                    foreach (var port in node.OutputPorts)
+                    {
+                        if (resultData.Keys.Contains(port.Key))
+                            resultData.Set($"{nodeDef.NodeId}.{port.Key}",
+                                resultData.Get<object>(port.Key));
+                    }
+                }
+
                 activatedPort = GetActivatedPort(nodeDef, resultData);
 
                 // ── Notify UI: node completed ─────────────────────────────────
@@ -233,6 +353,7 @@ public sealed class WorkflowDefinitionRunner
                 {
                     EventType  = "node_done",
                     NodeId     = nodeDef.Id,
+                    NodeRefId  = nodeDef.NodeId,
                     NodeName   = nodeDef.Name,
                     NodeType   = nodeDef.Type,
                     InputData  = inputSnapshot,
@@ -247,6 +368,7 @@ public sealed class WorkflowDefinitionRunner
                 {
                     EventType    = "node_error",
                     NodeId       = nodeDef.Id,
+                    NodeRefId    = nodeDef.NodeId,
                     NodeName     = nodeDef.Name,
                     NodeType     = nodeDef.Type,
                     InputData    = inputSnapshot,
@@ -264,6 +386,7 @@ public sealed class WorkflowDefinitionRunner
                 {
                     EventType    = "node_error",
                     NodeId       = nodeDef.Id,
+                    NodeRefId    = nodeDef.NodeId,
                     NodeName     = nodeDef.Name,
                     NodeType     = nodeDef.Type,
                     InputData    = inputSnapshot,
@@ -318,20 +441,32 @@ public sealed class WorkflowDefinitionRunner
 
     // ─── Node Factory ─────────────────────────────────────────────────────────
 
-    private INode? CreateNode(NodeDefinition nodeDef, WorkflowDefinition definition)
+    private INode? CreateNode(NodeDefinition nodeDef, WorkflowData data)
     {
         var p    = nodeDef.Parameters;
         var name = nodeDef.Name;
 
+        // Resolve {{variable}} placeholders in a parameter string against current WorkflowData.
+        // Intentionally excluded: apiKey and other sensitive credential fields.
+        string? Resolve(string? raw) =>
+            raw is null ? null
+            : System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
+            {
+                var key = m.Groups[1].Value;
+                return data.TryGet<object>(key, out var val) && val is not null
+                    ? val.ToString()!
+                    : m.Value; // leave unreplaced if not found
+            });
+
         return nodeDef.Type switch
         {
             // ── AI ────────────────────────────────────────────────────────────
-            "LlmNode" => new LlmNode(name, BuildLlmConfig(p)),
+            "LlmNode" => new LlmNode(name, BuildLlmConfig(p, Resolve)),
 
             "PromptBuilderNode" => new PromptBuilderNode(
                 name,
-                promptTemplate : GetString(p, "promptTemplate") ?? "",
-                systemTemplate : GetString(p, "systemTemplate")),
+                promptTemplate : Resolve(GetString(p, "promptTemplate")) ?? "",
+                systemTemplate : Resolve(GetString(p, "systemTemplate"))),
 
             "EmbeddingNode" => new EmbeddingNode(name, new EmbeddingConfig
             {
@@ -399,15 +534,32 @@ public sealed class WorkflowDefinitionRunner
                 ? MemoryNode.Write((GetStringList(p, "keys") ?? []).ToArray())
                 : MemoryNode.Read((GetStringList(p, "keys") ?? []).ToArray()),
 
+            "SetVariableNode" => new SetVariableNode(
+                name,
+                (GetStringDict(p, "assignments") ?? new Dictionary<string, string>())
+                    .ToDictionary(kv => kv.Key, kv => (object?)Resolve(kv.Value))),
+
             // ── IO ────────────────────────────────────────────────────────────
             "HttpRequestNode" => new HttpRequestNode(name, new HttpRequestConfig
             {
                 Method        = (GetString(p, "method") ?? "GET").ToUpperInvariant(),
-                UrlTemplate   = GetString(p, "url") ?? GetString(p, "urlTemplate") ?? "",
+                UrlTemplate   = Resolve(GetString(p, "url") ?? GetString(p, "urlTemplate")) ?? "",
                 Headers       = GetStringDict(p, "headers") ?? new Dictionary<string, string>(),
                 ThrowOnError  = GetBool(p, "throwOnError", true),
                 Timeout       = TimeSpan.FromMilliseconds(GetDouble(p, "timeoutMs", 30_000))
             }),
+
+            "FileReadNode"  => new FileReaderNode(Resolve(GetString(p, "filePath"))),
+            "FileWriteNode" => new FileWriterNode(
+                outputPath : Resolve(GetString(p, "filePath")) ?? "output.txt",
+                dataKey    : GetString(p, "contentKey") ?? "llm_response"),
+
+            // ── Control (routable) ────────────────────────────────────────────
+            "ErrorRouteNode" => new ErrorRouteNode(
+                name                 : name,
+                errorMessageKey      : GetString(p, "errorMessageKey")  ?? "error_message",
+                statusCodeKey        : GetString(p, "statusCodeKey")    ?? "http_status_code",
+                errorStatusThreshold : GetInt(p,    "errorStatusThreshold", 400)),
 
             _ => null
         };
@@ -415,13 +567,13 @@ public sealed class WorkflowDefinitionRunner
 
     // ─── Helpers: node config builders ────────────────────────────────────────
 
-    private static LlmConfig BuildLlmConfig(Dictionary<string, object?> p)
+    private static LlmConfig BuildLlmConfig(Dictionary<string, object?> p, Func<string?, string?> resolve)
     {
         var provider   = GetString(p, "provider") ?? "openai";
         var model      = GetString(p, "model")    ?? "gpt-4o";
-        var apiKey     = GetString(p, "apiKey")   ?? "";
+        var apiKey     = GetString(p, "apiKey")   ?? ""; // credentials are never variable-substituted
         var apiUrl     = GetString(p, "apiUrl");
-        var systemPmt  = GetString(p, "systemPrompt");
+        var systemPmt  = resolve(GetString(p, "systemPrompt"));
         var temp       = (float)GetDouble(p, "temperature", 0.7);
         var maxTokens  = GetInt(p, "maxTokens", 1000);
         var history    = GetBool(p, "maintainHistory");

@@ -1,7 +1,7 @@
 import { useContext } from 'react';
 import { Handle, Position, NodeToolbar, useReactFlow } from '@xyflow/react';
 import { SchemaContext } from '../../context/SchemaContext';
-import { portColor, NODE_ICONS } from '../../nodeConfig';
+import { portColor, NODE_ICONS, NODE_ROUTING_PORTS, DEFAULT_ROUTING_PORTS } from '../../nodeConfig';
 
 /**
  * Standard rectangular node used for most node types.
@@ -13,17 +13,17 @@ import { portColor, NODE_ICONS } from '../../nodeConfig';
  *   └─────────────────────────────────────────────────┘
  */
 export default function GenericNode({ id, data, selected }) {
-  const schemas = useContext(SchemaContext);
+  useContext(SchemaContext); // keep context alive for PropertiesPanel consumers
   const { setNodes, setEdges } = useReactFlow();
 
   const deleteNode = () => {
     setNodes((ns) => ns.filter((n) => n.id !== id));
     setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
   };
-  const schema = schemas[data.type] ?? {};
 
-  const inputPorts  = schema.inputPorts  ?? [{ id: 'input',  label: 'Input',  type: 'Data' }];
-  const outputPorts = schema.outputPorts ?? [{ id: 'output', label: 'Output', type: 'Data' }];
+  const routing = NODE_ROUTING_PORTS[data.type] ?? DEFAULT_ROUTING_PORTS;
+  const inputPorts  = routing.inputs;
+  const outputPorts = routing.outputs;
 
   const color = data.color ?? '#3498db';
   const icon  = data.icon  ?? NODE_ICONS[data.type] ?? 'bi-box';
@@ -127,6 +127,26 @@ export default function GenericNode({ id, data, selected }) {
         >
           {data.label}
         </div>
+
+        {/* NodeId badge — shown when assigned, used for {{nodeId.key}} references */}
+        {data.nodeId && (
+          <div
+            title={`Reference this node's outputs as {{${data.nodeId}.key}}`}
+            style={{
+              fontSize: 10,
+              fontFamily: 'monospace',
+              color: '#64748b',
+              background: '#f1f5f9',
+              border: '1px solid #e2e8f0',
+              borderRadius: 4,
+              padding: '1px 5px',
+              flexShrink: 0,
+              userSelect: 'text',
+            }}
+          >
+            {data.nodeId}
+          </div>
+        )}
       </div>
 
       {/* Description — strictly 2 lines, never expands node */}

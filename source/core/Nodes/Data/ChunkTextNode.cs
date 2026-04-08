@@ -20,6 +20,23 @@ public sealed class ChunkTextNode : BaseNode
     public override string Description =>
         $"Splits text into {_config.ChunkSize}-char chunks with {_config.Overlap}-char overlap";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "chunk";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+    [
+        new("text",   typeof(string), Required: true,  "Source text to split"),
+        new("source", typeof(string), Required: false, "Label attached to each chunk for provenance")
+    ];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("chunks",      typeof(List<TextChunk>), Description: "List of text chunks"),
+        new("chunk_count", typeof(int),             Description: "Number of chunks produced")
+    ];
+
     private readonly ChunkConfig _config;
 
     public ChunkTextNode(ChunkConfig? config = null)

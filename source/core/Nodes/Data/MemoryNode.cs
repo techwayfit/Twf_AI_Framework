@@ -16,6 +16,21 @@ public sealed class MemoryNode : BaseNode
             ? $"Reads {string.Join(", ", _keys)} from global memory"
             : $"Writes {string.Join(", ", _keys)} to global memory";
 
+    /// <inheritdoc/>
+    public override string IdPrefix => "memory";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+        _mode == MemoryMode.Write
+            ? _keys.Select(k => new NodePort(k, typeof(object), Required: false, "Written to global memory")).ToList<NodePort>()
+            : [];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+        _mode == MemoryMode.Read
+            ? _keys.Select(k => new NodePort(k, typeof(object), Required: false, "Read from global memory")).ToList<NodePort>()
+            : [];
+
     private readonly MemoryMode _mode;
     private readonly string[] _keys;
 

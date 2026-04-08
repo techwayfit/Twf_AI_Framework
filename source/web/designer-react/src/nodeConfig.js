@@ -1,3 +1,61 @@
+/**
+ * Short prefix used to generate human-readable NodeIds when a node is dropped onto the canvas.
+ * Must match the IdPrefix defined on each INode implementation in the core library.
+ * Format: prefix + zero-padded counter → "llm001", "http002", etc.
+ */
+export const NODE_ID_PREFIXES = {
+  // Control
+  StartNode:         'start',
+  EndNode:           'end',
+  ErrorNode:         'error',
+  ErrorRouteNode:    'errroute',
+  ConditionNode:     'cond',
+  BranchNode:        'branch',
+  SubWorkflowNode:   'sub',
+  LoopNode:          'loop',
+  DelayNode:         'delay',
+  MergeNode:         'merge',
+  LogNode:           'log',
+  // Data
+  SetVariableNode:   'setvar',
+  TransformNode:     'transform',
+  DataMapperNode:    'mapper',
+  FilterNode:        'filter',
+  ChunkTextNode:     'chunk',
+  MemoryNode:        'memory',
+  // IO
+  HttpRequestNode:   'http',
+  FileReadNode:      'fread',
+  FileWriteNode:     'fwrite',
+  // AI
+  LlmNode:           'llm',
+  PromptBuilderNode: 'prompt',
+  EmbeddingNode:     'embed',
+  OutputParserNode:  'parser',
+  // Visual
+  ContainerNode:     'container',
+  NoteNode:          'note',
+};
+
+/**
+ * Generates the next NodeId for a given node type by scanning existing nodes.
+ * Gaps from deleted nodes are fine — stability matters more than consecutive numbering.
+ *
+ * @param {string} nodeType  e.g. "LlmNode"
+ * @param {Array}  existingNodes  ReactFlow nodes array
+ * @returns {string}  e.g. "llm003"
+ */
+export function generateNodeId(nodeType, existingNodes) {
+  const prefix = NODE_ID_PREFIXES[nodeType] ?? 'node';
+  const max = existingNodes.reduce((acc, n) => {
+    const nid = n.data?.nodeId ?? '';
+    if (!nid.startsWith(prefix)) return acc;
+    const num = parseInt(nid.slice(prefix.length), 10);
+    return isNaN(num) ? acc : Math.max(acc, num);
+  }, 0);
+  return `${prefix}${String(max + 1).padStart(3, '0')}`;
+}
+
 export const NODE_COLORS = {
   AI: '#4A90E2',
   Control: '#F5A623',
@@ -11,140 +69,109 @@ export const NODE_COLORS = {
  */
 export const NODE_ICONS = {
   // Control
-  StartNode: 'bi-play-circle-fill',
-  EndNode: 'bi-stop-circle-fill',
-  ErrorNode: 'bi-exclamation-triangle-fill',
-  ErrorRouteNode: 'bi-arrow-right-circle-fill',
-  ConditionNode: 'bi-question-diamond',
-  SwitchNode: 'bi-diagram-3',
-  SubWorkflowNode: 'bi-box-arrow-in-right',
-  DelayNode: 'bi-clock',
-  MergeNode: 'bi-intersect',
-  LogNode: 'bi-journal-text',
-  LoopNode: 'bi-arrow-repeat',
-  ParallelNode: 'bi-lightning-charge',
-  BranchNode: 'bi-signpost-split',
-  WaitNode: 'bi-hourglass-split',
-  RetryNode: 'bi-arrow-counterclockwise',
-  TimeoutNode: 'bi-alarm',
-  EventTriggerNode: 'bi-broadcast',
+  StartNode:         'bi-play-circle-fill',
+  EndNode:           'bi-stop-circle-fill',
+  ErrorNode:         'bi-exclamation-triangle-fill',
+  ErrorRouteNode:    'bi-arrow-right-circle-fill',
+  ConditionNode:     'bi-question-diamond',
+  BranchNode:        'bi-signpost-split',
+  SubWorkflowNode:   'bi-box-arrow-in-right',
+  LoopNode:          'bi-arrow-repeat',
+  DelayNode:         'bi-clock',
+  MergeNode:         'bi-intersect',
+  LogNode:           'bi-journal-text',
   // Data
-  TransformNode: 'bi-arrow-left-right',
-  DataMapperNode: 'bi-map',
-  FilterNode: 'bi-funnel',
-  ChunkTextNode: 'bi-file-break',
-  MemoryNode: 'bi-memory',
-  SetVariableNode: 'bi-pencil',
-  ParseJsonNode: 'bi-code-slash',
-  AggregateNode: 'bi-calculator',
-  SortNode: 'bi-sort-down',
-  JoinNode: 'bi-link-45deg',
-  SchemaValidateNode: 'bi-check2-square',
-  TemplateNode: 'bi-file-earmark-code',
-  CsvParseNode: 'bi-filetype-csv',
-  XmlParseNode: 'bi-filetype-xml',
-  Base64Node: 'bi-file-binary',
-  HashNode: 'bi-hash',
-  DateTimeNode: 'bi-calendar-event',
-  RandomNode: 'bi-shuffle',
+  SetVariableNode:   'bi-pencil',
+  TransformNode:     'bi-arrow-left-right',
+  DataMapperNode:    'bi-map',
+  FilterNode:        'bi-funnel',
+  ChunkTextNode:     'bi-file-break',
+  MemoryNode:        'bi-memory',
   // IO
-  HttpRequestNode: 'bi-globe',
-  HttpResponseNode: 'bi-reply-fill',
-  DbQueryNode: 'bi-database',
-  FileReadNode: 'bi-file-earmark-text',
-  FileWriteNode: 'bi-file-earmark-arrow-down',
-  EmailSendNode: 'bi-envelope',
-  WebhookNode: 'bi-plug',
-  QueueNode: 'bi-collection',
-  CacheNode: 'bi-lightning',
-  NotificationNode: 'bi-bell',
-  StorageNode: 'bi-cloud-arrow-up',
-  // Logic
-  FunctionNode: 'bi-braces',
-  ProcessNode: 'bi-terminal',
-  StepNode: 'bi-play-btn',
-  ScriptNode: 'bi-file-code',
-  RateLimiterNode: 'bi-speedometer2',
+  HttpRequestNode:   'bi-globe',
+  FileReadNode:      'bi-file-earmark-text',
+  FileWriteNode:     'bi-file-earmark-arrow-down',
   // AI
-  LlmNode: 'bi-chat-left-dots',
+  LlmNode:           'bi-chat-left-dots',
   PromptBuilderNode: 'bi-pencil-square',
-  EmbeddingNode: 'bi-diagram-2',
-  OutputParserNode: 'bi-list-check',
-  VectorSearchNode: 'bi-search',
-  AgentNode: 'bi-robot',
-  TextSplitterNode: 'bi-scissors',
-  SummariseNode: 'bi-file-text',
+  EmbeddingNode:     'bi-diagram-2',
+  OutputParserNode:  'bi-list-check',
   // Visual
-  ContainerNode: 'bi-bounding-box',
-  NoteNode: 'bi-sticky',
-  AnchorNode: 'bi-geo-alt',
+  ContainerNode:     'bi-bounding-box',
+  NoteNode:          'bi-sticky',
 };
 
-// Default parameters per node type — used when a node is dropped onto the canvas
+// Default parameters per node type — used when a node is dropped onto the canvas.
 // Every entry includes `description: ''` so it appears in the properties panel.
 export const NODE_DEFAULT_PARAMS = {
-  LlmNode: { description: '', provider: 'openai', model: 'gpt-4o', apiKey: '', apiUrl: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, maintainHistory: false },
+  // ── Control ───────────────────────────────────────────────────────────────
+  StartNode:         { description: '' },
+  EndNode:           { description: '' },
+  ErrorNode:         { description: '' },
+  ErrorRouteNode:    { description: '' },
+  ConditionNode:     { description: '', condition: '' },
+  BranchNode:        { description: '', valueKey: '', case1Value: '', case2Value: '', case3Value: '', caseSensitive: false },
+  SubWorkflowNode:   { description: '', subWorkflowId: '' },
+  LoopNode:          { description: '', itemsKey: 'items', outputKey: 'results', loopItemKey: '__item__', maxIterations: 0 },
+  DelayNode:         { description: '', delayMs: 1000 },
+  MergeNode:         { description: '', targetKey: 'merged', sourceKeys: '' },
+  LogNode:           { description: '', message: '', logLevel: 'Info' },
+  // ── Data ──────────────────────────────────────────────────────────────────
+  SetVariableNode:   { description: '', assignments: '{}' },
+  TransformNode:     { description: '', expression: '', outputKey: '' },
+  DataMapperNode:    { description: '', mappings: '{}' },
+  FilterNode:        { description: '', condition: '', outputKey: '' },
+  ChunkTextNode:     { description: '', textKey: '', chunkSize: 500, chunkOverlap: 50, outputKey: 'chunks' },
+  MemoryNode:        { description: '', action: 'read', key: '', scope: 'global' },
+  // ── IO ────────────────────────────────────────────────────────────────────
+  HttpRequestNode:   { description: '', url: '', method: 'GET', headers: '{}', body: '', outputKey: 'response' },
+  FileReadNode:      { description: '', filePath: '', format: 'Text', encoding: 'utf-8', outputKey: 'file_content' },
+  FileWriteNode:     { description: '', filePath: '', contentKey: '', writeMode: 'Overwrite', createDirectories: true, encoding: 'utf-8' },
+  // ── AI ────────────────────────────────────────────────────────────────────
+  LlmNode:           { description: '', provider: 'openai', model: 'gpt-4o', apiKey: '', apiUrl: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, maintainHistory: false },
   PromptBuilderNode: { description: '', promptTemplate: '', systemTemplate: '' },
-  EmbeddingNode: { description: '', provider: 'openai', model: 'text-embedding-ada-002', apiKey: '', textKey: '', outputKey: 'embedding' },
-  OutputParserNode: { description: '', outputKey: 'parsed', schema: '' },
-  StartNode: { description: '' },
-  EndNode: { description: '' },
-  ErrorNode: { description: '' },
-  ErrorRouteNode: { description: '' },
-  ConditionNode: { description: '', condition: '' },
-  SubWorkflowNode: { description: '', subWorkflowId: '' },
-  DelayNode: { description: '', delayMs: 1000 },
-  MergeNode: { description: '', targetKey: 'merged', sourceKeys: '' },
-  LogNode: { description: '', message: '', logLevel: 'Info' },
-  LoopNode: { description: '', itemsKey: '', outputKey: '', loopItemKey: '__loop_item__', maxIterations: 0 },
-  ParallelNode: { description: '', branchCount: 3, mergeStrategy: 'overwrite' },
-  BranchNode: { description: '', valueKey: '', case1Value: '', case2Value: '', case3Value: '', caseSensitive: false },
-  TransformNode: { description: '', expression: '', outputKey: '' },
-  DataMapperNode: { description: '', mappings: '{}' },
-  FilterNode: { description: '', condition: '', outputKey: '' },
-  ChunkTextNode: { description: '', textKey: '', chunkSize: 500, chunkOverlap: 50, outputKey: 'chunks' },
-  MemoryNode: { description: '', action: 'read', key: '', scope: 'global' },
-  HttpRequestNode: { description: '', url: '', method: 'GET', headers: '{}', body: '', outputKey: 'response' },
-  HttpResponseNode: { description: '', statusCode: 200, showStatusCode: false, contentType: 'application/json', bodyKey: '', headers: '{}' },
-  FileReadNode: { description: '', filePath: '', format: 'Text', encoding: 'utf-8', outputKey: 'file_content' },
-  FileWriteNode: { description: '', filePath: '', contentKey: '', writeMode: 'Overwrite', createDirectories: true, encoding: 'utf-8' },
-  EmailSendNode: { description: '', provider: 'SMTP', smtpHost: '', smtpPort: 587, apiKey: '', from: '', to: '', cc: '', subject: '', body: '', isHtml: false, useSSL: true },
-  WebhookNode: { description: '', path: '', method: 'POST', authType: 'None', secretKey: '', outputKey: 'webhook_payload' },
-  QueueNode: { description: '', provider: 'RabbitMQ', connectionString: '', queueName: '', operation: 'Publish', messageKey: '', outputKey: 'queue_message' },
-  CacheNode: { description: '', provider: 'InMemory', connectionString: '', operation: 'Get', cacheKey: '', valueKey: '', outputKey: 'cached_value', ttlSeconds: 300 },
-  NotificationNode: { description: '', provider: 'Slack', webhookUrl: '', message: '', channel: '', title: '' },
-  StorageNode: { description: '', provider: 'S3', connectionString: '', operation: 'Read', bucket: '', objectKey: '', contentKey: '', outputKey: 'storage_result' },
-  FunctionNode: { description: '', functionName: '', parameters: '{}', outputKey: 'function_result', async: false },
-  DbQueryNode: { description: '', connectionString: '', queryType: 'SELECT', query: '', parameters: '{}', outputKey: 'db_result', singleRow: false },
-  ProcessNode: { description: '', processType: 'Command', command: '', arguments: '', workingDirectory: '', environmentVariables: '{}', outputKey: 'process_output', captureStderr: false },
-  StepNode: { description: '', stepType: 'Action', actionKey: '', inputKeys: '', outputKey: 'step_result', metadata: '{}' },
-  ScriptNode: { description: '', language: 'JavaScript', script: '', outputKey: '' },
-  RateLimiterNode: { description: '', strategy: 'FixedWindow', maxRequests: 10, windowMs: 60000, key: '', blockAction: 'Route' },
-  WaitNode: { description: '', waitType: 'Duration', durationMs: 5000, eventName: '', webhookPath: '', timeoutMs: 0, resumeDataKey: '' },
-  RetryNode: { description: '', maxRetries: 3, retryDelayMs: 1000, backoffMultiplier: 2.0, retryOn: 'Error', retryCondition: '' },
-  TimeoutNode: { description: '', timeoutMs: 30000, outputKey: 'timeout_message' },
-  EventTriggerNode: { description: '', mode: 'Emit', eventName: '', payloadKey: '' },
-  SwitchNode: { description: '', case1Expression: '', case1Label: 'Case 1', case2Expression: '', case2Label: 'Case 2', case3Expression: '', case3Label: 'Case 3', case4Expression: '', case4Label: 'Case 4', stopOnFirstMatch: true },
-  SetVariableNode: { description: '', assignments: '{}', mergeMode: 'Merge' },
-  ParseJsonNode: { description: '', sourceKey: '', outputKey: '', strict: true },
-  AggregateNode: { description: '', itemsKey: '', field: '', operation: 'Count', outputKey: 'aggregate_result' },
-  SortNode: { description: '', itemsKey: '', sortBy: '', direction: 'Asc', outputKey: '' },
-  JoinNode: { description: '', leftKey: '', rightKey: '', joinField: '', joinType: 'Inner', outputKey: 'joined_result' },
-  SchemaValidateNode: { description: '', schema: '{}', dataKey: '', errorsKey: 'validation_errors' },
-  TemplateNode: { description: '', engine: 'Handlebars', template: '', outputKey: 'rendered_template' },
-  CsvParseNode: { description: '', sourceKey: '', delimiter: ',', hasHeaders: true, outputKey: 'csv_rows' },
-  XmlParseNode: { description: '', sourceKey: '', outputKey: 'xml_data', preserveAttributes: true },
-  Base64Node: { description: '', operation: 'Encode', sourceKey: '', outputKey: 'base64_result' },
-  HashNode: { description: '', algorithm: 'SHA256', sourceKey: '', secretKey: '', outputKey: 'hash_result', encoding: 'Hex' },
-  DateTimeNode: { description: '', operation: 'Now', sourceKey: '', inputFormat: '', outputFormat: 'yyyy-MM-ddTHH:mm:ssZ', amount: 1, unit: 'Days', outputKey: 'datetime_result' },
-  RandomNode: { description: '', type: 'UUID', min: 0, max: 100, listKey: '', outputKey: 'random_result' },
-  VectorSearchNode: { description: '', provider: 'Qdrant', connectionString: '', indexName: '', queryKey: 'embedding', topK: 5, minScore: 0.7, filter: '{}', outputKey: 'search_results' },
-  AgentNode: { description: '', provider: 'openai', model: 'gpt-4o', apiKey: '', systemPrompt: '', goalKey: '', tools: '[]', maxIterations: 10, outputKey: 'agent_result' },
-  TextSplitterNode: { description: '', strategy: 'Recursive', textKey: '', chunkSize: 1000, chunkOverlap: 200, codeLanguage: '', outputKey: 'text_chunks' },
-  SummariseNode: { description: '', provider: 'openai', model: 'gpt-4o', apiKey: '', textKey: '', strategy: 'Stuff', systemPrompt: '', maxLength: 300, outputKey: 'summary' },
-  NoteNode: { text: '', color: 'yellow' },
-  AnchorNode: { description: '', anchorName: '' },
-  ContainerNode: { backgroundColor: '#6366f1', opacity: 0.12, width: 300, height: 200 },
+  EmbeddingNode:     { description: '', provider: 'openai', model: 'text-embedding-ada-002', apiKey: '', textKey: '', outputKey: 'embedding' },
+  OutputParserNode:  { description: '', outputKey: 'parsed', schema: '' },
+  // ── Visual ────────────────────────────────────────────────────────────────
+  ContainerNode:     { backgroundColor: '#6366f1', opacity: 0.12, width: 300, height: 200 },
+  NoteNode:          { text: '', color: 'yellow' },
+};
+
+/**
+ * Routing handles per node type — used by GenericNode to render React Flow connection points.
+ * Only nodes that differ from the default single input→output need an entry here.
+ * Format: { inputs: [{id, label}], outputs: [{id, label}] }
+ * Omitting a node uses the default: input on left, output on right.
+ */
+export const NODE_ROUTING_PORTS = {
+  StartNode:       { inputs: [],                         outputs: [{ id: 'output',   label: 'Start' }] },
+  EndNode:         { inputs: [{ id: 'input', label: 'End' }], outputs: [] },
+  ErrorNode:       { inputs: [],                         outputs: [{ id: 'output',   label: 'On Error' }] },
+  ErrorRouteNode:  { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'success', label: 'Success' }, { id: 'error', label: 'Error' }] },
+  ConditionNode:   { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'success', label: 'True' }, { id: 'failure', label: 'False' }] },
+  BranchNode:      { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'case1', label: 'Case 1' }, { id: 'case2', label: 'Case 2' },
+                               { id: 'case3', label: 'Case 3' }, { id: 'default', label: 'Default' }] },
+  SubWorkflowNode: { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'success', label: 'Success' }, { id: 'error', label: 'Error' }] },
+  LoopNode:        { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'output', label: 'After Loop' }] },
+  HttpRequestNode: { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
+  FileReadNode:    { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
+  FileWriteNode:   { inputs: [{ id: 'input', label: 'Input' }],
+                     outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
+  ContainerNode:   { inputs: [], outputs: [] },
+  NoteNode:        { inputs: [], outputs: [] },
+};
+
+// Default routing ports for any node not in NODE_ROUTING_PORTS
+export const DEFAULT_ROUTING_PORTS = {
+  inputs:  [{ id: 'input',  label: 'Input'  }],
+  outputs: [{ id: 'output', label: 'Output' }],
 };
 
 // Nodes rendered as circles (no rectangular box)
@@ -163,16 +190,11 @@ export const DIAMOND_NODE_TYPES = new Set(['ConditionNode']);
  *   default    → muted purple
  */
 export function portColor(portId, handleType) {
-  if (portId === 'input')                           return '#3b82f6'; // blue
-  if (portId === 'output')                          return '#6c757d'; // grey
-  if (portId === 'success')                         return '#22c55e'; // green
-  if (portId === 'failure' || portId === 'error')   return '#ef4444'; // red
-  if (portId === 'timeout')                         return '#f97316'; // orange
-  if (portId === 'blocked' || portId === 'miss')    return '#f97316'; // orange
-  if (portId === 'hit')                             return '#22c55e'; // green
-  if (portId === 'attempt' || portId === 'execute') return '#6c757d'; // grey
+  if (portId === 'input')                         return '#3b82f6'; // blue
+  if (portId === 'output')                        return '#6c757d'; // grey
+  if (portId === 'success')                       return '#22c55e'; // green
+  if (portId === 'failure' || portId === 'error') return '#ef4444'; // red
+  if (portId === 'default')                       return '#8b5cf6'; // purple
   if (portId.startsWith('case') || portId.startsWith('branch')) return '#f59e0b'; // amber
-  if (portId === 'afterAll' || portId === 'completed' || portId === 'resumed') return '#22c55e'; // green
-  if (portId === 'default')                         return '#8b5cf6'; // purple
   return handleType === 'target' ? '#3b82f6' : '#6c757d'; // fallback by direction
 }

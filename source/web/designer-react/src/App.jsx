@@ -30,7 +30,7 @@ import RunnerPanel from './components/RunnerPanel';
 import { toPng } from 'html-to-image';
 import { loadWorkflow, saveWorkflow, loadAvailableNodes, loadAllSchemas } from './api';
 import { toReactFlow, getContextData, applyContextData } from './adapter';
-import { NODE_DEFAULT_PARAMS } from './nodeConfig';
+import { NODE_DEFAULT_PARAMS, generateNodeId } from './nodeConfig';
 import './App.css';
 
 const genId = () => crypto.randomUUID();
@@ -323,6 +323,7 @@ function DesignerInner({ workflowId, mode }) {
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const isContainer = nodeInfo.type === 'ContainerNode';
       const defaultParams = { ...(NODE_DEFAULT_PARAMS[nodeInfo.type] ?? {}) };
+      const nodeId = generateNodeId(nodeInfo.type, nodesRef.current);
       const newNode = {
         id: genId(),
         type: nodeInfo.type,
@@ -334,6 +335,7 @@ function DesignerInner({ workflowId, mode }) {
           category: nodeInfo.category,
           color: nodeInfo.color,
           icon: nodeInfo.icon,
+          nodeId,
           parameters: defaultParams,
           executionOptions: null,
         },

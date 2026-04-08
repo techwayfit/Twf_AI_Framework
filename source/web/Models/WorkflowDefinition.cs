@@ -48,6 +48,13 @@ public class NodeDefinition
 {
     public Guid Id { get; set; } = Guid.NewGuid();
 
+    /// <summary>
+    /// Short human-readable ID unique within the workflow (e.g. "llm001", "http002").
+    /// Assigned by the designer client when a node is first dropped onto the canvas.
+    /// Stable for the life of the node — used in {{nodeId.key}} template references.
+    /// </summary>
+    public string NodeId { get; set; } = string.Empty;
+
   [Required]
     public string Name { get; set; } = string.Empty;
 

@@ -13,12 +13,15 @@
         <a asp-action="Runner" asp-route-id="@Model.Id" class="btn btn-success">
           <i class="bi bi-play-circle"></i> Run
         </a>
+        <a asp-action="Runs" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+          <i class="bi bi-clock-history"></i> Run History
+        </a>
         <a asp-action="Designer" asp-route-id="@Model.Id" class="btn btn-primary">
           <i class="bi bi-pencil-square"></i> Edit in Designer
         </a>
-     <a asp-action="Index" class="btn btn-secondary">
-    <i class="bi bi-arrow-left"></i> Back to List
-             </a>
+        <a asp-action="Index" class="btn btn-secondary">
+          <i class="bi bi-arrow-left"></i> Back to List
+        </a>
    </div>
  </div>
 

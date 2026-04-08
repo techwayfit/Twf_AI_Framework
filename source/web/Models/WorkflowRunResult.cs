@@ -59,6 +59,8 @@ public sealed class NodeStepEvent
     /// <summary>"node_start" | "node_done" | "node_error" | "workflow_done" | "workflow_error"</summary>
     public string EventType { get; init; } = string.Empty;
     public Guid NodeId { get; init; }
+    /// <summary>Short human-readable node ID (e.g. "llm001"). Used for {{nodeId.key}} references.</summary>
+    public string NodeRefId { get; init; } = string.Empty;
     public string NodeName { get; init; } = string.Empty;
     public string NodeType { get; init; } = string.Empty;
     /// <summary>Snapshot of WorkflowData BEFORE the node executed.</summary>

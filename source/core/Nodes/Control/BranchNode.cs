@@ -22,6 +22,23 @@ public sealed class BranchNode : BaseNode
     public override string Category => "Control";
     public override string Description =>
         $"Routes by '{_valueKey}' using switch/case matching";
+
+    /// <inheritdoc/>
+    public override string IdPrefix => "branch";
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> InputPorts =>
+    [
+        new(_valueKey, typeof(string), Required: true, "Value used to select a branch")
+    ];
+
+    /// <inheritdoc/>
+    public override IReadOnlyList<NodePort> OutputPorts =>
+    [
+        new("branch_selected_port", typeof(string), Description: "Matched case key (case1/case2/default)"),
+        new("branch_input_value",   typeof(string), Description: "String representation of the input value"),
+        new("branch_status",        typeof(string), Description: "success or failure")
+    ];
     public Dictionary<string, Workflow?> _branchWorkflows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
     private readonly string _valueKey; 
