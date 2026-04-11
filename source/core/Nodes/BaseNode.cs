@@ -27,8 +27,8 @@ public abstract class BaseNode : INode
     // Defaults are empty so existing nodes compile without change.
 
     public virtual string IdPrefix => "node";
-    public virtual IReadOnlyList<NodePort> InputPorts  => [];
-    public virtual IReadOnlyList<NodePort> OutputPorts => [];
+    public virtual IReadOnlyList<NodeData> DataIn  => [];
+    public virtual IReadOnlyList<NodeData> DataOut => [];
 
     // ─── Template Method ─────────────────────────────────────────────────────
 

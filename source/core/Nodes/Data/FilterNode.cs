@@ -17,13 +17,13 @@ public sealed class FilterNode : BaseNode
     public override string IdPrefix => "filter";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
-        _rules.Select(r => new NodePort(r.Key, typeof(object), Required: false, "Field subject to validation rule"))
+    public override IReadOnlyList<NodeData> DataIn =>
+        _rules.Select(r => new NodeData(r.Key, typeof(object), Required: false, "Field subject to validation rule"))
               .DistinctBy(p => p.Key)
-              .ToList<NodePort>();
+              .ToList<NodeData>();
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("is_valid",          typeof(bool),         Description: "True if all rules passed"),
         new("validation_errors", typeof(List<string>), Required: false, "List of failure messages")

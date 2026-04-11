@@ -20,15 +20,15 @@ public sealed class MemoryNode : BaseNode
     public override string IdPrefix => "memory";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
         _mode == MemoryMode.Write
-            ? _keys.Select(k => new NodePort(k, typeof(object), Required: false, "Written to global memory")).ToList<NodePort>()
+            ? _keys.Select(k => new NodeData(k, typeof(object), Required: false, "Written to global memory")).ToList<NodeData>()
             : [];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
         _mode == MemoryMode.Read
-            ? _keys.Select(k => new NodePort(k, typeof(object), Required: false, "Read from global memory")).ToList<NodePort>()
+            ? _keys.Select(k => new NodeData(k, typeof(object), Required: false, "Read from global memory")).ToList<NodeData>()
             : [];
 
     private readonly MemoryMode _mode;

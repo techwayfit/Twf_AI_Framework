@@ -10,10 +10,10 @@
     <div class="d-flex justify-content-between align-items-start mb-4">
    <h1><i class="bi bi-diagram-3"></i> @Model.Name</h1>
     <div>
-        <a asp-action="Runner" asp-route-id="@Model.Id" class="btn btn-success">
+        <a asp-controller="WorkflowRunner" asp-action="Runner" asp-route-id="@Model.Id" class="btn btn-success">
           <i class="bi bi-play-circle"></i> Run
         </a>
-        <a asp-action="Runs" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
+        <a asp-controller="WorkflowRunner" asp-action="Runs" asp-route-id="@Model.Id" class="btn btn-outline-secondary">
           <i class="bi bi-clock-history"></i> Run History
         </a>
         <a asp-action="Designer" asp-route-id="@Model.Id" class="btn btn-primary">
@@ -157,7 +157,7 @@
  <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger">
       <i class="bi bi-trash"></i> Delete Workflow
     </a>
-  <a asp-action="Runner" asp-route-id="@Model.Id" class="btn btn-success">
+  <a asp-controller="WorkflowRunner" asp-action="Runner" asp-route-id="@Model.Id" class="btn btn-success">
         <i class="bi bi-play-circle"></i> Run Workflow
     </a>
     <a asp-action="Designer" asp-route-id="@Model.Id" class="btn btn-primary">

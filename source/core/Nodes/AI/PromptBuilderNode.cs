@@ -29,10 +29,10 @@ public sealed class PromptBuilderNode : BaseNode
 
     /// <inheritdoc/>
     // Input ports are the {{variable}} placeholders found in the templates at construction time.
-    public override IReadOnlyList<NodePort> InputPorts => ExtractTemplatePorts();
+    public override IReadOnlyList<NodeData> DataIn => ExtractTemplatePorts();
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("prompt",        typeof(string), Description: "Rendered prompt text"),
         new("system_prompt", typeof(string), Required: false, Description: "Rendered system instruction")
@@ -93,7 +93,7 @@ public sealed class PromptBuilderNode : BaseNode
 
     // ─── Port helpers ────────────────────────────────────────────────────────
 
-    private IReadOnlyList<NodePort> ExtractTemplatePorts()
+    private IReadOnlyList<NodeData> ExtractTemplatePorts()
     {
         var keys = new HashSet<string>();
         foreach (Match m in Regex.Matches(_promptTemplate, @"\{\{(\w+)\}\}"))
@@ -103,7 +103,7 @@ public sealed class PromptBuilderNode : BaseNode
                 keys.Add(m.Groups[1].Value);
 
         return keys
-            .Select(k => new NodePort(k, typeof(string), Required: false,
+            .Select(k => new NodeData(k, typeof(string), Required: false,
                 Description: $"Template variable {{{{{k}}}}}"))
             .ToList();
     }

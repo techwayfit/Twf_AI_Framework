@@ -9,10 +9,10 @@ namespace TwfAiFramework.Web.Services;
 
 /// <summary>
 /// Creates a minimal skeleton instance of each node type and reads its
-/// InputPorts / OutputPorts directly from the core implementation.
+/// DataIn / DataOut directly from the core implementation.
 /// This ensures the UI always reflects the actual data contract.
 /// </summary>
-public static class NodePortMetadataProvider
+public static class NodeDataMetadataProvider
 {
     /// <summary>
     /// Returns (DataInputs, DataOutputs) for the given node type string,
@@ -24,12 +24,12 @@ public static class NodePortMetadataProvider
         if (node is null)
             return ([], []);
 
-        var inputs  = node.InputPorts .Select(ToDataPortInfo).ToList();
-        var outputs = node.OutputPorts.Select(ToDataPortInfo).ToList();
+        var inputs  = node.DataIn .Select(ToDataPortInfo).ToList();
+        var outputs = node.DataOut.Select(ToDataPortInfo).ToList();
         return (inputs, outputs);
     }
 
-    private static DataPortInfo ToDataPortInfo(NodePort p) => new()
+    private static DataPortInfo ToDataPortInfo(NodeData p) => new()
     {
         Key         = p.Key,
         Required    = p.Required,

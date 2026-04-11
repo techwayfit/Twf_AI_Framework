@@ -30,23 +30,23 @@ public sealed class OutputParserNode : BaseNode
     public override string IdPrefix => "parser";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new("llm_response", typeof(string), Required: true, "Raw LLM text to parse JSON from")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts
+    public override IReadOnlyList<NodeData> DataOut
     {
         get
         {
-            var ports = new List<NodePort>
+            var ports = new List<NodeData>
             {
                 new("parsed_output", typeof(Dictionary<string, object?>), Description: "Full parsed JSON object")
             };
             if (_fieldMapping is not null)
                 foreach (var (_, dataKey) in _fieldMapping)
-                    ports.Add(new NodePort(dataKey, typeof(object), Required: false, $"Mapped from JSON field"));
+                    ports.Add(new NodeData(dataKey, typeof(object), Required: false, $"Mapped from JSON field"));
             return ports;
         }
     }

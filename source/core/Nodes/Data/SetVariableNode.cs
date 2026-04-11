@@ -39,13 +39,13 @@ public sealed class SetVariableNode : BaseNode
 
     /// <inheritdoc/>
     // Input ports are the {{variable}} placeholders referenced inside assignment values.
-    public override IReadOnlyList<NodePort> InputPorts => ExtractTemplatePorts();
+    public override IReadOnlyList<NodeData> DataIn => ExtractTemplatePorts();
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
         _assignments.Keys
-            .Select(k => new NodePort(k, typeof(object), Description: "Assigned value"))
-            .ToList<NodePort>();
+            .Select(k => new NodeData(k, typeof(object), Description: "Assigned value"))
+            .ToList<NodeData>();
 
     private readonly IReadOnlyDictionary<string, object?> _assignments;
 
@@ -84,7 +84,7 @@ public sealed class SetVariableNode : BaseNode
         });
     }
 
-    private IReadOnlyList<NodePort> ExtractTemplatePorts()
+    private IReadOnlyList<NodeData> ExtractTemplatePorts()
     {
         var keys = new HashSet<string>();
         foreach (var (_, value) in _assignments)
@@ -94,8 +94,8 @@ public sealed class SetVariableNode : BaseNode
                     keys.Add(m.Groups[1].Value);
         }
         return keys
-            .Select(k => new NodePort(k, typeof(object), Required: false,
+            .Select(k => new NodeData(k, typeof(object), Required: false,
                 Description: $"Template variable {{{{{k}}}}}"))
-            .ToList<NodePort>();
+            .ToList<NodeData>();
     }
 }

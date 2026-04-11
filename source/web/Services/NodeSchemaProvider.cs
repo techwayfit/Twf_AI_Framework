@@ -4,7 +4,7 @@ namespace TwfAiFramework.Web.Services;
 
 /// <summary>
 /// Provides the parameters schema (form field definitions) for each node type.
-/// Routing handles live in nodeConfig.js. Data port metadata comes from NodePortMetadataProvider.
+/// Routing handles live in nodeConfig.js. Data port metadata comes from NodeDataMetadataProvider.
 /// </summary>
 public static class NodeSchemaProvider
 {

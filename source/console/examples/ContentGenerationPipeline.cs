@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Core;
+using TwfAiFramework.Nodes;
 using TwfAiFramework.Nodes.AI;
 using TwfAiFramework.Nodes.Control;
 using TwfAiFramework.Nodes.Data;
@@ -350,13 +351,13 @@ return parseResult.IsSuccess ? parseResult.Data : result.Data;
 /// Allows defining multi-step logic as a single named node using a lambda.
 /// Used in Parallel() blocks where each parallel branch needs multiple steps.
 /// </summary>
-public sealed class LambdaMultiStepNode : INode
+public sealed class LambdaMultiStepNode : BaseNode
 {
     private readonly Func<WorkflowData, WorkflowContext, Task<WorkflowData>> _logic;
 
-    public string Name { get; }
-    public string Category => "Custom";
-    public string Description => $"Multi-step lambda node: {Name}";
+    public override string Name { get;}
+    public override string Category => "Custom";
+    public override string Description => $"Multi-step lambda node: {Name}";
 
     public LambdaMultiStepNode(string name,
         Func<WorkflowData, WorkflowContext, Task<WorkflowData>> logic)
@@ -377,5 +378,10 @@ public sealed class LambdaMultiStepNode : INode
         {
             return NodeResult.Failure(Name, data, ex.Message, ex, DateTime.UtcNow - start, start);
         }
+    }
+
+    protected override Task<WorkflowData> RunAsync(WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
+    {
+        throw new NotImplementedException();
     }
 }

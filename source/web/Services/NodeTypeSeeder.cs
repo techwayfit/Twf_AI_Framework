@@ -27,7 +27,7 @@ public static class NodeTypeSeeder
             schema ??= new TwfAiFramework.Web.Models.NodeParameterSchema { NodeType = nodeType };
 
             // Populate DataInputs/DataOutputs from the core node's declared ports
-            var (inputs, outputs) = NodePortMetadataProvider.GetPorts(nodeType);
+            var (inputs, outputs) = NodeDataMetadataProvider.GetPorts(nodeType);
             schema.DataInputs  = inputs;
             schema.DataOutputs = outputs;
 

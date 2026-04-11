@@ -301,7 +301,7 @@ public sealed class WorkflowDefinitionRunner
             var opts = BuildNodeOptions(nodeDef.ExecutionOptions);
 
             // ── Validate required input ports before executing ────────────────
-            var missingRequired = node.InputPorts
+            var missingRequired = node.DataIn
                 .Where(p => p.Required && !data.Keys.Contains(p.Key))
                 .Select(p => p.Key)
                 .ToList();
@@ -314,18 +314,35 @@ public sealed class WorkflowDefinitionRunner
                 return (data, false, msg, nodeDef.Name);
             }
 
-            // ── Notify UI: node is starting ───────────────────────────────────
+            // ── Snapshot helpers scoped to declared DataIn / DataOut keys ────────
+            var dataInKeys  = node.DataIn .Select(p => p.Key).ToHashSet();
+            var dataOutKeys = node.DataOut.Select(p => p.Key).ToHashSet();
+            var hasDataIn   = dataInKeys.Count  > 0;
+            var hasDataOut  = dataOutKeys.Count > 0;
+
             var inputSnapshot = Snapshot(data);
+
+            // When DataIn ports are declared, filter to those keys only.
+            // When none are declared, send empty dict — UI will show "No DataIn configured".
+            var filteredInput = hasDataIn
+                ? inputSnapshot
+                    .Where(kv => dataInKeys.Contains(kv.Key))
+                    .ToDictionary(kv => kv.Key, kv => kv.Value)
+                : new Dictionary<string, object?>();
+
+            // ── Notify UI: node is starting ───────────────────────────────────
             await onStep(new NodeStepEvent
             {
-                EventType  = "node_start",
-                NodeId     = nodeDef.Id,
-                NodeName   = nodeDef.Name,
-                NodeType   = nodeDef.Type,
-                NodeRefId  = nodeDef.NodeId,
-                InputData  = inputSnapshot,
-                OutputData = new Dictionary<string, object?>(),
-                Timestamp  = DateTimeOffset.UtcNow
+                EventType       = "node_start",
+                NodeId          = nodeDef.Id,
+                NodeName        = nodeDef.Name,
+                NodeType        = nodeDef.Type,
+                NodeRefId       = nodeDef.NodeId,
+                InputData       = filteredInput,
+                OutputData      = new Dictionary<string, object?>(),
+                DataInConfigured  = hasDataIn,
+                DataOutConfigured = hasDataOut,
+                Timestamp       = DateTimeOffset.UtcNow
             });
 
             WorkflowData resultData;
@@ -338,7 +355,7 @@ public sealed class WorkflowDefinitionRunner
                 // ── Write scoped outputs: nodeId.key alongside flat key ───────
                 if (!string.IsNullOrEmpty(nodeDef.NodeId))
                 {
-                    foreach (var port in node.OutputPorts)
+                    foreach (var port in node.DataOut)
                     {
                         if (resultData.Keys.Contains(port.Key))
                             resultData.Set($"{nodeDef.NodeId}.{port.Key}",
@@ -348,17 +365,29 @@ public sealed class WorkflowDefinitionRunner
 
                 activatedPort = GetActivatedPort(nodeDef, resultData);
 
+                var fullOutputSnapshot = Snapshot(resultData);
+
+                // When DataOut ports are declared, filter to those keys only.
+                // When none are declared, send empty dict — UI will show "No DataOut configured".
+                var filteredOutput = hasDataOut
+                    ? fullOutputSnapshot
+                        .Where(kv => dataOutKeys.Contains(kv.Key))
+                        .ToDictionary(kv => kv.Key, kv => kv.Value)
+                    : new Dictionary<string, object?>();
+
                 // ── Notify UI: node completed ─────────────────────────────────
                 await onStep(new NodeStepEvent
                 {
-                    EventType  = "node_done",
-                    NodeId     = nodeDef.Id,
-                    NodeRefId  = nodeDef.NodeId,
-                    NodeName   = nodeDef.Name,
-                    NodeType   = nodeDef.Type,
-                    InputData  = inputSnapshot,
-                    OutputData = Snapshot(resultData),
-                    Timestamp  = DateTimeOffset.UtcNow
+                    EventType         = "node_done",
+                    NodeId            = nodeDef.Id,
+                    NodeRefId         = nodeDef.NodeId,
+                    NodeName          = nodeDef.Name,
+                    NodeType          = nodeDef.Type,
+                    InputData         = filteredInput,
+                    OutputData        = filteredOutput,
+                    DataInConfigured  = hasDataIn,
+                    DataOutConfigured = hasDataOut,
+                    Timestamp         = DateTimeOffset.UtcNow
                 });
             }
             catch (Exception ex) when (opts.ContinueOnError)
@@ -366,15 +395,17 @@ public sealed class WorkflowDefinitionRunner
                 _logger.LogWarning(ex, "  ⚠ Node '{Name}' failed but ContinueOnError=true.", nodeDef.Name);
                 await onStep(new NodeStepEvent
                 {
-                    EventType    = "node_error",
-                    NodeId       = nodeDef.Id,
-                    NodeRefId    = nodeDef.NodeId,
-                    NodeName     = nodeDef.Name,
-                    NodeType     = nodeDef.Type,
-                    InputData    = inputSnapshot,
-                    OutputData   = new Dictionary<string, object?>(),
-                    ErrorMessage = ex.Message,
-                    Timestamp    = DateTimeOffset.UtcNow
+                    EventType         = "node_error",
+                    NodeId            = nodeDef.Id,
+                    NodeRefId         = nodeDef.NodeId,
+                    NodeName          = nodeDef.Name,
+                    NodeType          = nodeDef.Type,
+                    InputData         = filteredInput,
+                    OutputData        = new Dictionary<string, object?>(),
+                    DataInConfigured  = hasDataIn,
+                    DataOutConfigured = hasDataOut,
+                    ErrorMessage      = ex.Message,
+                    Timestamp         = DateTimeOffset.UtcNow
                 });
                 resultData    = opts.FallbackData ?? data;
                 activatedPort = "output";
@@ -384,14 +415,16 @@ public sealed class WorkflowDefinitionRunner
                 _logger.LogError(ex, "  ✘ Node '{Name}' failed.", nodeDef.Name);
                 await onStep(new NodeStepEvent
                 {
-                    EventType    = "node_error",
-                    NodeId       = nodeDef.Id,
-                    NodeRefId    = nodeDef.NodeId,
-                    NodeName     = nodeDef.Name,
-                    NodeType     = nodeDef.Type,
-                    InputData    = inputSnapshot,
-                    OutputData   = new Dictionary<string, object?>(),
-                    ErrorMessage = ex.Message,
+                    EventType         = "node_error",
+                    NodeId            = nodeDef.Id,
+                    NodeRefId         = nodeDef.NodeId,
+                    NodeName          = nodeDef.Name,
+                    NodeType          = nodeDef.Type,
+                    InputData         = filteredInput,
+                    OutputData        = new Dictionary<string, object?>(),
+                    DataInConfigured  = hasDataIn,
+                    DataOutConfigured = hasDataOut,
+                    ErrorMessage      = ex.Message,
                     Timestamp    = DateTimeOffset.UtcNow
                 });
 

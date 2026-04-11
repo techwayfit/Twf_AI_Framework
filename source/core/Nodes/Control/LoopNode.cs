@@ -41,14 +41,14 @@ public sealed class LoopNode : BaseNode
     public override string IdPrefix => "loop";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new(_itemsKey, typeof(IEnumerable<object>), Required: true,
             "Collection to iterate — each element is placed in the loop body as loopItemKey")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new(_outputKey,              typeof(List<WorkflowData>), Description: "Collected per-item WorkflowData results"),
         new("loop_iteration_count",  typeof(int),                Description: "Number of items iterated")

@@ -8,7 +8,7 @@ namespace TwfAiFramework.Core;
 /// <param name="DataType">CLR type of the value (typeof(string), typeof(int), etc.).</param>
 /// <param name="Required">If true the runner will fail before executing if the key is absent.</param>
 /// <param name="Description">Human-readable hint shown in the UI.</param>
-public record NodePort(
+public record NodeData(
     string Key,
     Type   DataType,
     bool   Required    = true,
@@ -39,14 +39,14 @@ public interface INode
     /// WorkflowData keys this node reads. Required ports are validated by the runner
     /// before execution; missing keys produce a clear error instead of a silent null.
     /// </summary>
-    IReadOnlyList<NodePort> InputPorts { get; }
+    IReadOnlyList<NodeData> DataIn { get; }
 
     /// <summary>
     /// WorkflowData keys this node writes. The runner also writes each key under
     /// the scoped form "nodeId.key" so downstream nodes can reference a specific
     /// node's output via {{nodeId.key}} even when multiple nodes write the same key.
     /// </summary>
-    IReadOnlyList<NodePort> OutputPorts { get; }
+    IReadOnlyList<NodeData> DataOut { get; }
 
     /// <summary>
     /// Execute this node. Receives the current data packet and execution context.

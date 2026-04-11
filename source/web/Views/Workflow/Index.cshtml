@@ -72,7 +72,7 @@
                             <a asp-action="Designer" asp-route-id="@workflow.Id" class="btn btn-primary btn-sm">
                                 <i class="bi bi-pencil-square"></i> Design
                             </a>
-                            <a asp-action="Runner" asp-route-id="@workflow.Id" class="btn btn-success btn-sm">
+                            <a asp-controller="WorkflowRunner" asp-action="Runner" asp-route-id="@workflow.Id" class="btn btn-success btn-sm">
                                 <i class="bi bi-play-circle"></i> Run
                             </a>
                             <a asp-action="Details" asp-route-id="@workflow.Id" class="btn btn-info btn-sm">

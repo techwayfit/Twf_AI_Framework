@@ -21,8 +21,17 @@ namespace TwfAiFramework.Nodes.AI;
 /// </summary>
 public sealed class LlmNode : BaseNode
 {
+    /// <summary>
+    /// Gets the name of the node, which is set during initialization. This name is used to identify the node within a workflow and can be customized by the user when creating an instance of the LlmNode.
+    /// </summary>
     public override string Name { get; }
+    /// <summary>
+    /// Gets the category of the node, which is "AI" for this node. This categorization helps users find and organize nodes based on their functionality within the workflow editor.
+    /// </summary>
     public override string Category => "AI";
+    /// <summary>
+    /// Gets Description for the LlmNode
+    /// </summary>
     public override string Description =>
         $"Calls {_config.Provider} ({_config.Model}) with the current prompt";
 
@@ -30,14 +39,14 @@ public sealed class LlmNode : BaseNode
     public override string IdPrefix => "llm";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new("prompt",        typeof(string), Required: true,  "Prompt text to send to the model"),
         new("system_prompt", typeof(string), Required: false, "System instruction (overrides node config)")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("llm_response",      typeof(string), Description: "Model's text response"),
         new("llm_model",         typeof(string), Description: "Model name used"),
@@ -47,14 +56,25 @@ public sealed class LlmNode : BaseNode
 
     private readonly LlmConfig _config;
     private readonly HttpClient _httpClient;
-
+    /// <summary>
+    /// Initializes a new instance of the LlmNode with the specified configuration and an optional HttpClient.
+    /// </summary>
+    /// <param name="name">The name of the node.</param>
+    /// <param name="config">The configuration for the LLM.</param>
+    /// <param name="httpClient">An optional HttpClient to use for API calls.</param>
     public LlmNode(string name, LlmConfig config, HttpClient? httpClient = null)
     {
         Name = name;
         _config = config;
         _httpClient = httpClient ?? new HttpClient();
     }
-
+    /// <summary>
+    /// Executes the node's logic by building the message list, calling the LLM API (either streaming or non-streaming), and returning the response along with token usage information.
+    /// </summary>
+    /// <param name="input">The input workflow data.</param>
+    /// <param name="context">The workflow context.</param>
+    /// <param name="nodeCtx">The node execution context.</param>
+    /// <returns>A task that represents the asynchronous operation. The task result contains the updated workflow data.</returns>
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
@@ -228,10 +248,10 @@ public sealed class LlmNode : BaseNode
         using var stream = await response.Content.ReadAsStreamAsync(ct);
         using var reader = new StreamReader(stream);
 
-        while (!reader.EndOfStream)
+        string? line;
+        while ((line = await reader.ReadLineAsync(ct)) != null)
         {
             ct.ThrowIfCancellationRequested();
-            var line = await reader.ReadLineAsync(ct);
             if (string.IsNullOrWhiteSpace(line) || !line.StartsWith("data: ")) continue;
 
             var data = line["data: ".Length..];
@@ -352,54 +372,28 @@ public sealed class LlmNode : BaseNode
 }
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-
-public enum LlmProvider { OpenAI, Anthropic, AzureOpenAI, Ollama, Custom }
-
-public sealed record LlmConfig
-{
-    public LlmProvider Provider { get; init; } = LlmProvider.OpenAI;
-    public string Model { get; init; } = "gpt-4o";
-    public string ApiKey { get; init; } = "";
-    public string ApiEndpoint { get; init; } = "https://api.openai.com/v1/chat/completions";
-    public float Temperature { get; init; } = 0.7f;
-    public int MaxTokens { get; init; } = 2048;
-    public string? DefaultSystemPrompt { get; init; }
-    public bool MaintainHistory { get; init; } = false;
-    /// <summary>When true, the node streams the response via SSE and delivers chunks via <see cref="OnChunk"/>.</summary>
-    public bool Stream { get; init; } = false;
-    /// <summary>Called with each text chunk as it arrives during streaming. Ignored when <see cref="Stream"/> is false.</summary>
-    public Action<string>? OnChunk { get; init; }
-
-    // ─── Presets ──────────────────────────────────────────────────────────────
-
-    public static LlmConfig OpenAI(string apiKey, string model = "gpt-4o") => new()
-    {
-        Provider = LlmProvider.OpenAI,
-        Model = model,
-        ApiKey = apiKey,
-        ApiEndpoint = "https://api.openai.com/v1/chat/completions"
-    };
-
-    public static LlmConfig Anthropic(string apiKey, string model = "claude-sonnet-4-20250514") => new()
-    {
-        Provider = LlmProvider.Anthropic,
-        Model = model,
-        ApiKey = apiKey,
-        ApiEndpoint = "https://api.anthropic.com/v1/messages"
-    };
-
-    public static LlmConfig Ollama(string model = "llama3.2", string host = "http://localhost:11434") => new()
-    {
-        Provider = LlmProvider.Ollama,
-        Model = model,
-        ApiEndpoint = $"{host}/v1/chat/completions"
-    };
-
-    public static LlmConfig LmServer(string model, string apiKey, string apiEndpoint) => new()
-    {
-        Provider = LlmProvider.Custom,
-        Model = model,
-        ApiKey = apiKey,
-        ApiEndpoint = apiEndpoint
-    };
-}
+/// <summary>
+/// Configuration for the LlmNode, including provider selection, model name, API endpoint, and other parameters.
+/// </summary>
+public enum LlmProvider { 
+    /// <summary>
+    /// Open AI Provider
+    /// </summary>
+    OpenAI, 
+    /// <summary>
+    /// Anthopic Provider
+    /// </summary>
+    Anthropic, 
+    /// <summary>
+    /// Azure OpenAI Provider
+    /// </summary>
+    AzureOpenAI, 
+    /// <summary>
+    /// Ollama Provider
+    /// </summary>
+    Ollama, 
+    /// <summary>
+    /// Custom Provider - allows users to specify their own API endpoint and request format. The node will use the OpenAI-style request body by default, but users can customize the BuildRequestBody method for different formats if needed.
+    /// </summary>
+    Custom 
+    }

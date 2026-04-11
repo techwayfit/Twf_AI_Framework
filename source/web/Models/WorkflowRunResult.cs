@@ -63,10 +63,14 @@ public sealed class NodeStepEvent
     public string NodeRefId { get; init; } = string.Empty;
     public string NodeName { get; init; } = string.Empty;
     public string NodeType { get; init; } = string.Empty;
-    /// <summary>Snapshot of WorkflowData BEFORE the node executed.</summary>
+    /// <summary>Snapshot of WorkflowData BEFORE the node executed (filtered to DataIn keys).</summary>
     public Dictionary<string, object?> InputData { get; init; } = new();
-    /// <summary>Snapshot of WorkflowData AFTER the node executed (empty for node_start).</summary>
+    /// <summary>Snapshot of WorkflowData AFTER the node executed (filtered to DataOut keys).</summary>
     public Dictionary<string, object?> OutputData { get; init; } = new();
+    /// <summary>True when the node declares at least one DataIn port.</summary>
+    public bool DataInConfigured { get; init; }
+    /// <summary>True when the node declares at least one DataOut port.</summary>
+    public bool DataOutConfigured { get; init; }
     public string? ErrorMessage { get; init; }
     public DateTimeOffset Timestamp { get; init; } = DateTimeOffset.UtcNow;
 }

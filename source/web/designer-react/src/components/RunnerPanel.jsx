@@ -223,20 +223,23 @@ export default function RunnerPanel({ workflowId, onNodeStateChange, onResetNode
 
 // ─── Step card ────────────────────────────────────────────────────────────────
 
-function StepCard({ step }) {
-  const [expanded, setExpanded] = useState(false);
+const NO_PORTS_MSG = 'No Data in/out is configured';
 
+function StepCard({ step }) {
   const isError = step.stepType === 'node_error';
   const isDone  = step.stepType === 'node_done';
+  const isTerminal = isDone || isError;
+
+  // A terminal step always has something to show (data or the "not configured" message)
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (isTerminal) setExpanded(true);
+  }, [isTerminal]);
+
   const borderColor = isError ? '#ef4444' : isDone ? '#22c55e' : '#f59e0b';
   const icon        = isError ? '❌' : isDone ? '✅' : '⏳';
 
-  // Auto-expand error cards
-  useEffect(() => { if (isError) setExpanded(true); }, [isError]);
-
-  const hasDetails = step.errorMessage
-    || (step.inputData  && Object.keys(step.inputData).length  > 0)
-    || (step.outputData && Object.keys(step.outputData).length > 0);
+  const hasDetails = isTerminal || !!step.errorMessage;
 
   return (
     <div style={{
@@ -275,11 +278,15 @@ function StepCard({ step }) {
               {step.errorMessage}
             </div>
           )}
-          {step.inputData && Object.keys(step.inputData).length > 0 && (
-            <DataBlock label="Input" data={step.inputData} />
-          )}
-          {step.outputData && Object.keys(step.outputData).length > 0 && (
-            <DataBlock label="Output" data={step.outputData} />
+          {isTerminal && (
+            <>
+              {step.dataInConfigured
+                ? <DataBlock label="Data In"  data={step.inputData  ?? {}} />
+                : <NoPortsMessage label="Data In" />}
+              {step.dataOutConfigured
+                ? <DataBlock label="Data Out" data={step.outputData ?? {}} />
+                : <NoPortsMessage label="Data Out" />}
+            </>
           )}
         </div>
       )}
@@ -298,6 +305,20 @@ function DataBlock({ label, data }) {
       }}>
         {JSON.stringify(data, null, 2)}
       </pre>
+    </div>
+  );
+}
+
+function NoPortsMessage({ label }) {
+  return (
+    <div style={{ marginTop: 4 }}>
+      <div style={{ fontSize: 10, fontWeight: 600, color: '#6c757d', marginBottom: 2 }}>{label}</div>
+      <div style={{
+        background: '#f8f9fa', border: '1px solid #e9ecef', borderRadius: 3,
+        padding: '4px 6px', fontSize: 10, color: '#adb5bd', fontStyle: 'italic',
+      }}>
+        {NO_PORTS_MSG}
+      </div>
     </div>
   );
 }

@@ -26,17 +26,17 @@ public sealed class DataMapperNode : BaseNode
     public override string IdPrefix => "mapper";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
         _mappings.Values
-                 .Select(src => new NodePort(src.Split('.')[0], typeof(object), Required: false, "Source path root"))
+                 .Select(src => new NodeData(src.Split('.')[0], typeof(object), Required: false, "Source path root"))
                  .DistinctBy(p => p.Key)
-                 .ToList<NodePort>();
+                 .ToList<NodeData>();
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
         _mappings.Keys
-                 .Select(k => new NodePort(k, typeof(object), Description: "Mapped output key"))
-                 .ToList<NodePort>();
+                 .Select(k => new NodeData(k, typeof(object), Description: "Mapped output key"))
+                 .ToList<NodeData>();
 
     private readonly IReadOnlyDictionary<string, string> _mappings;
     private readonly IReadOnlyDictionary<string, object?> _defaultValues;

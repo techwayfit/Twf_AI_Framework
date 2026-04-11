@@ -20,12 +20,12 @@ public sealed class MergeNode : BaseNode
     public override string IdPrefix => "merge";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
-        _sourceKeys.Select(k => new NodePort(k, typeof(string), Required: false, "Source key to merge"))
-                   .ToList<NodePort>();
+    public override IReadOnlyList<NodeData> DataIn =>
+        _sourceKeys.Select(k => new NodeData(k, typeof(string), Required: false, "Source key to merge"))
+                   .ToList<NodeData>();
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new(_outputKey, typeof(string), Description: "Merged result")
     ];

@@ -28,12 +28,12 @@ public sealed class ConditionNode : BaseNode
 
     /// <inheritdoc/>
     // Inputs are the data keys referenced by predicates — not statically knowable in all cases.
-    public override IReadOnlyList<NodePort> InputPorts => [];
+    public override IReadOnlyList<NodeData> DataIn => [];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
-        _conditions.Select(c => new NodePort(c.Key, typeof(bool), Description: "Condition result flag"))
-                   .ToList<NodePort>();
+    public override IReadOnlyList<NodeData> DataOut =>
+        _conditions.Select(c => new NodeData(c.Key, typeof(bool), Description: "Condition result flag"))
+                   .ToList<NodeData>();
 
     private readonly List<(string Key, Func<WorkflowData, bool> Predicate)> _conditions;
 

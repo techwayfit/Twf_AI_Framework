@@ -21,9 +21,9 @@ public sealed class LogNode : BaseNode
     public override string IdPrefix => "log";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
-        (_keysToLog ?? []).Select(k => new NodePort(k, typeof(object), Required: false, "Key to log"))
-                          .ToList<NodePort>();
+    public override IReadOnlyList<NodeData> DataIn =>
+        (_keysToLog ?? []).Select(k => new NodeData(k, typeof(object), Required: false, "Key to log"))
+                          .ToList<NodeData>();
 
     private readonly string _label;
     private readonly string[]? _keysToLog;
@@ -45,18 +45,25 @@ public sealed class LogNode : BaseNode
         var keys = _keysToLog ?? input.Keys.ToArray();
 
         context.Logger.Log(_level, "📍 Checkpoint [{Label}]", _label);
-
+        var messages = new List<string>();
         foreach (var key in keys)
         {
             var val = input.Get<object>(key);
             var display = val?.ToString() ?? "(null)";
             if (display.Length > 200) display = display[..200] + "...";
             context.Logger.Log(_level, "   {Key}: {Value}", key, display);
+            messages.Add($"{key}: {display}");
         }
-
+        input.Set("logged_keys", keys);
+        input.Set("log_label", _label);
+        input.Set("log_message", messages.ToArray());
         return Task.FromResult(input);
     }
-
+    public override IReadOnlyList<NodeData> DataOut => [
+        new ("logged_keys", typeof(string[]), Description:  "Keys that were logged"),
+        new ("log_label",   typeof(string),   Description:  "Log checkpoint label"),
+        new ("log_message", typeof(string[]),   Description:  "Formatted log message")
+    ];
     public static LogNode All(string label) => new(label);
     public static LogNode Keys(string label, params string[] keys) => new(label, keys);
 }

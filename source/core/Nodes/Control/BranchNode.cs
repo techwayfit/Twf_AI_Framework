@@ -27,13 +27,13 @@ public sealed class BranchNode : BaseNode
     public override string IdPrefix => "branch";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new(_valueKey, typeof(string), Required: true, "Value used to select a branch")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("branch_selected_port", typeof(string), Description: "Matched case key (case1/case2/default)"),
         new("branch_input_value",   typeof(string), Description: "String representation of the input value"),

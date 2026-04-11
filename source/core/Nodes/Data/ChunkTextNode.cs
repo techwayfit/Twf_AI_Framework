@@ -24,14 +24,14 @@ public sealed class ChunkTextNode : BaseNode
     public override string IdPrefix => "chunk";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new("text",   typeof(string), Required: true,  "Source text to split"),
         new("source", typeof(string), Required: false, "Label attached to each chunk for provenance")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("chunks",      typeof(List<TextChunk>), Description: "List of text chunks"),
         new("chunk_count", typeof(int),             Description: "Number of chunks produced")

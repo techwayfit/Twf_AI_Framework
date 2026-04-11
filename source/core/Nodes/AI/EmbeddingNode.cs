@@ -29,14 +29,14 @@ public sealed class EmbeddingNode : BaseNode
     public override string IdPrefix => "embed";
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> InputPorts =>
+    public override IReadOnlyList<NodeData> DataIn =>
     [
         new("text",  typeof(string),       Required: false, "Single text to embed"),
         new("texts", typeof(List<string>), Required: false, "Batch of texts to embed")
     ];
 
     /// <inheritdoc/>
-    public override IReadOnlyList<NodePort> OutputPorts =>
+    public override IReadOnlyList<NodeData> DataOut =>
     [
         new("embedding",       typeof(float[]),       Required: false, "Single embedding vector"),
         new("embeddings",      typeof(List<float[]>), Required: false, "Batch embedding vectors"),
