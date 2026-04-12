@@ -36,9 +36,14 @@ public sealed class WorkflowDefinitionRunner
             .Where(t => t.IsClass && !t.IsAbstract && typeof(INode).IsAssignableFrom(t))
             .ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>Parameter keys that must not have {{variable}} substitution applied (credentials).</summary>
+    /// <summary>
+    /// Parameter keys whose values are never treated as {{variable}} templates.
+    /// Only block keys where the stored value is a literal secret that should
+    /// never be accidentally expanded — not where the user intentionally typed
+    /// a {{variable}} reference to inject a secret from workflow variables.
+    /// </summary>
     private static readonly HashSet<string> _noResolveKeys =
-        new(StringComparer.OrdinalIgnoreCase) { "apiKey", "secretKey", "password", "token", "apiSecret" };
+        new(StringComparer.OrdinalIgnoreCase) { };
 
     public WorkflowDefinitionRunner(ILogger<WorkflowDefinitionRunner> logger)
     {
@@ -303,20 +308,6 @@ public sealed class WorkflowDefinitionRunner
 
             var opts = BuildNodeOptions(nodeDef.ExecutionOptions);
 
-            // ── Validate required input ports before executing ────────────────
-            var missingRequired = node.DataIn
-                .Where(p => p.Required && !data.Keys.Contains(p.Key))
-                .Select(p => p.Key)
-                .ToList();
-
-            if (missingRequired.Count > 0)
-            {
-                var msg = $"Node '{nodeDef.Name}' ({nodeDef.NodeId}) is missing required input(s): " +
-                          string.Join(", ", missingRequired);
-                _logger.LogError("  ✘ {Message}", msg);
-                return (data, false, msg, nodeDef.Name);
-            }
-
             // ── Snapshot helpers scoped to declared DataIn / DataOut keys ────────
             var dataInKeys  = node.DataIn .Select(p => p.Key).ToHashSet();
             var dataOutKeys = node.DataOut.Select(p => p.Key).ToHashSet();
@@ -347,6 +338,35 @@ public sealed class WorkflowDefinitionRunner
                 DataOutConfigured = hasDataOut,
                 Timestamp       = DateTimeOffset.UtcNow
             });
+
+            // ── Validate required input ports — after node_start so UI shows the error ──
+            var missingRequired = node.DataIn
+                .Where(p => p.Required && !data.Keys.Contains(p.Key))
+                .Select(p => p.Key)
+                .ToList();
+
+            if (missingRequired.Count > 0)
+            {
+                var missing = string.Join(", ", missingRequired);
+                var msg = $"Missing required input(s): {missing}";
+                _logger.LogError("  ✘ Node '{Name}' ({NodeId}): Missing required input(s): {Missing}",
+                    nodeDef.Name, nodeDef.NodeId, missing);
+                await onStep(new NodeStepEvent
+                {
+                    EventType         = "node_error",
+                    NodeId            = nodeDef.Id,
+                    NodeName          = nodeDef.Name,
+                    NodeType          = nodeDef.Type,
+                    NodeRefId         = nodeDef.NodeId,
+                    ErrorMessage      = msg,
+                    InputData         = filteredInput,
+                    OutputData        = [],
+                    DataInConfigured  = hasDataIn,
+                    DataOutConfigured = hasDataOut,
+                    Timestamp         = DateTimeOffset.UtcNow
+                });
+                return (data, false, $"Node '{nodeDef.Name}' ({nodeDef.NodeId}): {msg}", nodeDef.Name);
+            }
 
             WorkflowData resultData;
             string activatedPort;

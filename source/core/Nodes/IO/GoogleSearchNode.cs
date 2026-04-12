@@ -72,9 +72,6 @@ public sealed class GoogleSearchNode : BaseNode
     /// <param name="httpClient">Optional custom HttpClient (e.g. for testing).</param>
     public GoogleSearchNode(string apiKey, HttpClient? httpClient = null)
     {
-        if (string.IsNullOrWhiteSpace(apiKey))
-            throw new ArgumentException("SerpApi API key is required.", nameof(apiKey));
-
         _apiKey = apiKey;
         _httpClient = httpClient ?? new HttpClient { Timeout = TimeSpan.FromSeconds(30) };
     }
@@ -82,6 +79,10 @@ public sealed class GoogleSearchNode : BaseNode
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
+        if (string.IsNullOrWhiteSpace(_apiKey))
+            throw new InvalidOperationException(
+                "GoogleSearchNode: 'apiKey' is required. Configure it in the node properties panel.");
+
         var query = input.GetRequiredString("search_query");
         var count = input.Get<int>("search_results_count");
         if (count <= 0) count = 5;

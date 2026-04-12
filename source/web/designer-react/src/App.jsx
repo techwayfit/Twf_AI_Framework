@@ -622,7 +622,7 @@ function DesignerInner({ workflowId, mode }) {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <SchemaContext.Provider value={schemas}>
+    <SchemaContext.Provider value={{ schemas, isRunner }}>
       <div className="designer-shell">
         {/* Top toolbar */}
         <Toolbar

@@ -1,6 +1,5 @@
-import { useContext } from 'react';
 import { Handle, Position, NodeToolbar, useReactFlow } from '@xyflow/react';
-import { SchemaContext } from '../../context/SchemaContext';
+import { useIsRunner } from '../../context/SchemaContext';
 import { portColor, NODE_ICONS, NODE_ROUTING_PORTS, DEFAULT_ROUTING_PORTS } from '../../nodeConfig';
 
 /**
@@ -13,7 +12,7 @@ import { portColor, NODE_ICONS, NODE_ROUTING_PORTS, DEFAULT_ROUTING_PORTS } from
  *   └─────────────────────────────────────────────────┘
  */
 export default function GenericNode({ id, data, selected }) {
-  useContext(SchemaContext); // keep context alive for PropertiesPanel consumers
+  const isRunner = useIsRunner();
   const { setNodes, setEdges } = useReactFlow();
 
   const deleteNode = () => {
@@ -39,7 +38,7 @@ export default function GenericNode({ id, data, selected }) {
 
   return (
     <>
-      {selected && data.type !== 'StartNode' && (
+      {selected && !isRunner && data.type !== 'StartNode' && (
         <NodeToolbar position={Position.Top} align="end" offset={4}>
           <button
             onClick={deleteNode}
