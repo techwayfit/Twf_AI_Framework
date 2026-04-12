@@ -1,52 +1,14 @@
 /**
- * Short prefix used to generate human-readable NodeIds when a node is dropped onto the canvas.
- * Must match the IdPrefix defined on each INode implementation in the core library.
- * Format: prefix + zero-padded counter → "llm001", "http002", etc.
- */
-export const NODE_ID_PREFIXES = {
-  // Control
-  StartNode:         'start',
-  EndNode:           'end',
-  ErrorNode:         'error',
-  ErrorRouteNode:    'errroute',
-  ConditionNode:     'cond',
-  BranchNode:        'branch',
-  SubWorkflowNode:   'sub',
-  LoopNode:          'loop',
-  DelayNode:         'delay',
-  MergeNode:         'merge',
-  LogNode:           'log',
-  // Data
-  SetVariableNode:   'setvar',
-  TransformNode:     'transform',
-  DataMapperNode:    'mapper',
-  FilterNode:        'filter',
-  ChunkTextNode:     'chunk',
-  MemoryNode:        'memory',
-  // IO
-  HttpRequestNode:   'http',
-  FileReadNode:      'fread',
-  FileWriteNode:     'fwrite',
-  // AI
-  LlmNode:           'llm',
-  PromptBuilderNode: 'prompt',
-  EmbeddingNode:     'embed',
-  OutputParserNode:  'parser',
-  // Visual
-  ContainerNode:     'container',
-  NoteNode:          'note',
-};
-
-/**
  * Generates the next NodeId for a given node type by scanning existing nodes.
- * Gaps from deleted nodes are fine — stability matters more than consecutive numbering.
+ * The prefix is now provided by the backend via the GetAvailableNodes API response
+ * (NodeTypeEntity.IdPrefix), so no hardcoded map is needed here.
  *
- * @param {string} nodeType  e.g. "LlmNode"
- * @param {Array}  existingNodes  ReactFlow nodes array
+ * @param {string} idPrefix      e.g. "llm" — comes from nodeInfo.idPrefix (API)
+ * @param {Array}  existingNodes ReactFlow nodes array
  * @returns {string}  e.g. "llm003"
  */
-export function generateNodeId(nodeType, existingNodes) {
-  const prefix = NODE_ID_PREFIXES[nodeType] ?? 'node';
+export function generateNodeId(idPrefix, existingNodes) {
+  const prefix = idPrefix ?? 'node';
   const max = existingNodes.reduce((acc, n) => {
     const nid = n.data?.nodeId ?? '';
     if (!nid.startsWith(prefix)) return acc;
@@ -89,8 +51,8 @@ export const NODE_ICONS = {
   MemoryNode:        'bi-memory',
   // IO
   HttpRequestNode:   'bi-globe',
-  FileReadNode:      'bi-file-earmark-text',
-  FileWriteNode:     'bi-file-earmark-arrow-down',
+  FileReaderNode:    'bi-file-earmark-text',
+  FileWriterNode:    'bi-file-earmark-arrow-down',
   // AI
   LlmNode:           'bi-chat-left-dots',
   PromptBuilderNode: 'bi-pencil-square',
@@ -101,41 +63,10 @@ export const NODE_ICONS = {
   NoteNode:          'bi-sticky',
 };
 
-// Default parameters per node type — used when a node is dropped onto the canvas.
-// Every entry includes `description: ''` so it appears in the properties panel.
-export const NODE_DEFAULT_PARAMS = {
-  // ── Control ───────────────────────────────────────────────────────────────
-  StartNode:         { description: '' },
-  EndNode:           { description: '' },
-  ErrorNode:         { description: '' },
-  ErrorRouteNode:    { description: '' },
-  ConditionNode:     { description: '', condition: '' },
-  BranchNode:        { description: '', valueKey: '', case1Value: '', case2Value: '', case3Value: '', caseSensitive: false },
-  SubWorkflowNode:   { description: '', subWorkflowId: '' },
-  LoopNode:          { description: '', itemsKey: 'items', outputKey: 'results', loopItemKey: '__item__', maxIterations: 0 },
-  DelayNode:         { description: '', delayMs: 1000 },
-  MergeNode:         { description: '', targetKey: 'merged', sourceKeys: '' },
-  LogNode:           { description: '', message: '', logLevel: 'Info' },
-  // ── Data ──────────────────────────────────────────────────────────────────
-  SetVariableNode:   { description: '', assignments: '{}' },
-  TransformNode:     { description: '', expression: '', outputKey: '' },
-  DataMapperNode:    { description: '', mappings: '{}' },
-  FilterNode:        { description: '', condition: '', outputKey: '' },
-  ChunkTextNode:     { description: '', textKey: '', chunkSize: 500, chunkOverlap: 50, outputKey: 'chunks' },
-  MemoryNode:        { description: '', action: 'read', key: '', scope: 'global' },
-  // ── IO ────────────────────────────────────────────────────────────────────
-  HttpRequestNode:   { description: '', url: '', method: 'GET', headers: '{}', body: '', outputKey: 'response' },
-  FileReadNode:      { description: '', filePath: '', format: 'Text', encoding: 'utf-8', outputKey: 'file_content' },
-  FileWriteNode:     { description: '', filePath: '', contentKey: '', writeMode: 'Overwrite', createDirectories: true, encoding: 'utf-8' },
-  // ── AI ────────────────────────────────────────────────────────────────────
-  LlmNode:           { description: '', provider: 'openai', model: 'gpt-4o', apiKey: '', apiUrl: '', systemPrompt: '', temperature: 0.7, maxTokens: 1000, maintainHistory: false },
-  PromptBuilderNode: { description: '', promptTemplate: '', systemTemplate: '' },
-  EmbeddingNode:     { description: '', provider: 'openai', model: 'text-embedding-ada-002', apiKey: '', textKey: '', outputKey: 'embedding' },
-  OutputParserNode:  { description: '', outputKey: 'parsed', schema: '' },
-  // ── Visual ────────────────────────────────────────────────────────────────
-  ContainerNode:     { backgroundColor: '#6366f1', opacity: 0.12, width: 300, height: 200 },
-  NoteNode:          { text: '', color: 'yellow' },
-};
+// Default parameters are no longer hardcoded here.
+// They are now provided by the backend via the GetAvailableNodes API response
+// (NodeTypeEntity default values derived from NodeParameterSchema.Parameters[*].DefaultValue).
+// Access via: nodeInfo.defaultParams (populated from API).
 
 /**
  * Routing handles per node type — used by GenericNode to render React Flow connection points.
@@ -160,9 +91,9 @@ export const NODE_ROUTING_PORTS = {
                      outputs: [{ id: 'output', label: 'After Loop' }] },
   HttpRequestNode: { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
-  FileReadNode:    { inputs: [{ id: 'input', label: 'Input' }],
+  FileReaderNode:  { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
-  FileWriteNode:   { inputs: [{ id: 'input', label: 'Input' }],
+  FileWriterNode:  { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
   ContainerNode:   { inputs: [], outputs: [] },
   NoteNode:        { inputs: [], outputs: [] },

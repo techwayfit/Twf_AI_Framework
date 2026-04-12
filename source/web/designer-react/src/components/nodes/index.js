@@ -7,90 +7,33 @@ import NoteNode from './NoteNode';
 
 /**
  * Registry mapping backend node type strings → React Flow node components.
- * Pass this object to the ReactFlow `nodeTypes` prop.
+ *
+ * Only non-generic shapes need explicit entries here. All other node types
+ * (including new nodes added to the backend) automatically use GenericNode
+ * via the Proxy fallback — no manual registration required.
  */
-export const nodeTypes = {
-  // AI
-  LlmNode: GenericNode,
-  PromptBuilderNode: GenericNode,
-  EmbeddingNode: GenericNode,
-  OutputParserNode: GenericNode,
-
-  // Control – circular
-  StartNode: CircularNode,
-  EndNode: CircularNode,
-  ErrorNode: CircularNode,
+const specialNodeTypes = {
+  // Special shapes
+  StartNode:      CircularNode,
+  EndNode:        CircularNode,
+  ErrorNode:      CircularNode,
   ErrorRouteNode: CircularNode,
+  ConditionNode:  DiamondNode,
+  ParallelNode:   ParallelNode,
 
-  // Control – diamond
-  ConditionNode: DiamondNode,
-
-  // Control – rectangular
-  SubWorkflowNode: GenericNode,
-  DelayNode: GenericNode,
-  MergeNode: GenericNode,
-  LogNode: GenericNode,
-  LoopNode: GenericNode,
-  ParallelNode: ParallelNode,
-  BranchNode: GenericNode,
-
-  // Data
-  TransformNode: GenericNode,
-  DataMapperNode: GenericNode,
-  FilterNode: GenericNode,
-  ChunkTextNode: GenericNode,
-  MemoryNode: GenericNode,
-
-  // IO
-  HttpRequestNode: GenericNode,
-  HttpResponseNode: GenericNode,
-  DbQueryNode: GenericNode,
-  FileReadNode: GenericNode,
-  FileWriteNode: GenericNode,
-  EmailSendNode: GenericNode,
-  WebhookNode: GenericNode,
-  QueueNode: GenericNode,
-  CacheNode: GenericNode,
-  NotificationNode: GenericNode,
-  StorageNode: GenericNode,
-
-  // Logic
-  FunctionNode: GenericNode,
-  ProcessNode: GenericNode,
-  StepNode: GenericNode,
-  ScriptNode: GenericNode,
-  RateLimiterNode: GenericNode,
-
-  // Control (new)
-  WaitNode: GenericNode,
-  RetryNode: GenericNode,
-  TimeoutNode: GenericNode,
-  EventTriggerNode: GenericNode,
-  SwitchNode: GenericNode,
-
-  // Data (new)
-  SetVariableNode: GenericNode,
-  ParseJsonNode: GenericNode,
-  AggregateNode: GenericNode,
-  SortNode: GenericNode,
-  JoinNode: GenericNode,
-  SchemaValidateNode: GenericNode,
-  TemplateNode: GenericNode,
-  CsvParseNode: GenericNode,
-  XmlParseNode: GenericNode,
-  Base64Node: GenericNode,
-  HashNode: GenericNode,
-  DateTimeNode: GenericNode,
-  RandomNode: GenericNode,
-
-  // AI (new)
-  VectorSearchNode: GenericNode,
-  AgentNode: GenericNode,
-  TextSplitterNode: GenericNode,
-  SummariseNode: GenericNode,
-
-  // Visual (new)
-  NoteNode: NoteNode,
-  AnchorNode: GenericNode,
-  ContainerNode: ContainerNode,
+  // Visual-only nodes
+  ContainerNode:  ContainerNode,
+  NoteNode:       NoteNode,
 };
+
+/**
+ * Proxy that returns GenericNode for any type not explicitly registered above.
+ * React Flow calls nodeTypes[node.type] to resolve the component — unknown
+ * types previously fell back to React Flow's built-in default (top/bottom handles).
+ * With this proxy they use GenericNode (left/right handles, colored border, icon).
+ */
+export const nodeTypes = new Proxy(specialNodeTypes, {
+  get(target, prop) {
+    return target[prop] ?? GenericNode;
+  },
+});

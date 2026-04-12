@@ -20,6 +20,18 @@ public sealed class DelayNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "delay";
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "DelayNode",
+        Description = "Pause execution for a fixed duration",
+        Parameters  =
+        [
+            new() { Name = "durationMs", Label = "Duration (ms)", Type = ParameterType.Number, Required = true, DefaultValue = 1000, MinValue = 0, MaxValue = 60000 },
+            new() { Name = "reason",     Label = "Reason",        Type = ParameterType.Text,   Required = false, Placeholder = "e.g. Rate limit" },
+        ]
+    };
+
     private readonly TimeSpan _delay;
     private readonly string? _reason;
 
@@ -28,6 +40,13 @@ public sealed class DelayNode : BaseNode
         _delay = delay;
         _reason = reason;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation. Parameter: durationMs (double).</summary>
+    public DelayNode(Dictionary<string, object?> parameters)
+        : this(
+            TimeSpan.FromMilliseconds(NodeParameters.GetDouble(parameters, "durationMs", 1000)),
+            NodeParameters.GetString(parameters, "reason"))
+    { }
 
     public static DelayNode Milliseconds(int ms, string? reason = null) =>
         new(TimeSpan.FromMilliseconds(ms), reason);

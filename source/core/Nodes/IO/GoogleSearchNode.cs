@@ -26,9 +26,9 @@ namespace TwfAiFramework.Nodes.IO;
 /// </summary>
 public sealed class GoogleSearchNode : BaseNode
 {
-    public override string Name => "GoogleSearch";
+    public override string Name => Schema.NodeType;
     public override string Category => "IO";
-    public override string Description => "Searches Google via SerpApi and returns structured results";
+    public override string Description => Schema.Description;
 
     public override string IdPrefix => "gsearch";
 
@@ -44,6 +44,24 @@ public sealed class GoogleSearchNode : BaseNode
         new("search_query_used",    typeof(string),                 Description: "Query submitted to Google"),
         new("search_results_count", typeof(int),                    Description: "Number of results returned")
     ];
+
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "GoogleSearchNode",
+        Description = "Search Google via SerpApi and return structured organic results",
+        Parameters  =
+        [
+            new() { Name = "apiKey", Label = "SerpApi Key", Type = ParameterType.Text, Required = true,
+                Placeholder = "your-serpapi-key",
+                Description = "Get a free key at serpapi.com (100 searches/month)" },
+        ]
+    };
+
+    /// <summary>Dictionary constructor for dynamic instantiation by the runner.</summary>
+    public GoogleSearchNode(Dictionary<string, object?> parameters)
+        : this(NodeParameters.GetString(parameters, "apiKey") ?? "")
+    { }
 
     private const string SerpApiBase = "https://serpapi.com/search.json";
 

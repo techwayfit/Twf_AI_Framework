@@ -55,7 +55,14 @@ using (var scope = app.Services.CreateScope())
             ON WorkflowInstances (Status);
         """);
 
-    // Seed built-in node type definitions (runs once when table is empty)
+    // Additive DDL: add new columns to NodeTypes if they don't exist yet.
+    // SQLite does not support IF NOT EXISTS for ALTER TABLE, so we catch duplicates.
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE NodeTypes ADD COLUMN IdPrefix TEXT NOT NULL DEFAULT 'node'"); }
+    catch { /* column already exists */ }
+    try { db.Database.ExecuteSqlRaw("ALTER TABLE NodeTypes ADD COLUMN FullTypeName TEXT"); }
+    catch { /* column already exists */ }
+
+    // Seed built-in node type definitions; re-seeds if IdPrefix is missing.
     var nodeRepo = scope.ServiceProvider.GetRequiredService<INodeTypeRepository>();
     await NodeTypeSeeder.SeedAsync(nodeRepo);
 

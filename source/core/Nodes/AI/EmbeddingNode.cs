@@ -43,6 +43,25 @@ public sealed class EmbeddingNode : BaseNode
         new("embedding_model", typeof(string),        Description: "Model name used")
     ];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "EmbeddingNode",
+        Description = "Generate vector embeddings for RAG and semantic search",
+        Parameters  =
+        [
+            new() { Name = "model",  Label = "Embedding Model", Type = ParameterType.Select, Required = true, DefaultValue = "text-embedding-3-small",
+                Options =
+                [
+                    new() { Value = "text-embedding-3-small", Label = "OpenAI Embedding Small" },
+                    new() { Value = "text-embedding-3-large", Label = "OpenAI Embedding Large" },
+                    new() { Value = "text-embedding-ada-002", Label = "OpenAI Ada 002 (Legacy)" },
+                ] },
+            new() { Name = "apiKey", Label = "API Key", Type = ParameterType.Text,   Required = false, Placeholder = "Leave empty to use environment variable" },
+            new() { Name = "apiUrl", Label = "API URL", Type = ParameterType.Text,   Required = false, DefaultValue = "https://api.openai.com/v1/embeddings" },
+        ]
+    };
+
     private readonly EmbeddingConfig _config;
     private readonly HttpClient _httpClient;
 
@@ -52,6 +71,19 @@ public sealed class EmbeddingNode : BaseNode
         _config = config;
         _httpClient = httpClient ?? new HttpClient();
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public EmbeddingNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Embedding",
+            new EmbeddingConfig
+            {
+                Model       = NodeParameters.GetString(parameters, "model") ?? "text-embedding-3-small",
+                ApiKey      = NodeParameters.GetString(parameters, "apiKey") ?? "",
+                ApiEndpoint = NodeParameters.GetString(parameters, "apiUrl")
+                              ?? "https://api.openai.com/v1/embeddings"
+            })
+    { }
 
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

@@ -15,7 +15,7 @@ namespace TwfAiFramework.Nodes.Data;
 /// </summary>
 public sealed class ChunkTextNode : BaseNode
 {
-    public override string Name => "ChunkText";
+    public override string Name => Schema.NodeType;
     public override string Category => "Data";
     public override string Description =>
         $"Splits text into {_config.ChunkSize}-char chunks with {_config.Overlap}-char overlap";
@@ -37,12 +37,43 @@ public sealed class ChunkTextNode : BaseNode
         new("chunk_count", typeof(int),             Description: "Number of chunks produced")
     ];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "ChunkTextNode",
+        Description = "Split text into overlapping chunks (character/word/sentence)",
+        Parameters  =
+        [
+            new() { Name = "chunkSize", Label = "Chunk Size",          Type = ParameterType.Number, Required = false, DefaultValue = 500,  MinValue = 50, MaxValue = 10000 },
+            new() { Name = "overlap",   Label = "Overlap",             Type = ParameterType.Number, Required = false, DefaultValue = 50,   MinValue = 0,  MaxValue = 1000 },
+            new() { Name = "strategy",  Label = "Chunking Strategy",   Type = ParameterType.Select, Required = false, DefaultValue = "Character",
+                Options =
+                [
+                    new() { Value = "Character", Label = "By Character" },
+                    new() { Value = "Word",      Label = "By Word" },
+                    new() { Value = "Sentence",  Label = "By Sentence" },
+                ] },
+        ]
+    };
+
     private readonly ChunkConfig _config;
 
     public ChunkTextNode(ChunkConfig? config = null)
     {
         _config = config ?? new ChunkConfig();
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public ChunkTextNode(Dictionary<string, object?> parameters)
+        : this(new ChunkConfig
+        {
+            ChunkSize = NodeParameters.GetInt(parameters, "chunkSize", 500),
+            Overlap   = NodeParameters.GetInt(parameters, "overlap",   50),
+            Strategy  = Enum.TryParse<ChunkStrategy>(
+                NodeParameters.GetString(parameters, "strategy"), true, out var strat)
+                ? strat : ChunkStrategy.Character
+        })
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

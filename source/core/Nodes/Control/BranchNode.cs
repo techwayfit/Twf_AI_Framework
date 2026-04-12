@@ -39,9 +39,25 @@ public sealed class BranchNode : BaseNode
         new("branch_input_value",   typeof(string), Description: "String representation of the input value"),
         new("branch_status",        typeof(string), Description: "success or failure")
     ];
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "BranchNode",
+        Description = "Route flow based on value matching (up to 3 cases + default)",
+        Parameters  =
+        [
+            new() { Name = "valueKey",      Label = "Value Key",    Type = ParameterType.Text,    Required = true,  Placeholder = "e.g. status, type, category",
+                Description = "WorkflowData key containing the value to match" },
+            new() { Name = "case1Value",    Label = "Case 1 Value", Type = ParameterType.Text,    Required = false, Placeholder = "e.g. approved" },
+            new() { Name = "case2Value",    Label = "Case 2 Value", Type = ParameterType.Text,    Required = false, Placeholder = "e.g. pending" },
+            new() { Name = "case3Value",    Label = "Case 3 Value", Type = ParameterType.Text,    Required = false, Placeholder = "e.g. rejected" },
+            new() { Name = "caseSensitive", Label = "Case Sensitive", Type = ParameterType.Boolean, Required = false, DefaultValue = false },
+        ]
+    };
+
     public Dictionary<string, Workflow?> _branchWorkflows { get; } = new(StringComparer.OrdinalIgnoreCase);
 
-    private readonly string _valueKey; 
+    private readonly string _valueKey;
     
     
     public BranchNode(
@@ -55,6 +71,17 @@ public sealed class BranchNode : BaseNode
         Name = name;
         _valueKey = valueKey;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public BranchNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Branch",
+            NodeParameters.GetString(parameters, "valueKey") ?? "",
+            NodeParameters.GetString(parameters, "case1Value"),
+            NodeParameters.GetString(parameters, "case2Value"),
+            NodeParameters.GetString(parameters, "case3Value"),
+            NodeParameters.GetBool(parameters, "caseSensitive"))
+    { }
 
     public BranchNode(string name, string valueKey, params KeyValuePair<string, Workflow>[] branches)
     {

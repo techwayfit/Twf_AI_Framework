@@ -21,9 +21,22 @@ namespace TwfAiFramework.Nodes.IO;
 /// </summary>
 public sealed class FileReaderNode : BaseNode
 {
-    public override string Name => "FileReader";
+    public override string Name => Schema.NodeType;
     public override string Category => "IO";
-    public override string Description => "Reads a file from disk into WorkflowData";
+    public override string Description => Schema.Description;
+
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "FileReaderNode",
+        Description = "Read a file from the local file system into workflow data",
+        Parameters  =
+        [
+            new() { Name = "filePath", Label = "File Path", Type = ParameterType.Text, Required = true,
+                Placeholder = "/data/input/{{filename}}",
+                Description = "Supports {{variable}} substitution" },
+        ]
+    };
 
     private readonly string? _staticFilePath;
 
@@ -31,6 +44,11 @@ public sealed class FileReaderNode : BaseNode
     {
         _staticFilePath = staticFilePath;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public FileReaderNode(Dictionary<string, object?> parameters)
+        : this(NodeParameters.GetString(parameters, "filePath"))
+    { }
 
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

@@ -25,6 +25,28 @@ public sealed class LogNode : BaseNode
         (_keysToLog ?? []).Select(k => new NodeData(k, typeof(object), Required: false, "Key to log"))
                           .ToList<NodeData>();
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "LogNode",
+        Description = "Emit a log checkpoint for debugging",
+        Parameters  =
+        [
+            new() { Name = "keysToLog", Label = "Keys to Log (JSON array)", Type = ParameterType.Json, Required = false,
+                Placeholder = "[\"prompt\", \"llm_response\"]",
+                Description = "Leave empty to log all keys" },
+            new() { Name = "logLevel", Label = "Log Level", Type = ParameterType.Select, Required = false, DefaultValue = "Information",
+                Options =
+                [
+                    new() { Value = "Trace",       Label = "Trace" },
+                    new() { Value = "Debug",       Label = "Debug" },
+                    new() { Value = "Information", Label = "Information" },
+                    new() { Value = "Warning",     Label = "Warning" },
+                    new() { Value = "Error",       Label = "Error" },
+                ] },
+        ]
+    };
+
     private readonly string _label;
     private readonly string[]? _keysToLog;
     private readonly Microsoft.Extensions.Logging.LogLevel _level;
@@ -38,6 +60,13 @@ public sealed class LogNode : BaseNode
         _keysToLog = keysToLog;
         _level = level;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public LogNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Log",
+            NodeParameters.GetStringList(parameters, "keysToLog")?.ToArray())
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

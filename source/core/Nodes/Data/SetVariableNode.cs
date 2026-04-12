@@ -47,6 +47,19 @@ public sealed class SetVariableNode : BaseNode
             .Select(k => new NodeData(k, typeof(object), Description: "Assigned value"))
             .ToList<NodeData>();
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "SetVariableNode",
+        Description = "Write literal or {{interpolated}} values into workflow data",
+        Parameters  =
+        [
+            new() { Name = "assignments", Label = "Assignments (JSON)", Type = ParameterType.Json, Required = true,
+                Placeholder = "{\"greeting\": \"Hello {{name}}\", \"count\": 0}",
+                Description = "Key/value pairs to write. String values support {{variable}} interpolation." },
+        ]
+    };
+
     private readonly IReadOnlyDictionary<string, object?> _assignments;
 
     public SetVariableNode(string name, Dictionary<string, object?> assignments)
@@ -54,6 +67,14 @@ public sealed class SetVariableNode : BaseNode
         Name         = name;
         _assignments = assignments;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public SetVariableNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Set Variable",
+            (NodeParameters.GetStringDict(parameters, "assignments") ?? new Dictionary<string, string>())
+                .ToDictionary(kv => kv.Key, kv => (object?)kv.Value))
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

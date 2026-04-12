@@ -24,6 +24,28 @@ public sealed class TransformNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "transform";
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "TransformNode",
+        Description = "Apply a preset or pass-through transformation to workflow data",
+        Parameters  =
+        [
+            new() { Name = "preset",    Label = "Preset",    Type = ParameterType.Select, Required = false, DefaultValue = "",
+                Options =
+                [
+                    new() { Value = "",             Label = "Pass-through (no-op)" },
+                    new() { Value = "rename",       Label = "Rename Key" },
+                    new() { Value = "selectkey",    Label = "Select Key" },
+                    new() { Value = "concatstrings",Label = "Concatenate Strings" },
+                ] },
+            new() { Name = "fromKey",   Label = "From Key",  Type = ParameterType.Text,   Required = false, Placeholder = "Source key" },
+            new() { Name = "toKey",     Label = "To Key",    Type = ParameterType.Text,   Required = false, Placeholder = "Target key" },
+            new() { Name = "keys",      Label = "Keys (JSON array, for concat)", Type = ParameterType.Json, Required = false, Placeholder = "[\"key1\",\"key2\"]" },
+            new() { Name = "separator", Label = "Separator", Type = ParameterType.Text,   Required = false, DefaultValue = " " },
+        ]
+    };
+
     private readonly Func<WorkflowData, Task<WorkflowData>> _transform;
 
     public TransformNode(string name, Func<WorkflowData, WorkflowData> transform)
@@ -36,6 +58,41 @@ public sealed class TransformNode : BaseNode
     {
         Name = name;
         _transform = transform;
+    }
+
+    /// <summary>
+    /// Dictionary constructor for dynamic instantiation.
+    /// Supports presets: rename, selectkey, concatstrings. Falls back to pass-through.
+    /// </summary>
+    public TransformNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Transform",
+            BuildTransformFunc(parameters))
+    { }
+
+    private static Func<WorkflowData, WorkflowData> BuildTransformFunc(Dictionary<string, object?> p)
+    {
+        var preset  = NodeParameters.GetString(p, "preset")?.ToLowerInvariant();
+        var fromKey = NodeParameters.GetString(p, "fromKey") ?? "";
+        var toKey   = NodeParameters.GetString(p, "toKey")   ?? "";
+        var sep     = NodeParameters.GetString(p, "separator") ?? " ";
+        var keys    = NodeParameters.GetStringList(p, "keys");
+
+        return preset switch
+        {
+            "rename" => data =>
+            {
+                var val = data.Get<object>(fromKey);
+                return data.Clone().Remove(fromKey).Set(toKey, val);
+            },
+            "selectkey" => data => data.Clone().Set(toKey, data.Get<object>(fromKey)),
+            "concatstrings" => data =>
+            {
+                var vals = (keys ?? []).Select(k => data.GetString(k) ?? "");
+                return data.Clone().Set(toKey, string.Join(sep, vals));
+            },
+            _ => data => data.Clone()  // pass-through
+        };
     }
 
     protected override async Task<WorkflowData> RunAsync(

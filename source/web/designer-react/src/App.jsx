@@ -30,7 +30,7 @@ import RunnerPanel from './components/RunnerPanel';
 import { toPng } from 'html-to-image';
 import { loadWorkflow, saveWorkflow, loadAvailableNodes, loadAllSchemas } from './api';
 import { toReactFlow, getContextData, applyContextData } from './adapter';
-import { NODE_DEFAULT_PARAMS, generateNodeId } from './nodeConfig';
+import { generateNodeId } from './nodeConfig';
 import './App.css';
 
 const genId = () => crypto.randomUUID();
@@ -322,8 +322,9 @@ function DesignerInner({ workflowId, mode }) {
       }
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY });
       const isContainer = nodeInfo.type === 'ContainerNode';
-      const defaultParams = { ...(NODE_DEFAULT_PARAMS[nodeInfo.type] ?? {}) };
-      const nodeId = generateNodeId(nodeInfo.type, nodesRef.current);
+      // Default parameters come from the backend schema (via API), not a hardcoded map.
+      const defaultParams = { ...(nodeInfo.defaultParams ?? {}) };
+      const nodeId = generateNodeId(nodeInfo.idPrefix, nodesRef.current);
       const newNode = {
         id: genId(),
         type: nodeInfo.type,

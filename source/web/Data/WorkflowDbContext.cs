@@ -38,6 +38,8 @@ public class WorkflowDbContext : DbContext
             entity.Property(e => e.Color).HasMaxLength(20);
             entity.Property(e => e.Icon).HasMaxLength(100);
             entity.Property(e => e.SchemaJson).IsRequired();
+            entity.Property(e => e.IdPrefix).HasMaxLength(30).HasDefaultValue("node");
+            entity.Property(e => e.FullTypeName).HasMaxLength(300);
             entity.HasIndex(e => e.NodeType).IsUnique();
             entity.HasIndex(e => e.Category);
         });
@@ -98,6 +100,10 @@ public class NodeTypeEntity
     public string Icon { get; set; } = "bi-box";
     public string SchemaJson { get; set; } = "{}";         // Serialized NodeParameterSchema
     public bool IsEnabled { get; set; } = true;
+    /// <summary>Short prefix for generating human-readable node IDs in the designer (e.g. "llm" → llm001).</summary>
+    public string IdPrefix { get; set; } = "node";
+    /// <summary>Fully-qualified .NET type name used for dynamic instantiation (e.g. "TwfAiFramework.Nodes.AI.LlmNode, TwfAiFramework.Core").</summary>
+    public string? FullTypeName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

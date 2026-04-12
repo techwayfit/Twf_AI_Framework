@@ -54,6 +54,24 @@ public sealed class LoopNode : BaseNode
         new("loop_iteration_count",  typeof(int),                Description: "Number of items iterated")
     ];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "LoopNode",
+        Description = "Iterate over each item in a list and collect results",
+        Parameters  =
+        [
+            new() { Name = "itemsKey",      Label = "Items Key",           Type = ParameterType.Text,   Required = true,  Placeholder = "e.g. documents, users",
+                Description = "WorkflowData key containing the collection to iterate" },
+            new() { Name = "outputKey",     Label = "Output Key",          Type = ParameterType.Text,   Required = true,  Placeholder = "e.g. results",
+                Description = "Where to store the array of per-item results" },
+            new() { Name = "loopItemKey",   Label = "Loop Item Variable",  Type = ParameterType.Text,   Required = false, DefaultValue = "__item__",
+                Description = "Variable name for the current item inside the loop body" },
+            new() { Name = "maxIterations", Label = "Max Iterations",      Type = ParameterType.Number, Required = false, DefaultValue = 0, MinValue = 0, MaxValue = 10000,
+                Description = "Safety cap — 0 means unlimited" },
+        ]
+    };
+
     private readonly string _itemsKey;
     private readonly string _outputKey;
     private readonly string _loopItemKey;
@@ -86,6 +104,16 @@ public sealed class LoopNode : BaseNode
             bodyBuilder(_body);
         }
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation (body sub-workflow is handled by the runner).</summary>
+    public LoopNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Loop",
+            NodeParameters.GetString(parameters, "itemsKey")    ?? "items",
+            NodeParameters.GetString(parameters, "outputKey")   ?? "results",
+            NodeParameters.GetString(parameters, "loopItemKey") ?? "__item__",
+            NodeParameters.GetInt(parameters, "maxIterations"))
+    { }
 
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

@@ -58,6 +58,29 @@ public sealed class HttpRequestNode : BaseNode
         new("http_headers",     typeof(Dictionary<string,string>), Required: false, "Response headers")
     ];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "HttpRequestNode",
+        Description = "Make an HTTP/REST API call with configurable method and headers",
+        Parameters  =
+        [
+            new() { Name = "method",      Label = "HTTP Method",     Type = ParameterType.Select, Required = true, DefaultValue = "GET",
+                Options =
+                [
+                    new() { Value = "GET",    Label = "GET" },
+                    new() { Value = "POST",   Label = "POST" },
+                    new() { Value = "PUT",    Label = "PUT" },
+                    new() { Value = "PATCH",  Label = "PATCH" },
+                    new() { Value = "DELETE", Label = "DELETE" },
+                ] },
+            new() { Name = "url",          Label = "URL Template",    Type = ParameterType.Text,   Required = true,  Placeholder = "https://api.example.com/users/{{user_id}}" },
+            new() { Name = "headers",      Label = "Headers (JSON)",  Type = ParameterType.Json,   Required = false, Placeholder = "{\"Authorization\": \"Bearer {{token}}\"}" },
+            new() { Name = "timeoutMs",    Label = "Timeout (ms)",    Type = ParameterType.Number, Required = false, DefaultValue = 30000, MinValue = 1000, MaxValue = 300000 },
+            new() { Name = "throwOnError", Label = "Throw on HTTP Error", Type = ParameterType.Boolean, Required = false, DefaultValue = true },
+        ]
+    };
+
     private readonly HttpRequestConfig _config;
     private readonly HttpClient _httpClient;
 
@@ -68,6 +91,23 @@ public sealed class HttpRequestNode : BaseNode
         _httpClient = httpClient ?? new HttpClient();
         _httpClient.Timeout = config.Timeout;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public HttpRequestNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "HTTP Request",
+            new HttpRequestConfig
+            {
+                Method      = (NodeParameters.GetString(parameters, "method") ?? "GET").ToUpperInvariant(),
+                UrlTemplate = NodeParameters.GetString(parameters, "url")
+                              ?? NodeParameters.GetString(parameters, "urlTemplate") ?? "",
+                Headers     = NodeParameters.GetStringDict(parameters, "headers")
+                              ?? new Dictionary<string, string>(),
+                ThrowOnError = NodeParameters.GetBool(parameters, "throwOnError", true),
+                Timeout      = TimeSpan.FromMilliseconds(
+                              NodeParameters.GetDouble(parameters, "timeoutMs", 30_000))
+            })
+    { }
 
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

@@ -31,6 +31,24 @@ public sealed class MemoryNode : BaseNode
             ? _keys.Select(k => new NodeData(k, typeof(object), Required: false, "Read from global memory")).ToList<NodeData>()
             : [];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "MemoryNode",
+        Description = "Read or write keys from persistent workflow memory (state)",
+        Parameters  =
+        [
+            new() { Name = "mode", Label = "Mode", Type = ParameterType.Select, Required = true, DefaultValue = "read",
+                Options =
+                [
+                    new() { Value = "read",  Label = "Read from Memory" },
+                    new() { Value = "write", Label = "Write to Memory" },
+                ] },
+            new() { Name = "keys", Label = "Keys (JSON array)", Type = ParameterType.Json, Required = true,
+                Placeholder = "[\"user_id\", \"session_state\"]" },
+        ]
+    };
+
     private readonly MemoryMode _mode;
     private readonly string[] _keys;
 
@@ -38,6 +56,15 @@ public sealed class MemoryNode : BaseNode
     {
         _mode = mode;
         _keys = keys;
+    }
+
+    /// <summary>Dictionary constructor for dynamic instantiation. Parameters: mode ("read"/"write"), keys (string array).</summary>
+    public MemoryNode(Dictionary<string, object?> parameters)
+    {
+        var mode = NodeParameters.GetString(parameters, "mode") ?? "read";
+        _mode = mode.Equals("write", StringComparison.OrdinalIgnoreCase)
+            ? MemoryMode.Write : MemoryMode.Read;
+        _keys = (NodeParameters.GetStringList(parameters, "keys") ?? []).ToArray();
     }
 
     protected override Task<WorkflowData> RunAsync(

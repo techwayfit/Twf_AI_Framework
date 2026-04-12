@@ -35,6 +35,19 @@ public sealed class ConditionNode : BaseNode
         _conditions.Select(c => new NodeData(c.Key, typeof(bool), Description: "Condition result flag"))
                    .ToList<NodeData>();
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "ConditionNode",
+        Description = "Evaluate conditions and write boolean flags to workflow data",
+        Parameters  =
+        [
+            new() { Name = "condition", Label = "Condition Expression", Type = ParameterType.Text, Required = false,
+                Placeholder = "e.g. score > 5",
+                Description = "In JSON mode, conditions are evaluated by upstream nodes. This field is for documentation." },
+        ]
+    };
+
     private readonly List<(string Key, Func<WorkflowData, bool> Predicate)> _conditions;
 
     public ConditionNode(string name,
@@ -43,6 +56,14 @@ public sealed class ConditionNode : BaseNode
         Name = name;
         _conditions = conditions.ToList();
     }
+
+    /// <summary>
+    /// Dictionary constructor for dynamic instantiation.
+    /// In JSON/UI mode conditions are code-defined predicates, so the node acts as a pass-through.
+    /// </summary>
+    public ConditionNode(Dictionary<string, object?> parameters)
+        : this(NodeParameters.GetString(parameters, "name") ?? "Condition")
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

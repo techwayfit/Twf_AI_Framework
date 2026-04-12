@@ -21,8 +21,7 @@ public sealed class PromptBuilderNode : BaseNode
 {
     public override string Name { get; }
     public override string Category => "AI";
-    public override string Description =>
-        "Builds a dynamic prompt from a template with variable substitution";
+    public override string Description => Schema.Description;
 
     /// <inheritdoc/>
     public override string IdPrefix => "prompt";
@@ -37,6 +36,20 @@ public sealed class PromptBuilderNode : BaseNode
         new("prompt",        typeof(string), Description: "Rendered prompt text"),
         new("system_prompt", typeof(string), Required: false, Description: "Rendered system instruction")
     ];
+
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "PromptBuilderNode",
+        Description = "Build a dynamic prompt from a template with {{variable}} slots",
+        Parameters  =
+        [
+            new() { Name = "promptTemplate", Label = "Prompt Template", Type = ParameterType.TextArea, Required = true,
+                Placeholder = "Use {{variable}} syntax, e.g. 'Summarize: {{content}}'" },
+            new() { Name = "systemTemplate", Label = "System Template", Type = ParameterType.TextArea, Required = false,
+                Placeholder = "Optional system prompt template" },
+        ]
+    };
 
     private readonly string _promptTemplate;
     private readonly string? _systemTemplate;
@@ -53,6 +66,14 @@ public sealed class PromptBuilderNode : BaseNode
         _systemTemplate = systemTemplate;
         _staticVariables = staticVariables ?? new();
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public PromptBuilderNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Prompt Builder",
+            NodeParameters.GetString(parameters, "promptTemplate") ?? "",
+            NodeParameters.GetString(parameters, "systemTemplate"))
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

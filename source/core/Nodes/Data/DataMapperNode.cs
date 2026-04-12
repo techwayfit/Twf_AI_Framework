@@ -38,6 +38,22 @@ public sealed class DataMapperNode : BaseNode
                  .Select(k => new NodeData(k, typeof(object), Description: "Mapped output key"))
                  .ToList<NodeData>();
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "DataMapperNode",
+        Description = "Map source paths to target keys with dot-path support",
+        Parameters  =
+        [
+            new() { Name = "mappings",       Label = "Mappings (JSON)",        Type = ParameterType.Json,    Required = true,
+                Placeholder = "{\"prompt\": \"llm_response\", \"user_id\": \"http_response.data.id\"}",
+                Description = "targetKey → sourcePath. Source supports dot-path notation." },
+            new() { Name = "throwOnMissing", Label = "Throw on Missing Source",Type = ParameterType.Boolean, Required = false, DefaultValue = false },
+            new() { Name = "removeUnmapped", Label = "Output Only Mapped Keys",Type = ParameterType.Boolean, Required = false, DefaultValue = false,
+                Description = "If enabled, unmapped keys are dropped from output" },
+        ]
+    };
+
     private readonly IReadOnlyDictionary<string, string> _mappings;
     private readonly IReadOnlyDictionary<string, object?> _defaultValues;
     private readonly bool _throwOnMissing;
@@ -58,6 +74,16 @@ public sealed class DataMapperNode : BaseNode
         _throwOnMissing = throwOnMissing;
         _removeUnmapped = removeUnmapped;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public DataMapperNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Data Mapper",
+            NodeParameters.GetStringDict(parameters, "mappings") ?? new Dictionary<string, string>(),
+            null,
+            NodeParameters.GetBool(parameters, "throwOnMissing"),
+            NodeParameters.GetBool(parameters, "removeUnmapped"))
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

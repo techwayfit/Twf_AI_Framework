@@ -202,14 +202,27 @@ public class WorkflowController : Controller
         var nodes = await _nodeTypeRepository.GetAllAsync();
         var result = nodes
             .Where(n => n.IsEnabled)
-            .Select(n => new
+            .Select(n =>
             {
-                type        = n.NodeType,
-                category    = n.Category,
-                name        = n.Name,
-                description = n.Description,
-                color       = n.Color,
-                icon        = n.Icon,
+                // Derive default parameters from the schema's parameter definitions
+                var schema = DeserializeSchema(n);
+                var defaultParams = schema?.Parameters
+                    ?.Where(p => p.DefaultValue is not null)
+                    ?.ToDictionary(p => p.Name, p => p.DefaultValue)
+                    ?? new Dictionary<string, object?>();
+
+                return new
+                {
+                    type          = n.NodeType,
+                    category      = n.Category,
+                    name          = n.Name,
+                    description   = n.Description,
+                    color         = n.Color,
+                    icon          = n.Icon,
+                    idPrefix      = n.IdPrefix,
+                    fullTypeName  = n.FullTypeName,
+                    defaultParams = defaultParams,
+                };
             });
         return Json(result);
     }

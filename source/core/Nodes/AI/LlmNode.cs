@@ -32,8 +32,7 @@ public sealed class LlmNode : BaseNode
     /// <summary>
     /// Gets Description for the LlmNode
     /// </summary>
-    public override string Description =>
-        $"Calls {_config.Provider} ({_config.Model}) with the current prompt";
+    public override string Description => $"Calls {_config.Provider} ({_config.Model}) with the current prompt";
 
     /// <inheritdoc/>
     public override string IdPrefix => "llm";
@@ -54,6 +53,33 @@ public sealed class LlmNode : BaseNode
         new("completion_tokens", typeof(int),    Description: "Tokens in the completion")
     ];
 
+    /// <summary>
+    /// UI schema: parameter form fields shown in the properties panel when configuring the node. This includes options for selecting the LLM provider, model, API key, and other parameters that control the behavior of the node when it is executed within a workflow.
+     /// </summary> 
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType = "LlmNode",
+        Description = "Send a prompt to any OpenAI-compatible language model",
+        Parameters =
+        [
+            new() { Name = "provider", Label = "Provider", Type = ParameterType.Select, Required = true, DefaultValue = "openai",
+                Options =
+                [
+                    new() { Value = "openai",    Label = "OpenAI" },
+                    new() { Value = "anthropic", Label = "Anthropic" },
+                    new() { Value = "ollama",    Label = "Ollama (Local)" },
+                    new() { Value = "azure",     Label = "Azure OpenAI" },
+                ] },
+            new() { Name = "model",          Label = "Model",         Type = ParameterType.Text,     Required = true,  DefaultValue = "gpt-4o", Placeholder = "e.g., gpt-4o, claude-3-opus" },
+            new() { Name = "apiKey",         Label = "API Key",       Type = ParameterType.Text,     Required = false, Placeholder = "Leave empty to use environment variable" },
+            new() { Name = "apiUrl",         Label = "API URL",       Type = ParameterType.Text,     Required = false, Placeholder = "Custom API endpoint (optional)" },
+            new() { Name = "systemPrompt",   Label = "System Prompt", Type = ParameterType.TextArea, Required = false, Placeholder = "You are a helpful assistant..." },
+            new() { Name = "temperature",    Label = "Temperature",   Type = ParameterType.Number,   Required = false, DefaultValue = 0.7,   MinValue = 0, MaxValue = 2 },
+            new() { Name = "maxTokens",      Label = "Max Tokens",    Type = ParameterType.Number,   Required = false, DefaultValue = 1000,  MinValue = 1, MaxValue = 128000 },
+            new() { Name = "maintainHistory",Label = "Maintain Chat History", Type = ParameterType.Boolean, Required = false, DefaultValue = false },
+        ]
+    };
+
     private readonly LlmConfig _config;
     private readonly HttpClient _httpClient;
     /// <summary>
@@ -68,6 +94,54 @@ public sealed class LlmNode : BaseNode
         _config = config;
         _httpClient = httpClient ?? new HttpClient();
     }
+
+    /// <summary>
+    /// Dictionary constructor — used by the workflow runner for dynamic instantiation.
+    /// Parameters: name, provider, model, apiKey, apiUrl, systemPrompt, temperature, maxTokens, maintainHistory.
+    /// </summary>
+    public LlmNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "LLM",
+            BuildConfigFromDict(parameters))
+    { }
+
+    private static LlmConfig BuildConfigFromDict(Dictionary<string, object?> p)
+    {
+        var provider = NodeParameters.GetString(p, "provider") ?? "openai";
+        var model = NodeParameters.GetString(p, "model") ?? "gpt-4o";
+        var apiKey = NodeParameters.GetString(p, "apiKey") ?? "";
+        var apiUrl = NodeParameters.GetString(p, "apiUrl");
+        var sysPrompt = NodeParameters.GetString(p, "systemPrompt");
+        var temp = (float)NodeParameters.GetDouble(p, "temperature", 0.7);
+        var maxTok = NodeParameters.GetInt(p, "maxTokens", 1000);
+        var history = NodeParameters.GetBool(p, "maintainHistory");
+
+        return provider.ToLowerInvariant() switch
+        {
+            "anthropic" => LlmConfig.Anthropic(apiKey, model) with
+            {
+                DefaultSystemPrompt = sysPrompt,
+                Temperature = temp,
+                MaxTokens = maxTok,
+                MaintainHistory = history
+            },
+            "ollama" => LlmConfig.Ollama(model, apiUrl ?? "http://localhost:11434") with
+            {
+                DefaultSystemPrompt = sysPrompt,
+                Temperature = temp,
+                MaxTokens = maxTok
+            },
+            _ => LlmConfig.OpenAI(apiKey, model) with
+            {
+                ApiEndpoint = apiUrl ?? "https://api.openai.com/v1/chat/completions",
+                DefaultSystemPrompt = sysPrompt,
+                Temperature = temp,
+                MaxTokens = maxTok,
+                MaintainHistory = history
+            }
+        };
+    }
+
     /// <summary>
     /// Executes the node's logic by building the message list, calling the LLM API (either streaming or non-streaming), and returning the response along with token usage information.
     /// </summary>
@@ -375,25 +449,26 @@ public sealed class LlmNode : BaseNode
 /// <summary>
 /// Configuration for the LlmNode, including provider selection, model name, API endpoint, and other parameters.
 /// </summary>
-public enum LlmProvider { 
+public enum LlmProvider
+{
     /// <summary>
     /// Open AI Provider
     /// </summary>
-    OpenAI, 
+    OpenAI,
     /// <summary>
     /// Anthopic Provider
     /// </summary>
-    Anthropic, 
+    Anthropic,
     /// <summary>
     /// Azure OpenAI Provider
     /// </summary>
-    AzureOpenAI, 
+    AzureOpenAI,
     /// <summary>
     /// Ollama Provider
     /// </summary>
-    Ollama, 
+    Ollama,
     /// <summary>
     /// Custom Provider - allows users to specify their own API endpoint and request format. The node will use the OpenAI-style request body by default, but users can customize the BuildRequestBody method for different formats if needed.
     /// </summary>
-    Custom 
-    }
+    Custom
+}

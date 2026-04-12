@@ -29,6 +29,23 @@ public sealed class FilterNode : BaseNode
         new("validation_errors", typeof(List<string>), Required: false, "List of failure messages")
     ];
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "FilterNode",
+        Description = "Validate data — fails or flags when rules are not met",
+        Parameters  =
+        [
+            new() { Name = "throwOnFail", Label = "Throw on Failure", Type = ParameterType.Boolean, Required = false, DefaultValue = true,
+                Description = "If false, writes is_valid=false instead of throwing" },
+            new() { Name = "requireKey",  Label = "Require Non-Empty Key", Type = ParameterType.Text, Required = false, Placeholder = "e.g. prompt",
+                Description = "Fail if this key is missing or blank" },
+            new() { Name = "maxLengthKey",Label = "Max Length Key",        Type = ParameterType.Text, Required = false, Placeholder = "e.g. prompt" },
+            new() { Name = "maxLength",   Label = "Max Length",            Type = ParameterType.Number, Required = false, DefaultValue = 0, MinValue = 0,
+                Description = "Maximum allowed character length (0 = no limit)" },
+        ]
+    };
+
     private readonly List<FilterRule> _rules;
     private readonly bool _throwOnFail;
 
@@ -37,6 +54,21 @@ public sealed class FilterNode : BaseNode
         Name = name;
         _throwOnFail = throwOnFail;
         _rules = new List<FilterRule>();
+    }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public FilterNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Filter",
+            NodeParameters.GetBool(parameters, "throwOnFail", true))
+    {
+        var requireKey = NodeParameters.GetString(parameters, "requireKey");
+        if (!string.IsNullOrEmpty(requireKey)) RequireNonEmpty(requireKey);
+
+        var maxLengthKey = NodeParameters.GetString(parameters, "maxLengthKey");
+        var maxLength    = NodeParameters.GetInt(parameters, "maxLength", 0);
+        if (!string.IsNullOrEmpty(maxLengthKey) && maxLength > 0)
+            MaxLength(maxLengthKey, maxLength);
     }
 
     public FilterNode Require(string key, string? reason = null)

@@ -23,8 +23,7 @@ public sealed class OutputParserNode : BaseNode
 
     public override string Name => _name;
     public override string Category => "AI";
-    public override string Description =>
-        "Parses structured JSON from LLM responses and maps fields to WorkflowData";
+    public override string Description => Schema.Description;
 
     /// <inheritdoc/>
     public override string IdPrefix => "parser";
@@ -51,6 +50,21 @@ public sealed class OutputParserNode : BaseNode
         }
     }
 
+    /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
+    public static NodeParameterSchema Schema { get; } = new()
+    {
+        NodeType    = "OutputParserNode",
+        Description = "Extract structured JSON from LLM text responses",
+        Parameters  =
+        [
+            new() { Name = "fieldMapping", Label = "Field Mapping (JSON)", Type = ParameterType.Json, Required = false,
+                Placeholder = "{\"sentiment\": \"sentiment\", \"score\": \"confidence\"}",
+                Description = "Map JSON keys to WorkflowData keys. Leave empty to write all fields directly." },
+            new() { Name = "strict", Label = "Strict Mode", Type = ParameterType.Boolean, Required = false, DefaultValue = false,
+                Description = "Fail the node if valid JSON cannot be extracted" },
+        ]
+    };
+
     private readonly Dictionary<string, string>? _fieldMapping;
     private readonly bool _strict;
 
@@ -66,6 +80,14 @@ public sealed class OutputParserNode : BaseNode
         _fieldMapping = fieldMapping;
         _strict = strict;
     }
+
+    /// <summary>Dictionary constructor for dynamic instantiation.</summary>
+    public OutputParserNode(Dictionary<string, object?> parameters)
+        : this(
+            NodeParameters.GetString(parameters, "name") ?? "Output Parser",
+            NodeParameters.GetStringDict(parameters, "fieldMapping"),
+            NodeParameters.GetBool(parameters, "strict"))
+    { }
 
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)

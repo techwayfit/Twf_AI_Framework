@@ -2,10 +2,6 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Core;
 using TwfAiFramework.Nodes;
-using TwfAiFramework.Nodes.AI;
-using TwfAiFramework.Nodes.Control;
-using TwfAiFramework.Nodes.Data;
-using TwfAiFramework.Nodes.IO;
 using TwfAiFramework.Web.Models;
 
 namespace TwfAiFramework.Web.Services;
@@ -22,11 +18,27 @@ namespace TwfAiFramework.Web.Services;
 ///   - ErrorNode    → invoked automatically when an unhandled exception occurs.
 ///   - All other nodes → always activate the "output" port.
 ///
+/// Node instantiation uses reflection: each node type is looked up in the core assembly
+/// and constructed via its Dictionary&lt;string, object?&gt; constructor.
 /// Node execution options (retry, timeout, continue-on-error) are honoured per node.
 /// </summary>
 public sealed class WorkflowDefinitionRunner
 {
     private readonly ILogger<WorkflowDefinitionRunner> _logger;
+
+    /// <summary>
+    /// Registry of all INode implementations in the core assembly, keyed by class name.
+    /// Built once at startup via reflection — no switch-case required.
+    /// </summary>
+    private static readonly IReadOnlyDictionary<string, Type> _nodeTypeRegistry =
+        typeof(BaseNode).Assembly
+            .GetTypes()
+            .Where(t => t.IsClass && !t.IsAbstract && typeof(INode).IsAssignableFrom(t))
+            .ToDictionary(t => t.Name, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Parameter keys that must not have {{variable}} substitution applied (credentials).</summary>
+    private static readonly HashSet<string> _noResolveKeys =
+        new(StringComparer.OrdinalIgnoreCase) { "apiKey", "secretKey", "password", "token", "apiSecret" };
 
     public WorkflowDefinitionRunner(ILogger<WorkflowDefinitionRunner> logger)
     {
@@ -103,15 +115,6 @@ public sealed class WorkflowDefinitionRunner
         // Find error node ID for this workflow (used for fallback routing)
         var errorNodeId = definition.ErrorNodeId;
 
-        // Resolve {{variable}} placeholders against current WorkflowData.
-        string? Resolve(string? raw, WorkflowData d) =>
-            raw is null ? null
-            : System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
-            {
-                var key = m.Groups[1].Value;
-                return d.TryGet<object>(key, out var val) && val is not null ? val.ToString()! : m.Value;
-            });
-
         var currentId = startNodeId;
         const int maxSteps = 500; // guard against infinite loops
         var steps = 0;
@@ -156,7 +159,7 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "SubWorkflowNode")
             {
-                var subIdStr = GetString(nodeDef.Parameters, "subWorkflowId");
+                var subIdStr = NodeParameters.GetString(nodeDef.Parameters, "subWorkflowId");
                 if (Guid.TryParse(subIdStr, out var subId))
                 {
                     var childDef = definition.SubWorkflows.FirstOrDefault(sw => sw.Id == subId);
@@ -212,10 +215,10 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "LoopNode")
             {
-                var itemsKey    = Resolve(GetString(nodeDef.Parameters, "itemsKey") ?? "items", data);
-                var outputKey   = GetString(nodeDef.Parameters, "outputKey")            ?? "results";
-                var loopItemKey = GetString(nodeDef.Parameters, "loopItemKey")          ?? "__item__";
-                var maxIter     = GetInt(nodeDef.Parameters,    "maxIterations");
+                var itemsKey    = ResolveVariables(NodeParameters.GetString(nodeDef.Parameters, "itemsKey") ?? "items", data);
+                var outputKey   = NodeParameters.GetString(nodeDef.Parameters, "outputKey")    ?? "results";
+                var loopItemKey = NodeParameters.GetString(nodeDef.Parameters, "loopItemKey")  ?? "__item__";
+                var maxIter     = NodeParameters.GetInt(nodeDef.Parameters,    "maxIterations");
 
                 var rawItems = data.Get<IEnumerable<object>>(itemsKey!)?.ToList();
                 if (rawItems is null)
@@ -472,204 +475,77 @@ public sealed class WorkflowDefinitionRunner
         return (data, true, null, null);
     }
 
-    // ─── Node Factory ─────────────────────────────────────────────────────────
+    // ─── Node Factory (reflection-based) ─────────────────────────────────────
 
+    /// <summary>
+    /// Dynamically creates a node instance by:
+    ///   1. Resolving {{variable}} placeholders in all non-credential string parameters.
+    ///   2. Looking up the node's Type from the core assembly registry.
+    ///   3. Invoking the node's Dictionary&lt;string, object?&gt; constructor.
+    /// No switch-case required — adding a new node only needs the constructor.
+    /// </summary>
     private INode? CreateNode(NodeDefinition nodeDef, WorkflowData data)
     {
-        var p    = nodeDef.Parameters;
-        var name = nodeDef.Name;
-
-        // Resolve {{variable}} placeholders in a parameter string against current WorkflowData.
-        // Intentionally excluded: apiKey and other sensitive credential fields.
-        string? Resolve(string? raw) =>
-            raw is null ? null
-            : System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
-            {
-                var key = m.Groups[1].Value;
-                return data.TryGet<object>(key, out var val) && val is not null
-                    ? val.ToString()!
-                    : m.Value; // leave unreplaced if not found
-            });
-
-        return nodeDef.Type switch
+        if (!_nodeTypeRegistry.TryGetValue(nodeDef.Type, out var type))
         {
-            // ── AI ────────────────────────────────────────────────────────────
-            "LlmNode" => new LlmNode(name, BuildLlmConfig(p, Resolve)),
+            _logger.LogWarning("No INode implementation found for type '{Type}'.", nodeDef.Type);
+            return null;
+        }
 
-            "PromptBuilderNode" => new PromptBuilderNode(
-                name,
-                promptTemplate : Resolve(GetString(p, "promptTemplate")) ?? "",
-                systemTemplate : Resolve(GetString(p, "systemTemplate"))),
+        var ctor = type.GetConstructor([typeof(Dictionary<string, object?>)]);
+        if (ctor is null)
+        {
+            _logger.LogWarning("Node '{Type}' has no Dictionary<string, object?> constructor.", nodeDef.Type);
+            return null;
+        }
 
-            "EmbeddingNode" => new EmbeddingNode(name, new EmbeddingConfig
-            {
-                Model       = GetString(p, "model") ?? "text-embedding-3-small",
-                ApiKey      = GetString(p, "apiKey") ?? "",
-                ApiEndpoint = GetString(p, "apiUrl")
-                              ?? "https://api.openai.com/v1/embeddings"
-            }),
+        // Pre-resolve {{variable}} placeholders; inject node name so constructors can read it.
+        var resolvedParams = ResolveParameters(nodeDef.Parameters, data);
+        resolvedParams["name"] = nodeDef.Name;
 
-            "OutputParserNode" => new OutputParserNode(
-                name : name,
-                fieldMapping : GetStringDict(p, "fieldMapping"),
-                strict       : GetBool(p, "strict")),
-
-            // ── Control ────────────────────────────────────────────────────────
-            // Condition predicates are code-side; in JSON mode, downstream branch
-            // nodes must read the flags already present in WorkflowData.
-            // Pass WorkflowData through unchanged so routing can read any flags set
-            // by a prior Condition node in the pipeline.
-            "ConditionNode" => new TransformNode(name, data => data.Clone()),
-
-            "BranchNode" => new BranchNode(
-                name         : name,
-                valueKey     : GetString(p, "valueKey") ?? "",
-                case1Value   : GetString(p, "case1Value"),
-                case2Value   : GetString(p, "case2Value"),
-                case3Value   : GetString(p, "case3Value"),
-                caseSensitive: GetBool(p, "caseSensitive")),
-
-            "DelayNode" => new DelayNode(
-                TimeSpan.FromMilliseconds(GetDouble(p, "durationMs", 1000)),
-                GetString(p, "reason")),
-
-            "MergeNode" => new MergeNode(
-                name      : name,
-                outputKey : GetString(p, "outputKey") ?? "merged",
-                separator : GetString(p, "separator") ?? "\n",
-                sourceKeys: GetStringList(p, "sourceKeys")?.ToArray() ?? []),
-
-            "LogNode" => new LogNode(
-                label     : name,
-                keysToLog : GetStringList(p, "keysToLog")?.ToArray()),
-
-            // ── Data ──────────────────────────────────────────────────────────
-            "TransformNode" => BuildTransformNode(name, p),
-
-            "DataMapperNode" => new DataMapperNode(
-                name           : name,
-                mappings       : GetStringDict(p, "mappings") ?? new Dictionary<string, string>(),
-                throwOnMissing : GetBool(p, "throwOnMissing"),
-                removeUnmapped : GetBool(p, "removeUnmapped")),
-
-            "FilterNode" => BuildFilterNode(name, p),
-
-            "ChunkTextNode" => new ChunkTextNode(new ChunkConfig
-            {
-                ChunkSize = GetInt(p, "chunkSize", 500),
-                Overlap   = GetInt(p, "overlap", 50),
-                Strategy  = Enum.TryParse<ChunkStrategy>(
-                    GetString(p, "strategy"), true, out var strat)
-                    ? strat : ChunkStrategy.Character
-            }),
-
-            "MemoryNode" => GetString(p, "mode")?.Equals("Write", StringComparison.OrdinalIgnoreCase) == true
-                ? MemoryNode.Write((GetStringList(p, "keys") ?? []).ToArray())
-                : MemoryNode.Read((GetStringList(p, "keys") ?? []).ToArray()),
-
-            "SetVariableNode" => new SetVariableNode(
-                name,
-                (GetStringDict(p, "assignments") ?? new Dictionary<string, string>())
-                    .ToDictionary(kv => kv.Key, kv => (object?)Resolve(kv.Value))),
-
-            // ── IO ────────────────────────────────────────────────────────────
-            "HttpRequestNode" => new HttpRequestNode(name, new HttpRequestConfig
-            {
-                Method        = (GetString(p, "method") ?? "GET").ToUpperInvariant(),
-                UrlTemplate   = Resolve(GetString(p, "url") ?? GetString(p, "urlTemplate")) ?? "",
-                Headers       = GetStringDict(p, "headers") ?? new Dictionary<string, string>(),
-                ThrowOnError  = GetBool(p, "throwOnError", true),
-                Timeout       = TimeSpan.FromMilliseconds(GetDouble(p, "timeoutMs", 30_000))
-            }),
-
-            "FileReadNode"  => new FileReaderNode(Resolve(GetString(p, "filePath"))),
-            "FileWriteNode" => new FileWriterNode(
-                outputPath : Resolve(GetString(p, "filePath")) ?? "output.txt",
-                dataKey    : GetString(p, "contentKey") ?? "llm_response"),
-
-            // ── Control (routable) ────────────────────────────────────────────
-            "ErrorRouteNode" => new ErrorRouteNode(
-                name                 : name,
-                errorMessageKey      : GetString(p, "errorMessageKey")  ?? "error_message",
-                statusCodeKey        : GetString(p, "statusCodeKey")    ?? "http_status_code",
-                errorStatusThreshold : GetInt(p,    "errorStatusThreshold", 400)),
-
-            _ => null
-        };
+        try
+        {
+            return (INode)ctor.Invoke([resolvedParams]);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to instantiate node '{Type}'.", nodeDef.Type);
+            return null;
+        }
     }
 
-    // ─── Helpers: node config builders ────────────────────────────────────────
-
-    private static LlmConfig BuildLlmConfig(Dictionary<string, object?> p, Func<string?, string?> resolve)
+    /// <summary>
+    /// Applies {{variable}} substitution to all string-valued parameters except credential keys.
+    /// </summary>
+    private static Dictionary<string, object?> ResolveParameters(
+        Dictionary<string, object?> raw,
+        WorkflowData data)
     {
-        var provider   = GetString(p, "provider") ?? "openai";
-        var model      = GetString(p, "model")    ?? "gpt-4o";
-        var apiKey     = GetString(p, "apiKey")   ?? ""; // credentials are never variable-substituted
-        var apiUrl     = GetString(p, "apiUrl");
-        var systemPmt  = resolve(GetString(p, "systemPrompt"));
-        var temp       = (float)GetDouble(p, "temperature", 0.7);
-        var maxTokens  = GetInt(p, "maxTokens", 1000);
-        var history    = GetBool(p, "maintainHistory");
-
-        return provider.ToLowerInvariant() switch
+        var result = new Dictionary<string, object?>(raw.Count, StringComparer.OrdinalIgnoreCase);
+        foreach (var (key, value) in raw)
         {
-            "anthropic" => LlmConfig.Anthropic(apiKey, model) with
+            if (_noResolveKeys.Contains(key))
             {
-                DefaultSystemPrompt = systemPmt,
-                Temperature         = temp,
-                MaxTokens           = maxTokens,
-                MaintainHistory     = history
-            },
-            "ollama" => LlmConfig.Ollama(model, apiUrl ?? "http://localhost:11434") with
-            {
-                DefaultSystemPrompt = systemPmt,
-                Temperature         = temp,
-                MaxTokens           = maxTokens
-            },
-            _ => LlmConfig.OpenAI(apiKey, model) with
-            {
-                ApiEndpoint         = apiUrl ?? "https://api.openai.com/v1/chat/completions",
-                DefaultSystemPrompt = systemPmt,
-                Temperature         = temp,
-                MaxTokens           = maxTokens,
-                MaintainHistory     = history
+                result[key] = value; // never resolve credentials
+                continue;
             }
-        };
+
+            result[key] = value switch
+            {
+                string str                                           => ResolveVariables(str, data),
+                JsonElement { ValueKind: JsonValueKind.String } je  => ResolveVariables(je.GetString() ?? "", data),
+                _                                                    => value
+            };
+        }
+        return result;
     }
 
-    private static FilterNode BuildFilterNode(string name, Dictionary<string, object?> p)
-    {
-        var node = new FilterNode(name, throwOnFail: GetBool(p, "throwOnFail", true));
-
-        var requireKey = GetString(p, "requireKey");
-        if (!string.IsNullOrEmpty(requireKey))
-            node.RequireNonEmpty(requireKey);
-
-        var maxLengthKey  = GetString(p, "maxLengthKey");
-        var maxLengthVal  = GetInt(p, "maxLength", 0);
-        if (!string.IsNullOrEmpty(maxLengthKey) && maxLengthVal > 0)
-            node.MaxLength(maxLengthKey, maxLengthVal);
-
-        return node;
-    }
-
-    private static TransformNode BuildTransformNode(string name, Dictionary<string, object?> p)
-    {
-        var preset  = GetString(p, "preset");
-        var fromKey = GetString(p, "fromKey") ?? "";
-        var toKey   = GetString(p, "toKey")   ?? "";
-        var sep     = GetString(p, "separator") ?? " ";
-        var keys    = GetStringList(p, "keys");
-
-        return preset?.ToLowerInvariant() switch
+    private static string ResolveVariables(string raw, WorkflowData data) =>
+        System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
         {
-            "rename"        => TransformNode.Rename(fromKey, toKey),
-            "selectkey"     => TransformNode.SelectKey(fromKey, toKey),
-            "concatstrings" => TransformNode.ConcatStrings(toKey, sep,
-                                   keys?.ToArray() ?? []),
-            _ => new TransformNode(name, data => data.Clone())   // pass-through
-        };
-    }
+            var key = m.Groups[1].Value;
+            return data.TryGet<object>(key, out var val) && val is not null ? val.ToString()! : m.Value;
+        });
 
     // ─── Execution with retry/timeout ─────────────────────────────────────────
 
@@ -790,75 +666,4 @@ public sealed class WorkflowDefinitionRunner
         return result;
     }
 
-    // ─── Parameter extraction helpers ─────────────────────────────────────────
-    // Parameters arrive from JSON deserialization as JsonElement or boxed primitives.
-
-    private static string? GetString(Dictionary<string, object?> p, string key, string? def = null)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return def;
-        if (raw is JsonElement je) return je.GetString() ?? def;
-        return raw.ToString() ?? def;
-    }
-
-    private static bool GetBool(Dictionary<string, object?> p, string key, bool def = false)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return def;
-        if (raw is bool b) return b;
-        if (raw is JsonElement je && je.ValueKind == JsonValueKind.True)  return true;
-        if (raw is JsonElement je2 && je2.ValueKind == JsonValueKind.False) return false;
-        return bool.TryParse(raw.ToString(), out var parsed) ? parsed : def;
-    }
-
-    private static int GetInt(Dictionary<string, object?> p, string key, int def = 0)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return def;
-        if (raw is JsonElement je && je.TryGetInt32(out var v)) return v;
-        if (raw is int i) return i;
-        return int.TryParse(raw.ToString(), out var parsed) ? parsed : def;
-    }
-
-    private static double GetDouble(Dictionary<string, object?> p, string key, double def = 0)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return def;
-        if (raw is JsonElement je && je.TryGetDouble(out var v)) return v;
-        if (raw is double d) return d;
-        if (raw is float f)  return f;
-        return double.TryParse(raw.ToString(), out var parsed) ? parsed : def;
-    }
-
-    private static Dictionary<string, string>? GetStringDict(Dictionary<string, object?> p, string key)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return null;
-
-        if (raw is JsonElement je && je.ValueKind == JsonValueKind.Object)
-        {
-            return je.EnumerateObject()
-                     .Where(prop => prop.Value.ValueKind == JsonValueKind.String)
-                     .ToDictionary(prop => prop.Name, prop => prop.Value.GetString()!);
-        }
-
-        if (raw is Dictionary<string, string> dict) return dict;
-        if (raw is Dictionary<string, object?> objDict)
-            return objDict.Where(kv => kv.Value is not null)
-                          .ToDictionary(kv => kv.Key, kv => kv.Value!.ToString()!);
-
-        return null;
-    }
-
-    private static List<string>? GetStringList(Dictionary<string, object?> p, string key)
-    {
-        if (!p.TryGetValue(key, out var raw) || raw is null) return null;
-
-        if (raw is JsonElement je && je.ValueKind == JsonValueKind.Array)
-            return je.EnumerateArray()
-                     .Where(e => e.ValueKind == JsonValueKind.String)
-                     .Select(e => e.GetString()!)
-                     .ToList();
-
-        if (raw is List<string> list)        return list;
-        if (raw is string[] arr)             return arr.ToList();
-        if (raw is IEnumerable<string> ienum) return ienum.ToList();
-
-        return null;
-    }
 }
