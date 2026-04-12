@@ -88,7 +88,7 @@ export const NODE_ROUTING_PORTS = {
   SubWorkflowNode: { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'success', label: 'Success' }, { id: 'error', label: 'Error' }] },
   LoopNode:        { inputs: [{ id: 'input', label: 'Input' }],
-                     outputs: [{ id: 'output', label: 'After Loop' }] },
+                     outputs: [{ id: 'body', label: 'Loop Body' }, { id: 'output', label: 'After Loop' }] },
   HttpRequestNode: { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
   FileReaderNode:  { inputs: [{ id: 'input', label: 'Input' }],
@@ -126,6 +126,7 @@ export function portColor(portId, handleType) {
   if (portId === 'success')                       return '#22c55e'; // green
   if (portId === 'failure' || portId === 'error') return '#ef4444'; // red
   if (portId === 'default')                       return '#8b5cf6'; // purple
+  if (portId === 'body')                                          return '#f97316'; // orange (loop body)
   if (portId.startsWith('case') || portId.startsWith('branch')) return '#f59e0b'; // amber
   return handleType === 'target' ? '#3b82f6' : '#6c757d'; // fallback by direction
 }

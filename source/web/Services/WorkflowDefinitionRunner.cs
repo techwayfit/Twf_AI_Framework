@@ -220,12 +220,22 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "LoopNode")
             {
-                var itemsKey    = ResolveVariables(NodeParameters.GetString(nodeDef.Parameters, "itemsKey") ?? "items", data);
+                // itemsKey may be a literal key ("search_results") or a {{node.key}} reference.
+                // Strip {{ }} to get the actual data key — do NOT call ResolveVariables here
+                // because that converts the stored list to a string via .ToString().
+                var itemsKeyRaw = NodeParameters.GetString(nodeDef.Parameters, "itemsKey") ?? "items";
+                var itemsKeyMatch = System.Text.RegularExpressions.Regex.Match(
+                    itemsKeyRaw, @"^\{\{([\w.]+)\}\}$");
+                var itemsKey    = itemsKeyMatch.Success ? itemsKeyMatch.Groups[1].Value : itemsKeyRaw;
                 var outputKey   = NodeParameters.GetString(nodeDef.Parameters, "outputKey")    ?? "results";
                 var loopItemKey = NodeParameters.GetString(nodeDef.Parameters, "loopItemKey")  ?? "__item__";
                 var maxIter     = NodeParameters.GetInt(nodeDef.Parameters,    "maxIterations");
 
-                var rawItems = data.Get<IEnumerable<object>>(itemsKey!)?.ToList();
+                // Try typed get first; fall back to object and cast (handles List<T> → IEnumerable<object>)
+                var rawItems = (data.Get<IEnumerable<object>>(itemsKey)
+                    ?? data.Get<object>(itemsKey) as IEnumerable<object>
+                    ?? (data.Get<object>(itemsKey) is System.Collections.IEnumerable ie
+                        ? ie.Cast<object>() : null))?.ToList();
                 if (rawItems is null)
                 {
                     _logger.LogWarning("  ⚠ LoopNode '{Name}': key '{Key}' not found or empty — skipping loop.",
@@ -239,9 +249,13 @@ public sealed class WorkflowDefinitionRunner
                     rawItems = rawItems.Take(maxIter).ToList();
 
                 var loopOutputs = new List<WorkflowData>(rawItems.Count);
-                var loopBodyNodes   = nodeDef.SubWorkflow?.Nodes        ?? [];
-                var loopBodyConns   = nodeDef.SubWorkflow?.Connections   ?? [];
-                var loopBodyStart   = loopBodyNodes.FirstOrDefault(n => n.Type == "StartNode");
+
+                // Body entry is the node connected to the "body" output port in the main graph.
+                // Body nodes live in the same flat graph; the walk terminates when their chain
+                // has no further connections. Each iteration shares parent context: changes made
+                // inside the body are propagated back so subsequent iterations and the post-loop
+                // path can read them.
+                var hasBodyPort = routing.TryGetValue((currentId, "body"), out var bodyEntryId);
 
                 for (var loopIdx = 0; loopIdx < rawItems.Count; loopIdx++)
                 {
@@ -251,31 +265,25 @@ public sealed class WorkflowDefinitionRunner
                         .Set(loopItemKey, rawItems[loopIdx])
                         .Set("__loop_index__", loopIdx);
 
-                    if (loopBodyStart is not null)
+                    if (hasBodyPort)
                     {
-                        var bodyNodeMap  = loopBodyNodes.ToDictionary(n => n.Id);
-                        var bodyRouting  = BuildRouting(loopBodyConns);
-                        var bodyWrapDef  = new WorkflowDefinition
-                        {
-                            Id = nodeDef.Id, Name = $"{nodeDef.Name}/Body",
-                            Nodes = loopBodyNodes, Connections = loopBodyConns,
-                            SubWorkflows = definition.SubWorkflows
-                        };
-
                         var (iterData, iterOk, iterErr, iterFailed) =
-                            await WalkGraphAsync(loopBodyStart.Id, itemData, context,
-                                bodyNodeMap, bodyRouting, bodyWrapDef, onStep);
+                            await WalkGraphAsync(bodyEntryId, itemData, context,
+                                nodeMap, routing, definition, onStep);
 
                         if (!iterOk)
                             return (data, false,
                                 $"LoopNode '{nodeDef.Name}' iteration {loopIdx} failed: {iterErr}",
                                 iterFailed ?? nodeDef.Name);
 
+                        // Write body changes back to parent context so subsequent iterations
+                        // and post-loop nodes can read them.
+                        data = iterData;
                         loopOutputs.Add(iterData);
                     }
                     else
                     {
-                        loopOutputs.Add(itemData); // no body — collect item data as-is
+                        loopOutputs.Add(itemData); // no body wired — collect item data as-is
                     }
                 }
 
@@ -561,10 +569,12 @@ public sealed class WorkflowDefinitionRunner
     }
 
     private static string ResolveVariables(string raw, WorkflowData data) =>
-        System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{(\w+)\}\}", m =>
+        System.Text.RegularExpressions.Regex.Replace(raw, @"\{\{([\w.]+)\}\}", m =>
         {
-            var key = m.Groups[1].Value;
-            return data.TryGet<object>(key, out var val) && val is not null ? val.ToString()! : m.Value;
+            var key     = m.Groups[1].Value;
+            var dataDict = data.Keys.ToDictionary(k => k, data.Get<object>);
+            var val      = NodeParameters.GetNestedValue(dataDict, key);
+            return val is not null ? val.ToString()! : m.Value;
         });
 
     // ─── Execution with retry/timeout ─────────────────────────────────────────

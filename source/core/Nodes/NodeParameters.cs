@@ -114,6 +114,86 @@ public static class NodeParameters
         if (raw is string[] arr)              return arr.ToList();
         if (raw is IEnumerable<string> ienum) return ienum.ToList();
 
+        // Value is a JSON array serialised as a plain string — e.g. "[\"__item__\"]"
+        if (raw is string s && s.TrimStart().StartsWith('['))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<string>>(s);
+                if (parsed is not null) return parsed;
+            }
+            catch { /* fall through */ }
+        }
+
         return null;
+    }
+
+    /// <summary>
+    /// Resolves a value from <paramref name="data"/> by key, supporting dotted property paths.
+    /// <para>
+    /// Examples:
+    /// <list type="bullet">
+    ///   <item><c>"search_results_count"</c> — flat key lookup</item>
+    ///   <item><c>"__item__.title"</c> — gets <c>__item__</c>, then accesses <c>Title</c> by reflection</item>
+    ///   <item><c>"node001.result.value"</c> — nested traversal</item>
+    /// </list>
+    /// </para>
+    /// Supports C# records/POCOs (reflection), <see cref="JsonElement"/>, and
+    /// <see cref="IDictionary{TKey,TValue}"/> at each level.
+    /// </summary>
+    public static object? GetNestedValue(IReadOnlyDictionary<string, object?> data, string key)
+    {
+        // Fast path — direct hit (also handles scoped keys like "node001.search_results")
+        if (data.TryGetValue(key, out var flat)) return flat;
+
+        // Dotted path: split on first dot, recurse into the object
+        var dot = key.IndexOf('.');
+        if (dot <= 0) return null;
+
+        var rootKey = key[..dot];
+        if (!data.TryGetValue(rootKey, out var root) || root is null) return null;
+
+        return TraversePropertyPath(root, key[(dot + 1)..]);
+    }
+
+    /// <summary>
+    /// Traverses a dotted property path on <paramref name="obj"/>, returning the terminal
+    /// value as an <see cref="object"/> or <c>null</c> if any segment is missing.
+    /// </summary>
+    public static object? TraversePropertyPath(object obj, string path)
+    {
+        var dot      = path.IndexOf('.');
+        var segment  = dot > 0 ? path[..dot] : path;
+        var rest     = dot > 0 ? path[(dot + 1)..] : null;
+
+        object? next = null;
+
+        if (obj is JsonElement je && je.ValueKind == JsonValueKind.Object)
+        {
+            foreach (var p in je.EnumerateObject())
+            {
+                if (!string.Equals(p.Name, segment, StringComparison.OrdinalIgnoreCase)) continue;
+                next = p.Value.ValueKind == JsonValueKind.String ? p.Value.GetString() : (object)p.Value;
+                break;
+            }
+        }
+        else if (obj is IDictionary<string, object?> dict)
+        {
+            var hit = dict.FirstOrDefault(kv =>
+                string.Equals(kv.Key, segment, StringComparison.OrdinalIgnoreCase));
+            next = hit.Value;
+        }
+        else
+        {
+            var prop = obj.GetType().GetProperty(segment,
+                System.Reflection.BindingFlags.Public |
+                System.Reflection.BindingFlags.Instance |
+                System.Reflection.BindingFlags.IgnoreCase);
+            next = prop?.GetValue(obj);
+        }
+
+        if (next is null) return null;
+        if (rest is null) return next;
+        return TraversePropertyPath(next, rest);
     }
 }

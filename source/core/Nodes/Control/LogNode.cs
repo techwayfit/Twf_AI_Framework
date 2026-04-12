@@ -77,7 +77,8 @@ public sealed class LogNode : BaseNode
         var messages = new List<string>();
         foreach (var key in keys)
         {
-            var val = input.Get<object>(key);
+            var val = NodeParameters.GetNestedValue(
+                input.Keys.ToDictionary(k => k, input.Get<object>), key);
             var display = val?.ToString() ?? "(null)";
             if (display.Length > 200) display = display[..200] + "...";
             context.Logger.Log(_level, "   {Key}: {Value}", key, display);

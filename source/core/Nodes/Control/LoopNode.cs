@@ -48,6 +48,11 @@ public sealed class LoopNode : BaseNode
     ];
 
     /// <inheritdoc/>
+    /// <remarks>
+    /// Control ports (not data keys):
+    ///   "body"   — connects to the first node of the per-item body chain (orange handle in UI).
+    ///   "output" — connects to the next step after the loop completes (grey handle in UI).
+    /// </remarks>
     public override IReadOnlyList<NodeData> DataOut =>
     [
         new(_outputKey,              typeof(List<WorkflowData>), Description: "Collected per-item WorkflowData results"),
