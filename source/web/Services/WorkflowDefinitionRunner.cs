@@ -138,7 +138,18 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "StartNode")
             {
-                // Pass-through — just follow the output connection
+                await onStep(new NodeStepEvent
+                {
+                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
+                });
+                await onStep(new NodeStepEvent
+                {
+                    EventType = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
+                });
                 if (!routing.TryGetValue((currentId, "output"), out var nextId))
                     break;
                 currentId = nextId;
@@ -147,6 +158,18 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "EndNode")
             {
+                await onStep(new NodeStepEvent
+                {
+                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
+                });
+                await onStep(new NodeStepEvent
+                {
+                    EventType = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
+                });
                 return (data, true, null, null); // success!
             }
 
@@ -231,6 +254,15 @@ public sealed class WorkflowDefinitionRunner
                 var loopItemKey = NodeParameters.GetString(nodeDef.Parameters, "loopItemKey")  ?? "__item__";
                 var maxIter     = NodeParameters.GetInt(nodeDef.Parameters,    "maxIterations");
 
+                await onStep(new NodeStepEvent
+                {
+                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                    InputData = new() { ["itemsKey"] = itemsKey },
+                    OutputData = [],
+                    Timestamp = DateTimeOffset.UtcNow
+                });
+
                 // Try typed get first; fall back to object and cast (handles List<T> → IEnumerable<object>)
                 var rawItems = (data.Get<IEnumerable<object>>(itemsKey)
                     ?? data.Get<object>(itemsKey) as IEnumerable<object>
@@ -240,6 +272,15 @@ public sealed class WorkflowDefinitionRunner
                 {
                     _logger.LogWarning("  ⚠ LoopNode '{Name}': key '{Key}' not found or empty — skipping loop.",
                         nodeDef.Name, itemsKey);
+                    await onStep(new NodeStepEvent
+                    {
+                        EventType    = "node_error", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                        NodeType     = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                        ErrorMessage = $"Key '{itemsKey}' not found or is not a collection — loop skipped.",
+                        InputData    = new() { ["itemsKey"] = itemsKey },
+                        OutputData   = [],
+                        Timestamp    = DateTimeOffset.UtcNow
+                    });
                     if (!routing.TryGetValue((currentId, "output"), out var loopSkipId)) break;
                     currentId = loopSkipId;
                     continue;
@@ -272,9 +313,20 @@ public sealed class WorkflowDefinitionRunner
                                 nodeMap, routing, definition, onStep);
 
                         if (!iterOk)
+                        {
+                            await onStep(new NodeStepEvent
+                            {
+                                EventType    = "node_error", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                                NodeType     = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
+                                ErrorMessage = $"Iteration {loopIdx} failed: {iterErr}",
+                                InputData    = new() { ["itemsKey"] = itemsKey },
+                                OutputData   = [],
+                                Timestamp    = DateTimeOffset.UtcNow
+                            });
                             return (data, false,
                                 $"LoopNode '{nodeDef.Name}' iteration {loopIdx} failed: {iterErr}",
                                 iterFailed ?? nodeDef.Name);
+                        }
 
                         // Write body changes back to parent context so subsequent iterations
                         // and post-loop nodes can read them.
@@ -288,7 +340,7 @@ public sealed class WorkflowDefinitionRunner
                 }
 
                 data = data.Clone()
-                    .Set(outputKey!, loopOutputs)
+                    .Set(outputKey, loopOutputs)
                     .Set("loop_iteration_count", rawItems.Count);
 
                 if (!string.IsNullOrEmpty(nodeDef.NodeId))
@@ -296,6 +348,19 @@ public sealed class WorkflowDefinitionRunner
                     data.Set($"{nodeDef.NodeId}.{outputKey}", loopOutputs);
                     data.Set($"{nodeDef.NodeId}.loop_iteration_count", rawItems.Count);
                 }
+
+                await onStep(new NodeStepEvent
+                {
+                    EventType  = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
+                    NodeType   = nodeDef.Type, NodeRefId = nodeDef.NodeId,
+                    InputData  = new() { ["itemsKey"] = itemsKey },
+                    OutputData = new()
+                    {
+                        [outputKey]              = loopOutputs,
+                        ["loop_iteration_count"] = rawItems.Count
+                    },
+                    Timestamp = DateTimeOffset.UtcNow
+                });
 
                 if (!routing.TryGetValue((currentId, "output"), out var loopNextId)) break;
                 currentId = loopNextId;
