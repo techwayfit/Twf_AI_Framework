@@ -9,15 +9,20 @@
  */
 import { useState, useRef, useEffect, useCallback } from 'react';
 
-export default function RunnerPanel({ workflowId, onNodeStateChange, onResetNodeStates }) {
+export default function RunnerPanel({ workflowId, onNodeStateChange, onEdgeActivate, onResetNodeStates }) {
   const [inputs, setInputs] = useState([{ key: '', value: '' }]);
   const [status, setStatus] = useState('idle'); // idle | running | done | error | stopped
   const [steps, setSteps] = useState([]);
   const abortRef = useRef(null);
 
-  // Keep a stable ref to the callback so the async SSE loop never captures a stale version
-  const onNodeStateRef = useRef(onNodeStateChange);
-  useEffect(() => { onNodeStateRef.current = onNodeStateChange; }, [onNodeStateChange]);
+  // Keep stable refs to callbacks so the async SSE loop never captures stale versions
+  const onNodeStateRef   = useRef(onNodeStateChange);
+  const onEdgeActivateRef = useRef(onEdgeActivate);
+  useEffect(() => { onNodeStateRef.current    = onNodeStateChange; }, [onNodeStateChange]);
+  useEffect(() => { onEdgeActivateRef.current = onEdgeActivate;    }, [onEdgeActivate]);
+
+  // Tracks the last node that completed so we can infer which edge was traversed
+  const lastDoneNodeRef = useRef(null);
 
   // ── Input helpers ──────────────────────────────────────────────────────────
   const addInput    = () => setInputs(s => [...s, { key: '', value: '' }]);
@@ -30,6 +35,7 @@ export default function RunnerPanel({ workflowId, onNodeStateChange, onResetNode
     onResetNodeStates();
     setSteps([]);
     setStatus('running');
+    lastDoneNodeRef.current = null;
 
     const initialData = {};
     inputs.forEach(({ key, value }) => { if (key.trim()) initialData[key.trim()] = value; });
@@ -48,15 +54,30 @@ export default function RunnerPanel({ workflowId, onNodeStateChange, onResetNode
 
       if (eventType === 'node_start') {
         onNodeStateRef.current(payload.nodeId, 'running');
+        // Activate the edge that leads into this node (inferred from last completed node)
+        if (lastDoneNodeRef.current) {
+          onEdgeActivateRef.current?.(lastDoneNodeRef.current, payload.nodeId, true);
+        }
+        // Update immediately so container nodes (LoopNode) that recurse into sub-walks
+        // have the correct source when the first body node fires its node_start.
+        lastDoneNodeRef.current = payload.nodeId;
         setSteps(s => [...s, { id: payload.nodeId, ...payload, stepType: 'node_start' }]);
       } else if (eventType === 'node_done') {
         onNodeStateRef.current(payload.nodeId, 'done');
+        onEdgeActivateRef.current?.(null, payload.nodeId, false); // deactivate incoming edge
+        lastDoneNodeRef.current = payload.nodeId;
         setSteps(s => s.map(st => st.id === payload.nodeId
           ? { ...st, ...payload, stepType: 'node_done' } : st));
       } else if (eventType === 'node_error') {
         onNodeStateRef.current(payload.nodeId, 'error');
+        onEdgeActivateRef.current?.(null, payload.nodeId, false); // deactivate incoming edge
+        lastDoneNodeRef.current = payload.nodeId;
         setSteps(s => s.map(st => st.id === payload.nodeId
           ? { ...st, ...payload, stepType: 'node_error' } : st));
+      } else if (eventType === 'loop_iteration_start') {
+        // Re-anchor to the LoopNode so the LoopNode→firstBodyNode edge animates each iteration.
+        // Body node states will naturally transition done→running when their node_start fires.
+        lastDoneNodeRef.current = payload.nodeId;
       } else if (eventType === 'workflow_done') {
         setStatus('done');
       } else if (eventType === 'workflow_error') {

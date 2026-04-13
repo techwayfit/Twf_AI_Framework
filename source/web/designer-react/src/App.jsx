@@ -265,11 +265,21 @@ function DesignerInner({ workflowId, mode }) {
     );
   }, [setNodes]);
 
+  const handleEdgeActivate = useCallback((sourceId, targetId, active) => {
+    setEdges((es) => es.map((e) => {
+      if (e.target === targetId && (sourceId === null || e.source === sourceId)) {
+        return { ...e, animated: active, className: active ? 'rf-edge-runner-active' : '' };
+      }
+      return e;
+    }));
+  }, [setEdges]);
+
   const handleResetNodeStates = useCallback(() => {
     setNodes((ns) =>
       ns.map((n) => ({ ...n, data: { ...n.data, runnerState: 'pending' } })),
     );
-  }, [setNodes]);
+    setEdges((es) => es.map((e) => ({ ...e, animated: false, className: '' })));
+  }, [setNodes, setEdges]);
 
   // ── Connections ────────────────────────────────────────────────────────────
   const onConnect = useCallback(
@@ -646,6 +656,7 @@ function DesignerInner({ workflowId, mode }) {
               <RunnerPanel
                 workflowId={workflowId}
                 onNodeStateChange={handleNodeStateChange}
+                onEdgeActivate={handleEdgeActivate}
                 onResetNodeStates={handleResetNodeStates}
               />
             </div>

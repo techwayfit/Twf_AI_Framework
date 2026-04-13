@@ -138,18 +138,8 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "StartNode")
             {
-                await onStep(new NodeStepEvent
-                {
-                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
-                });
-                await onStep(new NodeStepEvent
-                {
-                    EventType = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
-                });
+                await using var s = await NodeStepScope.StartAsync(nodeDef, [], false, false, onStep);
+                s.Complete([]);
                 if (!routing.TryGetValue((currentId, "output"), out var nextId))
                     break;
                 currentId = nextId;
@@ -158,18 +148,8 @@ public sealed class WorkflowDefinitionRunner
 
             if (nodeDef.Type is "EndNode")
             {
-                await onStep(new NodeStepEvent
-                {
-                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
-                });
-                await onStep(new NodeStepEvent
-                {
-                    EventType = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                    InputData = [], OutputData = [], Timestamp = DateTimeOffset.UtcNow
-                });
+                await using var s = await NodeStepScope.StartAsync(nodeDef, [], false, false, onStep);
+                s.Complete([]);
                 return (data, true, null, null); // success!
             }
 
@@ -254,14 +234,8 @@ public sealed class WorkflowDefinitionRunner
                 var loopItemKey = NodeParameters.GetString(nodeDef.Parameters, "loopItemKey")  ?? "__item__";
                 var maxIter     = NodeParameters.GetInt(nodeDef.Parameters,    "maxIterations");
 
-                await onStep(new NodeStepEvent
-                {
-                    EventType = "node_start", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType  = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                    InputData = new() { ["itemsKey"] = itemsKey },
-                    OutputData = [],
-                    Timestamp = DateTimeOffset.UtcNow
-                });
+                var loopInput = new Dictionary<string, object?> { ["itemsKey"] = itemsKey };
+                await using var loopScope = await NodeStepScope.StartAsync(nodeDef, loopInput, true, true, onStep);
 
                 // Try typed get first; fall back to object and cast (handles List<T> → IEnumerable<object>)
                 var rawItems = (data.Get<IEnumerable<object>>(itemsKey)
@@ -272,15 +246,7 @@ public sealed class WorkflowDefinitionRunner
                 {
                     _logger.LogWarning("  ⚠ LoopNode '{Name}': key '{Key}' not found or empty — skipping loop.",
                         nodeDef.Name, itemsKey);
-                    await onStep(new NodeStepEvent
-                    {
-                        EventType    = "node_error", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                        NodeType     = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                        ErrorMessage = $"Key '{itemsKey}' not found or is not a collection — loop skipped.",
-                        InputData    = new() { ["itemsKey"] = itemsKey },
-                        OutputData   = [],
-                        Timestamp    = DateTimeOffset.UtcNow
-                    });
+                    loopScope.Fail($"Key '{itemsKey}' not found or is not a collection — loop skipped.");
                     if (!routing.TryGetValue((currentId, "output"), out var loopSkipId)) break;
                     currentId = loopSkipId;
                     continue;
@@ -308,21 +274,23 @@ public sealed class WorkflowDefinitionRunner
 
                     if (hasBodyPort)
                     {
+                        // Signal the UI to re-anchor lastDoneNodeRef to the LoopNode so the
+                        // LoopNode→firstBodyNode edge re-animates at the start of each iteration.
+                        await onStep(new NodeStepEvent
+                        {
+                            EventType = "loop_iteration_start",
+                            NodeId    = nodeDef.Id,
+                            NodeName  = nodeDef.Name,
+                            NodeType  = nodeDef.Type,
+                        });
+
                         var (iterData, iterOk, iterErr, iterFailed) =
                             await WalkGraphAsync(bodyEntryId, itemData, context,
                                 nodeMap, routing, definition, onStep);
 
                         if (!iterOk)
                         {
-                            await onStep(new NodeStepEvent
-                            {
-                                EventType    = "node_error", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                                NodeType     = nodeDef.Type,  NodeRefId = nodeDef.NodeId,
-                                ErrorMessage = $"Iteration {loopIdx} failed: {iterErr}",
-                                InputData    = new() { ["itemsKey"] = itemsKey },
-                                OutputData   = [],
-                                Timestamp    = DateTimeOffset.UtcNow
-                            });
+                            loopScope.Fail($"Iteration {loopIdx} failed: {iterErr}");
                             return (data, false,
                                 $"LoopNode '{nodeDef.Name}' iteration {loopIdx} failed: {iterErr}",
                                 iterFailed ?? nodeDef.Name);
@@ -349,17 +317,10 @@ public sealed class WorkflowDefinitionRunner
                     data.Set($"{nodeDef.NodeId}.loop_iteration_count", rawItems.Count);
                 }
 
-                await onStep(new NodeStepEvent
+                loopScope.Complete(new()
                 {
-                    EventType  = "node_done", NodeId = nodeDef.Id, NodeName = nodeDef.Name,
-                    NodeType   = nodeDef.Type, NodeRefId = nodeDef.NodeId,
-                    InputData  = new() { ["itemsKey"] = itemsKey },
-                    OutputData = new()
-                    {
-                        [outputKey]              = loopOutputs,
-                        ["loop_iteration_count"] = rawItems.Count
-                    },
-                    Timestamp = DateTimeOffset.UtcNow
+                    [outputKey]              = loopOutputs,
+                    ["loop_iteration_count"] = rawItems.Count
                 });
 
                 if (!routing.TryGetValue((currentId, "output"), out var loopNextId)) break;
@@ -397,20 +358,8 @@ public sealed class WorkflowDefinitionRunner
                     .ToDictionary(kv => kv.Key, kv => kv.Value)
                 : new Dictionary<string, object?>();
 
-            // ── Notify UI: node is starting ───────────────────────────────────
-            await onStep(new NodeStepEvent
-            {
-                EventType       = "node_start",
-                NodeId          = nodeDef.Id,
-                NodeName        = nodeDef.Name,
-                NodeType        = nodeDef.Type,
-                NodeRefId       = nodeDef.NodeId,
-                InputData       = filteredInput,
-                OutputData      = new Dictionary<string, object?>(),
-                DataInConfigured  = hasDataIn,
-                DataOutConfigured = hasDataOut,
-                Timestamp       = DateTimeOffset.UtcNow
-            });
+            await using var scope = await NodeStepScope.StartAsync(
+                nodeDef, filteredInput, hasDataIn, hasDataOut, onStep);
 
             // ── Validate required input ports — after node_start so UI shows the error ──
             var missingRequired = node.DataIn
@@ -424,20 +373,7 @@ public sealed class WorkflowDefinitionRunner
                 var msg = $"Missing required input(s): {missing}";
                 _logger.LogError("  ✘ Node '{Name}' ({NodeId}): Missing required input(s): {Missing}",
                     nodeDef.Name, nodeDef.NodeId, missing);
-                await onStep(new NodeStepEvent
-                {
-                    EventType         = "node_error",
-                    NodeId            = nodeDef.Id,
-                    NodeName          = nodeDef.Name,
-                    NodeType          = nodeDef.Type,
-                    NodeRefId         = nodeDef.NodeId,
-                    ErrorMessage      = msg,
-                    InputData         = filteredInput,
-                    OutputData        = [],
-                    DataInConfigured  = hasDataIn,
-                    DataOutConfigured = hasDataOut,
-                    Timestamp         = DateTimeOffset.UtcNow
-                });
+                scope.Fail(msg);
                 return (data, false, $"Node '{nodeDef.Name}' ({nodeDef.NodeId}): {msg}", nodeDef.Name);
             }
 
@@ -471,58 +407,19 @@ public sealed class WorkflowDefinitionRunner
                         .ToDictionary(kv => kv.Key, kv => kv.Value)
                     : new Dictionary<string, object?>();
 
-                // ── Notify UI: node completed ─────────────────────────────────
-                await onStep(new NodeStepEvent
-                {
-                    EventType         = "node_done",
-                    NodeId            = nodeDef.Id,
-                    NodeRefId         = nodeDef.NodeId,
-                    NodeName          = nodeDef.Name,
-                    NodeType          = nodeDef.Type,
-                    InputData         = filteredInput,
-                    OutputData        = filteredOutput,
-                    DataInConfigured  = hasDataIn,
-                    DataOutConfigured = hasDataOut,
-                    Timestamp         = DateTimeOffset.UtcNow
-                });
+                scope.Complete(filteredOutput);
             }
             catch (Exception ex) when (opts.ContinueOnError)
             {
                 _logger.LogWarning(ex, "  ⚠ Node '{Name}' failed but ContinueOnError=true.", nodeDef.Name);
-                await onStep(new NodeStepEvent
-                {
-                    EventType         = "node_error",
-                    NodeId            = nodeDef.Id,
-                    NodeRefId         = nodeDef.NodeId,
-                    NodeName          = nodeDef.Name,
-                    NodeType          = nodeDef.Type,
-                    InputData         = filteredInput,
-                    OutputData        = new Dictionary<string, object?>(),
-                    DataInConfigured  = hasDataIn,
-                    DataOutConfigured = hasDataOut,
-                    ErrorMessage      = ex.Message,
-                    Timestamp         = DateTimeOffset.UtcNow
-                });
+                scope.Fail(ex.Message);
                 resultData    = opts.FallbackData ?? data;
                 activatedPort = "output";
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "  ✘ Node '{Name}' failed.", nodeDef.Name);
-                await onStep(new NodeStepEvent
-                {
-                    EventType         = "node_error",
-                    NodeId            = nodeDef.Id,
-                    NodeRefId         = nodeDef.NodeId,
-                    NodeName          = nodeDef.Name,
-                    NodeType          = nodeDef.Type,
-                    InputData         = filteredInput,
-                    OutputData        = new Dictionary<string, object?>(),
-                    DataInConfigured  = hasDataIn,
-                    DataOutConfigured = hasDataOut,
-                    ErrorMessage      = ex.Message,
-                    Timestamp    = DateTimeOffset.UtcNow
-                });
+                scope.Fail(ex.Message);
 
                 // Try the node's own "error" port first
                 if (routing.TryGetValue((currentId, "error"), out var nodeErrorId))
