@@ -2,69 +2,49 @@
 
 A visual workflow designer for creating and managing AI workflows using the TWF AI Framework.
 
-## Features
+## ?? Documentation
 
-### Visual Workflow Designer
-- **Drag-and-drop interface** for creating workflows
-- **Node-based visual programming** similar to n8n
-- **Connection management** with visual bezier curves
-- **Zoom and pan** controls for large workflows
-- **Property editing** for node configuration
+This project includes comprehensive documentation:
 
-### Node Types Available
-- **AI Nodes**: LLM, Prompt Builder, Embedding, Output Parser
-- **Control Nodes**: If, Switch, Loop
-- **Data Nodes**: Filter, Transform, Merge
-- **IO Nodes**: HTTP Request, File Read, File Write
+- **[DOCUMENTATION.md](./DOCUMENTATION.md)** - Complete technical documentation covering:
+  - Architecture overview
+  - Getting started guide
+  - Core components
+  - Features
+  - API reference
+  - Database schema
+  - Workflow execution
+  - Configuration
+  - Deployment
+  - Troubleshooting
 
-### Persistence Options
-The workflow designer supports two storage backends:
+- **[ARCHITECTURE.md](./ARCHITECTURE.md)** - Detailed architectural diagrams and design patterns:
+  - Layer architecture
+  - Service dependencies
+  - Workflow execution flow
+  - Data flow
+  - Database schema
+  - Design patterns (Repository, Factory, Strategy, etc.)
+  - Concurrency model
+  - Error handling architecture
 
-#### 1. JSON File Storage (Default)
-Workflows are saved as individual JSON files in a directory.
+- **[QUICK_REFERENCE.md](./QUICK_REFERENCE.md)** - Quick lookup guide for:
+  - Common tasks
+  - API endpoints
+  - Code snippets
+  - Database queries
+  - Troubleshooting tips
+  - Configuration examples
 
-```json
-{
-  "UseDatabase": false,
-  "WorkflowDataDirectory": "workflows"
-}
-```
+- **[API_SPECIFICATION.md](./API_SPECIFICATION.md)** - RESTful API specification:
+  - Workflow management endpoints
+  - Workflow execution endpoints
+  - Node type management endpoints
+  - Data models
+  - Error responses
+  - SSE streaming
 
-**Pros:**
-- Simple, no database setup required
-- Easy to version control
-- Human-readable format
-- Easy backup and migration
-
-**Cons:**
-- Slower for large numbers of workflows
-- No built-in search capabilities
-- Concurrent access limitations
-
-#### 2. SQLite Database
-Workflows are stored in a SQLite database.
-
-```json
-{
-  "UseDatabase": true,
-  "ConnectionStrings": {
-    "WorkflowDb": "Data Source=workflows.db"
-  }
-}
-```
-
-**Pros:**
-- Better performance for many workflows
-- Built-in indexing and search
-- ACID compliance
-- Better concurrent access
-
-**Cons:**
-- Requires database setup
-- Less human-readable
-- Slightly more complex deployment
-
-## Getting Started
+## ?? Quick Start
 
 ### Prerequisites
 - .NET 10.0 SDK
@@ -75,8 +55,10 @@ Workflows are stored in a SQLite database.
 1. **Configure storage** in `appsettings.json`:
    ```json
    {
-     "UseDatabase": false,
-     "WorkflowDataDirectory": "workflows"
+     "UseDatabase": true,
+     "ConnectionStrings": {
+       "WorkflowDb": "Data Source=workflows.db"
+     }
    }
    ```
 
@@ -88,162 +70,225 @@ Workflows are stored in a SQLite database.
 
 3. **Open your browser** to `https://localhost:5001`
 
-### Creating Your First Workflow
+## ? Features
 
-1. Click **"Create New Workflow"**
-2. Enter a name and description
-3. Click **"Create & Open Designer"**
-4. Drag nodes from the palette on the left
-5. Connect nodes by dragging from output ports to input ports
-6. Click **"Save"** to persist your workflow
+### Visual Workflow Designer
+- **Drag-and-drop interface** for creating workflows
+- **Node-based visual programming** similar to n8n
+- **Connection management** with visual bezier curves
+- **Zoom and pan** controls for large workflows
+- **Property editing** for node configuration
 
-## Workflow Designer Interface
+### Workflow Execution
+- **Real-time streaming** via Server-Sent Events (SSE)
+- **Retry logic** with exponential backoff
+- **Timeout handling** per node
+- **Error recovery** with workflow-level error routing
+- **Sub-workflow support** for hierarchical composition
 
-### Toolbar
-- **Zoom In/Out**: Control canvas zoom level
-- **Reset**: Reset zoom to 100%
-- **Save**: Save workflow to storage
-- **Delete**: Delete selected node or connection
-- **Back**: Return to workflow list
+### Node Type Management
+- **Database-driven node registry** with SQLite
+- **Dynamic node schema** generation
+- **CRUD operations** for node types
+- **Enable/disable** node types
 
-### Node Palette (Left Panel)
-Browse and drag available node types onto the canvas.
+### Advanced Features
+- **Loop nodes** for iterating over collections
+- **Branch nodes** for conditional routing
+- **Sub-workflow nodes** for reusable workflows
+- **Variable substitution** with `{{template}}` syntax
+- **Scoped outputs** for accessing node results
+- **Structured logging** with correlation IDs
 
-### Canvas (Center)
-Visual workspace for designing workflows:
-- **Drag nodes** to reposition
-- **Click nodes** to select and edit properties
-- **Drag from ports** to create connections
-- **Click connections** to select for deletion
+## ??? Architecture
 
-### Properties Panel (Right Panel)
-Edit properties of the selected node:
-- Node name
-- Node type (read-only)
-- Category (read-only)
-- Custom parameters (node-specific)
-
-## Keyboard Shortcuts
-
-- **Delete**: Delete selected node or connection
-- **Escape**: Deselect all
-- **Ctrl+S**: Save workflow
-
-## Project Structure
+The application follows a **clean architecture** pattern with clear separation of concerns:
 
 ```
-source/web/
-??? Controllers/
-?   ??? WorkflowController.cs    # MVC controller for workflow operations
-??? Data/
-?   ??? WorkflowDbContext.cs     # EF Core database context
-??? Models/
-?   ??? WorkflowDefinition.cs    # Workflow data models
-??? Repositories/
-?   ??? IWorkflowRepository.cs        # Repository interface
-?   ??? JsonFileWorkflowRepository.cs    # JSON file implementation
-?   ??? SqliteWorkflowRepository.cs      # SQLite implementation
-??? Views/
-?   ??? Workflow/
-?   ??? Index.cshtml         # Workflow list
-?       ??? Create.cshtml        # Create workflow
-?       ??? Designer.cshtml      # Visual designer
-?       ??? Details.cshtml       # Workflow details
-?       ??? Delete.cshtml        # Delete confirmation
-??? wwwroot/
-    ??? js/
-        ??? workflow-designer.js # Designer JavaScript logic
+Controllers ? Services ? Repositories ? Database
+     ?      ?            ?   ?
+ ??????????? Dependency Injection ??????
 ```
 
-## Workflow JSON Format
+**Key Services:**
+- `WorkflowDefinitionRunner` - Orchestrates workflow execution
+- `WorkflowGraphWalker` - Graph traversal and node execution
+- `NodeExecutor` - Individual node execution with retry/timeout
+- `NodeFactory` - Dynamic node instantiation
+- `VariableResolver` - Template variable substitution
 
-Workflows are saved in the following JSON format:
+For detailed architecture diagrams, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
+## ?? API Endpoints
+
+### Workflow Management
+- `GET /Workflow` - List workflows
+- `GET /Workflow/GetWorkflow/{id}` - Get workflow JSON
+- `POST /Workflow/SaveWorkflow` - Save workflow
+- `GET /Workflow/GetAvailableNodes` - Get node types
+
+### Workflow Execution
+- `POST /Workflow/Run/{id}` - Execute workflow (blocking)
+- `POST /Workflow/RunStream/{id}` - Execute workflow (streaming SSE)
+- `GET /Workflow/Runs/{id}` - View execution history
+- `GET /Workflow/RunDetail/{instanceId}` - View run details
+
+### Node Type Management
+- `GET /Node` - List node types
+- `POST /Node/Create` - Create node type
+- `POST /Node/Edit/{id}` - Update node type
+- `POST /Node/Delete/{id}` - Delete node type
+
+For complete API specification, see [API_SPECIFICATION.md](./API_SPECIFICATION.md).
+
+## ??? Database
+
+The application uses **SQLite** with **Entity Framework Core** for persistence.
+
+**Tables:**
+- `Workflows` - Workflow definitions
+- `NodeTypes` - Node type registry
+- `WorkflowInstances` - Execution history
+
+**Connection String:**
 ```json
 {
-  "id": "guid",
-  "name": "My Workflow",
-  "description": "Description",
-  "createdAt": "2024-01-01T00:00:00Z",
-  "updatedAt": "2024-01-01T00:00:00Z",
-  "nodes": [
-    {
- "id": "node-guid",
-      "name": "LLM Node",
-      "type": "LlmNode",
-      "category": "AI",
-      "parameters": {},
-    "position": { "x": 100, "y": 100 },
-      "color": "#4A90E2"
-    }
-  ],
-  "connections": [
-    {
-    "id": "connection-guid",
-      "sourceNodeId": "source-node-guid",
-      "sourcePort": "output",
-      "targetNodeId": "target-node-guid",
-      "targetPort": "input"
-    }
-  ],
-  "metadata": {
-    "author": "User Name",
- "tags": ["ai", "workflow"],
-    "version": 1,
-    "isActive": true
+  "ConnectionStrings": {
+  "WorkflowDb": "Data Source=workflows.db"
   }
 }
 ```
 
-## Switching Between Storage Backends
+## ?? Configuration
 
-To switch from JSON files to SQLite:
+### appsettings.json
 
-1. Update `appsettings.json`:
-   ```json
-   {
-     "UseDatabase": true
-   }
-   ```
+```json
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "UseDatabase": true,
+  "ConnectionStrings": {
+    "WorkflowDb": "Data Source=workflows.db"
+  }
+}
+```
 
-2. The database will be created automatically on first run
+## ??? Development
 
-3. To migrate existing workflows, use the migration utility (TODO)
+### Project Structure
 
-## API Endpoints
+```
+source/web/
+??? Controllers/     # MVC controllers
+??? Services/            # Business logic
+?   ??? GraphWalker/     # Workflow execution
+?   ??? NodeFactory/     # Node instantiation
+?   ??? Execution/       # Node execution
+?   ??? VariableResolution/ # Template variables
+??? Repositories/        # Data access
+??? Models/           # Data models
+??? Data/      # EF Core DbContext
+??? Middleware/       # Custom middleware
+??? Views/         # Razor views
+??? wwwroot/ # Static files
 
-The workflow controller exposes the following endpoints:
+```
 
-- `GET /Workflow` - List all workflows
-- `GET /Workflow/Details/{id}` - View workflow details
-- `GET /Workflow/Create` - Create workflow form
-- `POST /Workflow/Create` - Create new workflow
-- `GET /Workflow/Designer/{id}` - Open visual designer
-- `GET /Workflow/Edit/{id}` - Edit workflow metadata
-- `POST /Workflow/Edit/{id}` - Update workflow metadata
-- `GET /Workflow/Delete/{id}` - Delete confirmation
-- `POST /Workflow/Delete/{id}` - Delete workflow
-- `GET /Workflow/GetWorkflow/{id}` - Get workflow JSON (API)
-- `POST /Workflow/SaveWorkflow` - Save workflow JSON (API)
-- `GET /Workflow/GetAvailableNodes` - Get available node types (API)
+### Adding a Custom Node
 
-## Future Enhancements
+See [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#create-a-custom-node-c) for code examples.
 
-- [ ] Workflow execution engine
-- [ ] Real-time collaboration
-- [ ] Workflow templates library
-- [ ] Export/import workflows
-- [ ] Workflow versioning
-- [ ] Undo/redo support
-- [ ] Node parameter validation
-- [ ] Custom node creation UI
-- [ ] Workflow testing framework
-- [ ] Performance metrics dashboard
+## ?? Testing
 
-## Contributing
+```bash
+cd tests/TwfAiFramework.Tests
+dotnet test
+```
 
-Contributions are welcome! Please feel free to submit pull requests.
+## ?? Deployment
 
-## License
+### Docker
+
+```bash
+docker build -t twf-ai-framework-web .
+docker run -d -p 8080:80 -v /data:/app/data twf-ai-framework-web
+```
+
+### IIS
+
+1. Publish: `dotnet publish -c Release -o ./publish`
+2. Create IIS application pool (.NET CLR: No Managed Code)
+3. Point to publish directory
+
+For detailed deployment instructions, see [DOCUMENTATION.md](./DOCUMENTATION.md#deployment).
+
+## ?? Troubleshooting
+
+### Common Issues
+
+**"Workflow has no Start node"**
+- Add a Start node to your workflow in the designer
+
+**"Node type not found"**
+- Check that the node type is enabled in `/Node`
+- Verify the node type exists in the database
+
+**Database is locked**
+- Stop the application
+- Delete lock files
+- Restart
+
+For more troubleshooting tips, see [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#troubleshooting).
+
+## ?? Performance
+
+- **Async/await** throughout for maximum throughput
+- **HTTP client pooling** for AI API calls
+- **Database indexes** on frequently queried columns
+- **Scoped logging** to reduce verbosity
+- **Server-Sent Events** for real-time updates without polling
+
+## ?? Security
+
+- **HTTPS enforcement** in production
+- **Anti-forgery tokens** for state-changing requests
+- **Input validation** with model binding
+- **SQL injection prevention** via EF Core parameterization
+- **Exception details filtering** in production
+
+## ?? Contributing
+
+Contributions are welcome! Please:
+1. Fork the repository
+2. Create a feature branch
+3. Follow coding standards
+4. Add tests
+5. Update documentation
+6. Submit pull request
+
+## ?? License
 
 This project is part of the TWF AI Framework.
+
+## ?? Acknowledgments
+
+- Built with ASP.NET Core MVC
+- Uses Entity Framework Core
+- Inspired by n8n and Node-RED
+
+---
+
+For detailed documentation, see:
+- [DOCUMENTATION.md](./DOCUMENTATION.md) - Complete technical documentation
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - Architectural diagrams
+- [QUICK_REFERENCE.md](./QUICK_REFERENCE.md) - Quick lookup guide
+- [API_SPECIFICATION.md](./API_SPECIFICATION.md) - API specification
+
+**Version:** 1.0  
+**Framework:** .NET 10.0
