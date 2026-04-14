@@ -1,5 +1,6 @@
 using TwfAiFramework.Core;
 using TwfAiFramework.Core.Http;
+using TwfAiFramework.Core.Secrets;
 using TwfAiFramework.Nodes;
 using System.Text;
 using System.Text.Json;
@@ -15,7 +16,7 @@ namespace TwfAiFramework.Nodes.AI;
 ///   - "system_prompt"        : optional system instruction
 ///
 /// Writes to WorkflowData:
-///   - "llm_response"    : the model's text response
+///   - "llm_response"  : the model's text response
 ///   - "llm_model"       : model used
 ///   - "prompt_tokens"   : tokens used in prompt
 ///   - "completion_tokens": tokens used in completion
@@ -83,6 +84,7 @@ public sealed class LlmNode : BaseNode
 
     private readonly LlmConfig _config;
     private readonly IHttpClientProvider _httpProvider;
+    private readonly ISecretProvider _secretProvider;
 
     /// <summary>
     /// Initializes a new instance of the LlmNode with the specified configuration and HTTP provider.
@@ -90,12 +92,18 @@ public sealed class LlmNode : BaseNode
     /// <param name="name">The name of the node.</param>
     /// <param name="config">The configuration for the LLM.</param>
     /// <param name="httpProvider">The HTTP client provider for making API calls. If null, uses a default provider.</param>
-    public LlmNode(string name, LlmConfig config, IHttpClientProvider? httpProvider = null)
+    /// <param name="secretProvider">The secret provider for resolving API keys. If null, uses a default provider.</param>
+    public LlmNode(
+      string name, 
+        LlmConfig config, 
+        IHttpClientProvider? httpProvider = null,
+        ISecretProvider? secretProvider = null)
     {
         Name = name;
-        _config = config;
-        _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
-    }
+_config = config;
+    _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
+ _secretProvider = secretProvider ?? new DefaultSecretProvider();
+ }
 
     /// <summary>
     /// Backward compatibility constructor - accepts HttpClient and wraps it in a provider.
@@ -292,7 +300,7 @@ public sealed class LlmNode : BaseNode
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
 
-        AddAuthHeaders(request);
+        await AddAuthHeadersAsync(request);
 
         var httpClient = _httpProvider.GetClient(_config.ApiEndpoint);
         var response = await httpClient.SendAsync(request, ct);
@@ -302,19 +310,22 @@ public sealed class LlmNode : BaseNode
         return JsonDocument.Parse(content);
     }
 
-    private void AddAuthHeaders(HttpRequestMessage request)
-    {
-        if (string.IsNullOrEmpty(_config.ApiKey)) return;
+    private async Task AddAuthHeadersAsync(HttpRequestMessage request)
+{
+        // Resolve API key using secret provider
+   var apiKey = await _config.GetApiKeyAsync(_secretProvider);
+        
+        if (string.IsNullOrEmpty(apiKey)) return;
 
         if (_config.Provider == LlmProvider.Anthropic)
-        {
-            request.Headers.Add("x-api-key", _config.ApiKey);
-            request.Headers.Add("anthropic-version", "2023-06-01");
-        }
+    {
+         request.Headers.Add("x-api-key", apiKey);
+         request.Headers.Add("anthropic-version", "2023-06-01");
+    }
         else
         {
-            request.Headers.Authorization =
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _config.ApiKey);
+    request.Headers.Authorization =
+           new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         }
     }
 
@@ -326,11 +337,11 @@ public sealed class LlmNode : BaseNode
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
-    AddAuthHeaders(request);
+        await AddAuthHeadersAsync(request);
 
         var httpClient = _httpProvider.GetClient(_config.ApiEndpoint);
         var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-   response.EnsureSuccessStatusCode();
+        response.EnsureSuccessStatusCode();
 
         var sb = new StringBuilder();
         int promptTokens = 0, completionTokens = 0;
