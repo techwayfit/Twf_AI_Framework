@@ -1,4 +1,5 @@
 using TwfAiFramework.Core.Secrets;
+using TwfAiFramework.Core.Sanitization;
 
 namespace TwfAiFramework.Nodes.AI;
 /// <summary>
@@ -65,6 +66,25 @@ public sealed record LlmConfig
     public Action<string>? OnChunk { get; init; }
 
     /// <summary>
+    /// Whether to sanitize prompts before sending to LLM.
+    /// </summary>
+    /// <remarks>
+    /// When enabled, prompts are validated and sanitized according to
+    /// <see cref="SanitizationOptions"/> to prevent injection attacks.
+    /// Recommended for production use.
+    /// </remarks>
+    public bool SanitizePrompts { get; init; } = true;
+
+    /// <summary>
+    /// Options for prompt sanitization and validation.
+    /// </summary>
+    /// <remarks>
+    /// Only used when <see cref="SanitizePrompts"/> is true.
+    /// Defaults to <see cref="PromptSanitizationOptions.Default"/> if null.
+    /// </remarks>
+    public PromptSanitizationOptions? SanitizationOptions { get; init; }
+
+    /// <summary>
     /// Gets the effective API key, resolving secret references if needed.
     /// </summary>
     /// <param name="secretProvider">Optional secret provider for resolving references.</param>
@@ -112,13 +132,23 @@ public sealed record LlmConfig
     /// </summary>
     /// <param name="apiKeyReference">Secure API key reference.</param>
     /// <param name="model">Model name.</param>
-    /// <returns>LlmConfig instance.</returns>
-    public static LlmConfig OpenAISecure(SecretReference apiKeyReference, string model = "gpt-4o") => new()
+    /// <param name="sanitizationMode">Prompt sanitization mode.</param>
+    /// <returns>LlmConfig instance with sanitization enabled.</returns>
+    public static LlmConfig OpenAISecure(
+        SecretReference apiKeyReference, 
+        string model = "gpt-4o",
+        PromptSanitizationMode sanitizationMode = PromptSanitizationMode.EscapeSpecialChars) => new()
     {
         Provider = LlmProvider.OpenAI,
         Model = model,
         ApiKeyReference = apiKeyReference,
-        ApiEndpoint = "https://api.openai.com/v1/chat/completions"
+        ApiEndpoint = "https://api.openai.com/v1/chat/completions",
+        SanitizePrompts = true,
+        SanitizationOptions = new PromptSanitizationOptions
+        {
+            Mode = sanitizationMode,
+            ValidationLevel = PromptValidationLevel.Moderate
+        }
     };
 
     /// <summary>

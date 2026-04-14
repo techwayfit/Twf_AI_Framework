@@ -1,6 +1,7 @@
 using TwfAiFramework.Core;
 using TwfAiFramework.Core.Http;
 using TwfAiFramework.Core.Secrets;
+using TwfAiFramework.Core.Sanitization;
 using TwfAiFramework.Nodes;
 using System.Text;
 using System.Text.Json;
@@ -16,7 +17,7 @@ namespace TwfAiFramework.Nodes.AI;
 ///   - "system_prompt"        : optional system instruction
 ///
 /// Writes to WorkflowData:
-///   - "llm_response"  : the model's text response
+///   - "llm_response"    : the model's text response
 ///   - "llm_model"       : model used
 ///   - "prompt_tokens"   : tokens used in prompt
 ///   - "completion_tokens": tokens used in completion
@@ -85,6 +86,7 @@ public sealed class LlmNode : BaseNode
     private readonly LlmConfig _config;
     private readonly IHttpClientProvider _httpProvider;
     private readonly ISecretProvider _secretProvider;
+    private readonly IPromptSanitizer _promptSanitizer;
 
     /// <summary>
     /// Initializes a new instance of the LlmNode with the specified configuration and HTTP provider.
@@ -93,16 +95,19 @@ public sealed class LlmNode : BaseNode
     /// <param name="config">The configuration for the LLM.</param>
     /// <param name="httpProvider">The HTTP client provider for making API calls. If null, uses a default provider.</param>
     /// <param name="secretProvider">The secret provider for resolving API keys. If null, uses a default provider.</param>
+    /// <param name="promptSanitizer">The prompt sanitizer for input validation. If null, uses a default sanitizer.</param>
     public LlmNode(
       string name, 
         LlmConfig config, 
         IHttpClientProvider? httpProvider = null,
-        ISecretProvider? secretProvider = null)
+        ISecretProvider? secretProvider = null,
+  IPromptSanitizer? promptSanitizer = null)
     {
         Name = name;
 _config = config;
     _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
  _secretProvider = secretProvider ?? new DefaultSecretProvider();
+     _promptSanitizer = promptSanitizer ?? new DefaultPromptSanitizer();
  }
 
     /// <summary>
@@ -174,11 +179,28 @@ _config = config;
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
+        // Sanitize prompt if enabled in config
+        var sanitizedInput = input;
+        if (_config.SanitizePrompts && _config.SanitizationOptions != null)
+   {
+      var rawPrompt = input.GetString("prompt") ?? "";
+        if (!string.IsNullOrEmpty(rawPrompt))
+        {
+       var sanitized = _promptSanitizer.Sanitize(rawPrompt, _config.SanitizationOptions);
+         sanitizedInput = input.Clone().Set("prompt", sanitized);
+       
+      if (rawPrompt != sanitized)
+       {
+         nodeCtx.Log($"Prompt sanitized (original: {rawPrompt.Length} chars, sanitized: {sanitized.Length} chars)");
+    }
+      }
+        }
+
         // Build the messages list
-        var messages = BuildMessages(input, context);
+        var messages = BuildMessages(sanitizedInput, context);
 
         nodeCtx.Log($"Sending {messages.Count} messages to {_config.Model}");
-        nodeCtx.Log($"Last message: {messages.Last().Content[..Math.Min(100, messages.Last().Content.Length)]}...");
+   nodeCtx.Log($"Last message: {messages.Last().Content[..Math.Min(100, messages.Last().Content.Length)]}...");
 
         var requestBody = BuildRequestBody(messages);
 
