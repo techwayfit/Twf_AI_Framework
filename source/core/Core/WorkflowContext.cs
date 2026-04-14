@@ -1,14 +1,21 @@
 using TwfAiFramework.Tracking;
 using Microsoft.Extensions.Logging;
 using twf_ai_framework.Core.Models;
+using TwfAiFramework.Core.Extensions;
 
 namespace TwfAiFramework.Core;
 
 /// <summary>
-/// Immutable execution context shared across all nodes in a single workflow run.
-/// Provides logging, tracking, shared state, and cancellation support.
-/// Think of this as the "runtime environment" for the workflow.
+/// Execution context for a workflow run.
+/// Provides infrastructure (logging, tracking, cancellation) and scoped state management.
 /// </summary>
+/// <remarks>
+/// Refactored to follow Single Responsibility Principle:
+/// - Infrastructure concerns (logging, tracking) remain here
+/// - State management delegated to <see cref="IWorkflowState"/>
+/// - Domain logic (chat history) moved to extension methods
+/// - Service locator pattern removed (use proper DI instead)
+/// </remarks>
 public sealed class WorkflowContext
 {
     // ─── Identity ────────────────────────────────────────────────────────────
@@ -16,7 +23,7 @@ public sealed class WorkflowContext
     /// <summary>The name of the workflow (e.g., "CustomerSupportBot").</summary>
     public string WorkflowName { get; }
 
-    /// <summary>Unique ID for this specific execution run (UUID).</summary>
+    /// <summary>Unique ID for this specific execution run.</summary>
     public string RunId { get; }
 
     /// <summary>UTC timestamp when this run was started.</summary>
@@ -24,7 +31,7 @@ public sealed class WorkflowContext
 
     // ─── Infrastructure ──────────────────────────────────────────────────────
 
-    /// <summary>Structured logger. Automatically prefixes all messages with [WorkflowName][RunId].</summary>
+    /// <summary>Structured logger for workflow events.</summary>
     public ILogger Logger { get; }
 
     /// <summary>Execution tracker — records every node's start/end/status.</summary>
@@ -33,90 +40,106 @@ public sealed class WorkflowContext
     /// <summary>Cancellation token for the entire workflow run.</summary>
     public CancellationToken CancellationToken { get; }
 
-    // ─── State ───────────────────────────────────────────────────────────────
+    // ─── State Management ─────────────────────────────────────────────────────
 
     /// <summary>
-    /// Global state bag — survives across all nodes in the run.
-    /// Use for things like "accumulated chat history", "user session", "running totals".
-    /// Unlike WorkflowData (which is per-step), this persists for the entire run.
+    /// Workflow state for sharing data between nodes.
+    /// Use extension methods (e.g., <see cref="WorkflowStateChatExtensions.AppendMessage"/>)
+    /// for domain-specific operations.
     /// </summary>
-    private readonly Dictionary<string, object?> _globalState = new();
-
-    /// <summary>Services injected into the context (e.g., IHttpClientFactory, IVectorStore).</summary>
-    private readonly Dictionary<Type, object> _services = new();
+    public IWorkflowState State { get; }
 
     // ─── Constructor ─────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Creates a new workflow context for a workflow run.
+    /// </summary>
+    /// <param name="workflowName">The name of the workflow.</param>
+    /// <param name="logger">Logger for workflow events.</param>
+    /// <param name="tracker">Optional execution tracker (creates default if null).</param>
+    /// <param name="cancellationToken">Cancellation token for the workflow.</param>
     public WorkflowContext(
         string workflowName,
-        ILogger logger,
+     ILogger logger,
         ExecutionTracker? tracker = null,
         CancellationToken cancellationToken = default)
     {
+        if (string.IsNullOrWhiteSpace(workflowName))
+            throw new ArgumentException("Workflow name cannot be empty", nameof(workflowName));
+
         WorkflowName = workflowName;
         RunId = Guid.NewGuid().ToString("N")[..12].ToUpper();
         StartedAt = DateTime.UtcNow;
         Logger = new PrefixedLogger(logger, $"[{workflowName}][{RunId}]");
         Tracker = tracker ?? new ExecutionTracker();
         CancellationToken = cancellationToken;
+        State = new WorkflowState();
     }
 
-    // ─── Global State ─────────────────────────────────────────────────────────
+    // ─── Backward Compatibility Methods (Deprecated) ─────────────────────────
+    // These delegate to State for backward compatibility with existing code.
+    // New code should use context.State.Set() directly.
 
-    public void SetState<T>(string key, T value) => _globalState[key] = value;
+    /// <summary>
+    /// Stores a value in the workflow state.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.Set(key, value)</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.Set() instead")]
+    public void SetState<T>(string key, T value) => State.Set(key, value);
 
-    public T? GetState<T>(string key)
-    {
-        if (!_globalState.TryGetValue(key, out var val) || val is null) return default;
-        return val is T typed ? typed : default;
-    }
+    /// <summary>
+    /// Retrieves a value from the workflow state.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.Get&lt;T&gt;(key)</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.Get<T>() instead")]
+    public T? GetState<T>(string key) => State.Get<T>(key);
 
-    public bool HasState(string key) =>
-        _globalState.TryGetValue(key, out var v) && v is not null;
+    /// <summary>
+    /// Checks if a key exists in the workflow state.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.Has(key)</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.Has() instead")]
+    public bool HasState(string key) => State.Has(key);
 
-    // ─── Conversation Memory (chat history shortcut) ──────────────────────────
+    // ─── Chat History Methods (Backward Compatibility) ────────────────────────
+    // These delegate to extension methods for backward compatibility.
 
-    private const string ChatHistoryKey = "__chat_history__";
+    /// <summary>
+    /// Appends a message to the chat history.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.AppendMessage(message)</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.AppendMessage() extension method instead")]
+    public void AppendMessage(ChatMessage message) => State.AppendMessage(message);
 
-    public void AppendMessage(ChatMessage message)
-    {
-        var history = GetState<List<ChatMessage>>(ChatHistoryKey) ?? new();
-        history.Add(message);
-        SetState(ChatHistoryKey, history);
-    }
+    /// <summary>
+    /// Gets the chat history.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.GetChatHistory()</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.GetChatHistory() extension method instead")]
+    public List<ChatMessage> GetChatHistory() => State.GetChatHistory();
 
-    public List<ChatMessage> GetChatHistory() =>
-        GetState<List<ChatMessage>>(ChatHistoryKey) ?? new();
+    /// <summary>
+    /// Clears the chat history.
+    /// </summary>
+    /// <remarks>
+    /// ⚠️ Deprecated: Use <c>context.State.ClearChatHistory()</c> instead.
+    /// </remarks>
+    [Obsolete("Use context.State.ClearChatHistory() extension method instead")]
+    public void ClearChatHistory() => State.ClearChatHistory();
 
-    public void ClearChatHistory() => SetState(ChatHistoryKey, new List<ChatMessage>());
+    // ─── Service Locator (Removed) ────────────────────────────────────────────
+    // Service locator pattern removed - use proper dependency injection instead.
+    // If you need services in nodes, inject them through constructors.
 
-    // ─── Service Locator ─────────────────────────────────────────────────────
-
-    public void RegisterService<T>(T service) where T : notnull =>
-        _services[typeof(T)] = service;
-
-    public T GetService<T>() where T : notnull
-    {
-        if (_services.TryGetValue(typeof(T), out var svc) && svc is T typed)
-            return typed;
-        throw new InvalidOperationException(
-            $"Service '{typeof(T).Name}' not registered in WorkflowContext. " +
-            $"Call context.RegisterService<{typeof(T).Name}>(instance) before running the workflow.");
-    }
-
-    public bool HasService<T>() => _services.ContainsKey(typeof(T));
-
-    // ─── Builder Pattern ─────────────────────────────────────────────────────
-
-    public WorkflowContext WithService<T>(T service) where T : notnull
-    {
-        RegisterService(service);
-        return this;
-    }
-
-    public WorkflowContext WithState<T>(string key, T value)
-    {
-        SetState(key, value);
-        return this;
-    }
+    public override string ToString() => $"WorkflowContext('{WorkflowName}', RunId={RunId})";
 }
