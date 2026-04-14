@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Core;
+using TwfAiFramework.Core.ValueObjects;
 using TwfAiFramework.Nodes.AI;
 using TwfAiFramework.Nodes.Control;
 using TwfAiFramework.Nodes.Data;
@@ -55,8 +56,8 @@ public static class RagDocumentQA
             // 1. Chunk the document into overlapping pieces
             .AddNode(new ChunkTextNode(new ChunkConfig
             {
-                ChunkSize = 300,
-                Overlap = 50,
+                ChunkSize = ChunkSize.FromValue(300),
+                Overlap = ChunkOverlap.FromValue(50),
                 Strategy = ChunkStrategy.Sentence
             }))
 
@@ -190,10 +191,10 @@ public static class RagDocumentQA
 
                     // 6. Call LLM
                     .AddNode(new LlmNode("RAGAnswerer", llmConfig with
-                    {
-                        MaxTokens = 500,
-                        Temperature = 0.1f  // Low temp for factual Q&A
-                    }), NodeOptions.WithRetry(2).AndTimeout(TimeSpan.FromSeconds(30)))
+          {
+            MaxTokens = TokenCount.FromValue(500),
+       Temperature = Temperature.Deterministic  // Low temp for factual Q&A
+       }), NodeOptions.WithRetry(2).AndTimeout(TimeSpan.FromSeconds(30)))
 
                     // 7. Add metadata
                     .AddStep("EnrichResponse", (data, _) =>

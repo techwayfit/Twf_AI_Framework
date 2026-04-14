@@ -7,6 +7,59 @@ namespace TwfAiFramework.Nodes.Data;
 /// throws (stopping the pipeline) or sets an "is_valid" flag.
 /// Use for input validation, safety checks, and guardrails.
 /// </summary>
+/// <example>
+/// <code>
+/// // Example 1: Basic validation with throw on failure (default)
+/// var validator = new FilterNode("ValidateUserInput")
+///     .RequireNonEmpty("email")
+///     .RequireNonEmpty("username")
+///     .MaxLength("username", 50);
+///   
+/// var result = await validator.ExecuteAsync(userData, context);
+/// // Throws ValidationException if any rule fails
+/// 
+/// // Example 2: Soft validation (sets flag instead of throwing)
+/// var softValidator = new FilterNode("CheckOptionalData", throwOnFail: false)
+///     .RequireNonEmpty("company_name")
+///     .MaxLength("company_name", 100);
+///     
+/// var result = await softValidator.ExecuteAsync(optionalData, context);
+/// var isValid = result.Data.Get&lt;bool&gt;("is_valid");
+/// var errors = result.Data.Get&lt;List&lt;string&gt;&gt;("validation_errors");
+/// 
+/// // Example 3: Custom validation rules
+/// var ageValidator = new FilterNode("ValidateAge")
+///     .Custom("age", 
+///         data => data.Get&lt;int&gt;("age") >= 18, 
+///         "User must be 18 or older")
+///     .Custom("age", 
+///  data => data.Get&lt;int&gt;("age") <= 120, 
+///      "Age must be realistic");
+///         
+/// // Example 4: Complex business logic validation
+/// var orderValidator = new FilterNode("ValidateOrder")
+///     .RequireNonEmpty("order_id")
+///     .Require("total_amount")
+///     .Custom("total_amount", 
+///       data => data.Get&lt;decimal&gt;("total_amount") > 0, 
+///         "Order total must be positive")
+///     .Custom("items", 
+///         data => data.Get&lt;List&lt;object&gt;&gt;("items")?.Count > 0, 
+///         "Order must contain at least one item");
+/// 
+/// // Example 5: Use in workflow
+/// var workflow = Workflow.Create("UserRegistration")
+///     .AddNode(new FilterNode("ValidateInput")
+///      .RequireNonEmpty("email")
+///         .RequireNonEmpty("password")
+///  .MaxLength("password", 128)
+///         .Custom("email", 
+///   data => data.GetString("email")!.Contains("@"), 
+///      "Email must be valid"))
+///     .AddNode(new HttpNode("CreateAccount", httpConfig))
+///     .AddNode(new EmailNode("SendWelcome", emailConfig));
+/// </code>
+/// </example>
 public sealed class FilterNode : BaseNode
 {
     public override string Name { get; }

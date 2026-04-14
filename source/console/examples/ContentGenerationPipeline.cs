@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Core;
+using TwfAiFramework.Core.ValueObjects;
 using TwfAiFramework.Nodes;
 using TwfAiFramework.Nodes.AI;
 using TwfAiFramework.Nodes.Control;
@@ -33,8 +34,8 @@ public static class ContentGenerationPipeline
         var logger = logFactory.CreateLogger("ContentPipeline");
 
         var llm = LlmConfig.Anthropic(apiKey);
-        var fastLlm = llm with { MaxTokens = 300, Temperature = 0.8f };
-        var writingLlm = llm with { MaxTokens = 1500, Temperature = 0.75f };
+        var fastLlm = llm with { MaxTokens = TokenCount.FromValue(300), Temperature = Temperature.FromValue(0.8f) };
+        var writingLlm = llm with { MaxTokens = TokenCount.FromValue(1500), Temperature = Temperature.FromValue(0.75f) };
 
         // ─── Token usage tracker ──────────────────────────────────────────────
         var totalTokens = 0;
@@ -164,7 +165,7 @@ public static class ContentGenerationPipeline
                          .Set("system_prompt", "You are a LinkedIn thought leader. Write " +
                              "professional posts that establish authority and drive engagement.");
 
-                    var llmNode = new LlmNode("LinkedInLLM", fastLlm with { MaxTokens = 600 });
+                    var llmNode = new LlmNode("LinkedInLLM", fastLlm with { MaxTokens = TokenCount.FromValue(600) });
                     var result = await llmNode.ExecuteAsync(input, ctx);
 
                     return result.IsSuccess
@@ -189,7 +190,7 @@ public static class ContentGenerationPipeline
          .Set("system_prompt", "You are an email marketing expert. Write " +
    "high-converting newsletter content.");
 
-                    var llmNode = new LlmNode("EmailLLM", fastLlm with { MaxTokens = 400 });
+                    var llmNode = new LlmNode("EmailLLM", fastLlm with { MaxTokens = TokenCount.FromValue(400) });
                     var result = await llmNode.ExecuteAsync(input, ctx);
 
                     if (!result.IsSuccess) throw new Exception(result.ErrorMessage);

@@ -15,6 +15,100 @@ namespace TwfAiFramework.Nodes.Data;
 ///   - "{{http_response.data.id}}" (template braces are allowed)
 ///   - "parsed_output.items.0.name" (array index supported for JSON arrays)
 /// </summary>
+/// <example>
+/// <code>
+/// // Example 1: Simple key renaming
+/// var mapper = new DataMapperNode("RenameFields", new Dictionary&lt;string, string&gt;
+/// {
+///     ["input_name"] = "user_name",      // Rename input_name → user_name
+///     ["input_email"] = "email_address"  // Rename input_email → email_address
+/// });
+/// 
+/// var input = new WorkflowData()
+///     .Set("input_name", "John Doe")
+///     .Set("input_email", "john@example.com");
+///     
+/// var result = await mapper.ExecuteAsync(input, context);
+/// // Output: user_name="John Doe", email_address="john@example.com", input_name="John Doe", input_email="john@example.com"
+/// 
+/// // Example 2: Extract nested data
+/// var nestedMapper = new DataMapperNode("ExtractNested", new Dictionary&lt;string, string&gt;
+/// {
+///     ["customer_id"] = "response.data.customer.id",
+///     ["full_name"] = "response.data.customer.name",
+///["subscription"] = "response.data.plan.type"
+/// });
+/// 
+/// var apiResponse = new WorkflowData().Set("response", new
+/// {
+///     data = new
+///     {
+///         customer = new { id = "cust_123", name = "Jane Smith" },
+///     plan = new { type = "premium" }
+///     }
+/// });
+/// 
+/// var result = await nestedMapper.ExecuteAsync(apiResponse, context);
+/// // Output: customer_id="cust_123", full_name="Jane Smith", subscription="premium"
+/// 
+/// // Example 3: Default values for missing data
+/// var safeMapper = new DataMapperNode(
+/// "SafeMapping",
+///     mappings: new Dictionary&lt;string, string&gt; { ["country"] = "address.country" },
+///     defaultValues: new Dictionary&lt;string, object?&gt; { ["country"] = "US" }
+/// );
+/// 
+/// var incompleteData = new WorkflowData().Set("address", new { city = "Seattle" });
+/// var result = await safeMapper.ExecuteAsync(incompleteData, context);
+/// // Output: country="US" (fallback used)
+/// 
+/// // Example 4: Strict mode — fail on missing data
+/// var strictMapper = new DataMapperNode(
+///     "StrictMapping",
+///     mappings: new Dictionary&lt;string, string&gt; { ["required_field"] = "source.required" },
+///     throwOnMissing: true
+/// );
+/// 
+/// try
+/// {
+///     var result = await strictMapper.ExecuteAsync(emptyData, context);
+/// }
+/// catch (Exception ex)
+/// {
+///  // Throws exception if source.required is missing
+/// }
+/// 
+/// // Example 5: Clean output — remove unmapped fields
+/// var cleanMapper = new DataMapperNode(
+///     "CleanMapper",
+///   mappings: new Dictionary&lt;string, string&gt;
+///     {
+///         ["name"] = "user.name",
+///         ["email"] = "user.email"
+///     },
+///     removeUnmapped: true  // Only include mapped fields in output
+/// );
+/// 
+/// var messyInput = new WorkflowData()
+///     .Set("user", new { name = "Bob", email = "bob@test.com" })
+///     .Set("temp_value", "ignore_this")
+///   .Set("debug_info", "also_ignore");
+///     
+/// var result = await cleanMapper.ExecuteAsync(messyInput, context);
+/// // Output: ONLY name="Bob" and email="bob@test.com" (other keys removed)
+/// 
+/// // Example 6: Use in workflow (API response transformation)
+/// var workflow = Workflow.Create("ProcessAPI")
+///     .AddNode(new HttpNode("FetchData", httpConfig))
+///     .AddNode(new DataMapperNode("TransformResponse", new Dictionary&lt;string, string&gt;
+/// {
+///         ["user_id"] = "response.body.data.id",
+///         ["user_name"] = "response.body.data.attributes.name",
+///  ["created_at"] = "response.body.data.attributes.createdAt"
+///     }))
+///     .AddNode(new DbQueryNode("SaveUser", dbConfig));
+/// </code>
+/// </example>
 public sealed class DataMapperNode : BaseNode
 {
     public override string Name { get; }

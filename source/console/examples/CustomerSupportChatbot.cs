@@ -1,5 +1,6 @@
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Core;
+using TwfAiFramework.Core.ValueObjects;
 using TwfAiFramework.Nodes.AI;
 using TwfAiFramework.Nodes.Control;
 using TwfAiFramework.Nodes.Data;
@@ -58,7 +59,7 @@ public static class CustomerSupportChatbot
                 promptTemplate: """Classify if this customer message is safe to respond to. Message: "{{user_message}}" Respond ONLY with JSON: {"is_safe": true/false, "reason": "brief reason"}""",
                 systemTemplate: "You are a content safety classifier. Be concise."
             ))
-            .AddNode(new LlmNode("SafetyChecker", llm with { MaxTokens = 100 }),
+            .AddNode(new LlmNode("SafetyChecker", llm with { MaxTokens = TokenCount.FromValue(100) }),
                 NodeOptions.WithRetry(2))
             .AddNode(OutputParserNode.WithMapping("SafetyParser",
             ("is_safe", "is_safe"),
@@ -71,7 +72,7 @@ public static class CustomerSupportChatbot
                         name: "SentimentAnalyzer",
                         promptTemplate: "Analyze the sentiment: \"{{user_message}}\". " +
                         "JSON: {\"sentiment\": \"positive|neutral|negative|angry\", \"score\": 1-10}"))
-                    .AddNode(new LlmNode("SentimentAnalyzer", llm with { MaxTokens = 100 }))
+                    .AddNode(new LlmNode("SentimentAnalyzer", llm with { MaxTokens = TokenCount.FromValue(100) }))
                     .AddNode(OutputParserNode.WithMapping("SentimentParser",
                         ("sentiment", "sentiment"),
                         ("score", "anger_score")))

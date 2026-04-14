@@ -14,9 +14,119 @@ namespace TwfAiFramework.Nodes.AI;
 ///   - Keys matching {{variable}} names in the template
 ///
 /// Writes to WorkflowData:
-///   - "prompt" : the fully substituted prompt string
+/// - "prompt" : the fully substituted prompt string
 ///   - "system_prompt" : if a system template is also provided
 /// </summary>
+/// <example>
+/// <code>
+/// // Example 1: Simple template substitution
+/// var promptNode = new PromptBuilderNode(
+///     "BuildGreeting",
+///     promptTemplate: "Hello {{name}}, welcome to {{company}}!"
+/// );
+/// 
+/// var input = new WorkflowData()
+///     .Set("name", "Alice")
+///     .Set("company", "TechCorp");
+///
+/// var result = await promptNode.ExecuteAsync(input, context);
+/// var prompt = result.Data.GetString("prompt");
+/// // Output: "Hello Alice, welcome to TechCorp!"
+/// 
+/// // Example 2: System + User prompt for LLM
+/// var chatNode = new PromptBuilderNode(
+///     "ChatPrompt",
+///     promptTemplate: "User question: {{question}}",
+///     systemTemplate: "You are a {{role}}. {{instructions}}"
+/// );
+/// 
+/// var chatInput = new WorkflowData()
+///     .Set("question", "What is .NET?")
+///     .Set("role", "senior software engineer")
+///     .Set("instructions", "Answer concisely with code examples.");
+/// 
+/// var result = await chatNode.ExecuteAsync(chatInput, context);
+/// var userPrompt = result.Data.GetString("prompt");
+/// var systemPrompt = result.Data.GetString("system_prompt");
+/// // prompt: "User question: What is .NET?"
+/// // system_prompt: "You are a senior software engineer. Answer concisely with code examples."
+/// 
+/// // Example 3: Static variables (constants)
+/// var templateNode = new PromptBuilderNode(
+///     "StaticTemplate",
+///  promptTemplate: "Translate '{{text}}' to {{language}}",
+///   staticVariables: new Dictionary&lt;string, object?&gt;
+///     {
+///         ["language"] = "French"  // Always use French
+///     }
+/// );
+/// 
+/// var input = new WorkflowData().Set("text", "Hello world");
+/// var result = await templateNode.ExecuteAsync(input, context);
+/// // prompt: "Translate 'Hello world' to French"
+/// 
+/// // Example 4: Complex multi-variable template
+/// var summaryNode = new PromptBuilderNode(
+///  "SummarizeArticle",
+///     promptTemplate: """
+///         Summarize this article:
+///         Title: {{title}}
+/// Author: {{author}}
+///         Content: {{content}}
+///         
+///       Target audience: {{audience}}
+///    Max length: {{max_words}} words
+///      """,
+///     systemTemplate: "You are an expert content editor."
+/// );
+/// 
+/// var article = new WorkflowData()
+///     .Set("title", "AI in Healthcare")
+///     .Set("author", "Dr. Smith")
+///   .Set("content", "Long article text here...")
+///     .Set("audience", "medical professionals")
+///     .Set("max_words", "150");
+/// 
+/// // Example 5: Use in LLM workflow
+/// var workflow = Workflow.Create("ChatBot")
+///   .AddNode(new PromptBuilderNode(
+///      "BuildPrompt",
+///         promptTemplate: "{{user_message}}",
+///     systemTemplate: "You are a {{persona}}. {{tone}}"
+/// ))
+///     .AddNode(new LlmNode("GenerateResponse", llmConfig))
+///     .AddNode(new OutputParserNode("ParseJSON"));
+/// 
+/// var chat = new WorkflowData()
+///     .Set("user_message", "Explain quantum computing")
+///     .Set("persona", "physics professor")
+///     .Set("tone", "Use simple analogies for beginners.");
+///     
+/// var result = await workflow.RunAsync(chat);
+/// 
+/// // Example 6: Missing variable handling
+/// var node = new PromptBuilderNode("Test", "Hello {{missing_var}}!");
+/// var input = new WorkflowData(); // no "missing_var" key
+/// var result = await node.ExecuteAsync(input, context);
+/// var prompt = result.Data.GetString("prompt");
+/// // Output: "Hello {{MISSING:missing_var}}!" (shows what's missing)
+/// 
+/// // Example 7: Load templates from files
+/// var fileNode = PromptBuilderNode.FromFile(
+///     "LoadedPrompt",
+///     templatePath: "prompts/system.txt",
+///     systemPath: "prompts/user.txt"
+/// );
+/// 
+/// // Example 8: Factory methods
+/// var simplePrompt = PromptBuilderNode.Simple("Quick", "Summarize: {{text}}");
+/// var withSystem = PromptBuilderNode.WithSystem(
+///     "Detailed",
+///     prompt: "Translate: {{text}}",
+///     system: "You are a professional translator."
+/// );
+/// </code>
+/// </example>
 public sealed class PromptBuilderNode : BaseNode
 {
     public override string Name { get; }

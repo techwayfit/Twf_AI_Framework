@@ -17,6 +17,143 @@ namespace TwfAiFramework.Nodes.AI;
 ///   - The extracted JSON fields as individual keys
 ///   - "parsed_output" : the full parsed object
 /// </summary>
+/// <example>
+/// <code>
+/// // Example 1: Auto-parse LLM JSON response
+/// var parser = new OutputParserNode("ParseResponse");
+/// 
+/// var llmOutput = new WorkflowData().Set("llm_response", """
+///   {
+/// "sentiment": "positive",
+///   "confidence": 0.95,
+///  "entities": ["product", "pricing"]
+///     }
+///     """);
+/// 
+/// var result = await parser.ExecuteAsync(llmOutput, context);
+/// var sentiment = result.Data.Get&lt;string&gt;("sentiment");      // "positive"
+/// var confidence = result.Data.Get&lt;double&gt;("confidence");    // 0.95
+/// var entities = result.Data.Get&lt;List&lt;object&gt;&gt;("entities"); // ["product", "pricing"]
+/// var fullJson = result.Data.Get&lt;Dictionary&lt;string, object?&gt;&gt;("parsed_output");
+/// 
+/// // Example 2: Extract from markdown code fence
+/// var fencedParser = new OutputParserNode("ParseFenced");
+/// 
+/// var llmWithMarkdown = new WorkflowData().Set("llm_response", """
+///     Here's the analysis you requested:
+///     
+///     ```json
+///     {
+///     "summary": "Great product",
+///         "score": 8.5,
+///      "recommend": true
+///     }
+///   ```
+///  
+///     This shows the user is satisfied.
+///     """);
+/// 
+/// var result = await fencedParser.ExecuteAsync(llmWithMarkdown, context);
+/// var summary = result.Data.Get&lt;string&gt;("summary");     // "Great product"
+/// var score = result.Data.Get&lt;double&gt;("score");         // 8.5
+/// var recommend = result.Data.Get&lt;bool&gt;("recommend"); // true
+/// 
+/// // Example 3: Field mapping (rename JSON keys)
+/// var mappingParser = new OutputParserNode(
+///   "MapFields",
+///   fieldMapping: new Dictionary&lt;string, string&gt;
+///     {
+///         ["sentiment"] = "user_sentiment",    // Rename sentiment → user_sentiment
+///       ["score"] = "confidence_level"    // Rename score → confidence_level
+///     }
+/// );
+/// 
+/// var llmJson = new WorkflowData().Set("llm_response", """
+/// {"sentiment": "negative", "score": 0.82}
+/// """);
+/// 
+/// var result = await mappingParser.ExecuteAsync(llmJson, context);
+/// var sentiment = result.Data.Get&lt;string&gt;("user_sentiment");     // "negative"
+/// var confidence = result.Data.Get&lt;double&gt;("confidence_level");  // 0.82
+/// // Note: original keys are NOT added to WorkflowData when using fieldMapping
+/// 
+/// // Example 4: Strict mode (fail on invalid JSON)
+/// var strictParser = OutputParserNode.Strict("StrictParse");
+/// 
+/// var invalidJson = new WorkflowData().Set("llm_response", "This is not JSON");
+/// 
+/// try
+/// {
+///     var result = await strictParser.ExecuteAsync(invalidJson, context);
+/// }
+/// catch (InvalidOperationException ex)
+/// {
+/// // Throws exception: "OutputParser: Could not extract JSON from LLM response..."
+/// }
+/// 
+/// // Example 5: Lenient mode (pass-through on failure)
+/// var lenientParser = new OutputParserNode("Lenient", strict: false);
+/// 
+/// var noJson = new WorkflowData()
+///     .Set("llm_response", "I couldn't generate JSON for that request.");
+/// 
+/// var result = await lenientParser.ExecuteAsync(noJson, context);
+/// // Result: original data unchanged, no exception thrown
+/// // Logs: "⚠️  No JSON found in response — passing data through unchanged"
+/// 
+/// // Example 6: Convenience factory with field mapping
+/// var factoryParser = OutputParserNode.WithMapping(
+///  "MapSpecific",
+///     ("title", "article_title"),
+///     ("author", "article_author"),
+///     ("published", "publish_date")
+/// );
+/// 
+/// var article = new WorkflowData().Set("llm_response", """
+/// {
+///     "title": "AI Trends 2025",
+///   "author": "Jane Doe",
+///         "published": "2025-01-15"
+///  }
+/// """);
+/// 
+/// var result = await factoryParser.ExecuteAsync(article, context);
+/// var title = result.Data.Get&lt;string&gt;("article_title");
+/// var author = result.Data.Get&lt;string&gt;("article_author");
+/// var date = result.Data.Get&lt;string&gt;("publish_date");
+/// 
+/// // Example 7: Use in LLM workflow
+/// var workflow = Workflow.Create("StructuredExtraction")
+///     .AddNode(new PromptBuilderNode("BuildPrompt", 
+///      "Extract: {{text}}\nReturn JSON: {\"category\": \"...\", \"priority\": 1-5}"))
+///     .AddNode(new LlmNode("ExtractData", llmConfig))
+///     .AddNode(new OutputParserNode("ParseJSON"))
+///  .AddNode(new FilterNode("ValidateParsed")
+///   .Require("category")
+///         .Custom("priority", 
+///   data => data.Get&lt;int&gt;("priority") >= 1 && data.Get&lt;int&gt;("priority") <= 5,
+///             "Priority must be 1-5"));
+/// 
+/// var input = new WorkflowData().Set("text", "URGENT: Server down!");
+/// var result = await workflow.RunAsync(input);
+/// var category = result.Data.Get&lt;string&gt;("category");
+/// var priority = result.Data.Get&lt;int&gt;("priority");
+/// 
+/// // Example 8: Handle LLM that returns array
+/// var arrayParser = new OutputParserNode("ParseArray");
+/// 
+/// var llmArray = new WorkflowData().Set("llm_response", """
+///     [
+// {"name": "Item 1", "value": 10},
+///      {"name": "Item 2", "value": 20}
+///     ]
+///     """);
+/// 
+/// var result = await arrayParser.ExecuteAsync(llmArray, context);
+/// var items = result.Data.Get&lt;List&lt;object&gt;&gt;("parsed_output");
+/// // Access array items from parsed_output
+/// </code>
+/// </example>
 public sealed class OutputParserNode : BaseNode
 {
     private readonly string _name;
