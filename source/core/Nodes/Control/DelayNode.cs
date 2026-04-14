@@ -63,7 +63,7 @@ public sealed class DelayNode : BaseNode
         nodeCtx.Log($"Waiting {_delay.TotalMilliseconds}ms" +
                     (_reason is not null ? $" ({_reason})" : ""));
 
-        await Task.Delay(_delay, context.CancellationToken);
+        await Task.Delay(_delay, context.CancellationToken).ConfigureAwait(false);
         return input;
     }
 }

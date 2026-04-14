@@ -8,6 +8,7 @@ using TwfAiFramework.Web.Services.Execution;
 using TwfAiFramework.Web.Services.GraphWalker;
 using TwfAiFramework.Web.Middleware;
 using TwfAiFramework.Web.Services.Database;
+using TwfAiFramework.Core.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -45,6 +46,15 @@ builder.Services.AddControllersWithViews()
 // Register global exception handler and ProblemDetails support
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
+
+// Register pooled HTTP client provider (optimized for AI API calls)
+builder.Services.AddSingleton<IHttpClientProvider>(sp =>
+{
+    var logger = sp.GetRequiredService<ILogger<PooledHttpClientProvider>>();
+    return new PooledHttpClientProvider(
+        clientLifetime: TimeSpan.FromMinutes(2), // DNS refresh every 2 minutes
+        logger: logger);
+});
 
 // Register workflow execution services (Refactored architecture)
 builder.Services.AddSingleton<IVariableResolver, TemplateVariableResolver>();

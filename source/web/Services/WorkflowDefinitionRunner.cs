@@ -29,8 +29,8 @@ _graphWalker = graphWalker;
 
     /// <summary>
 /// Execute the workflow and fire <paramref name="onStep"/> before and after each node.
-    /// Use this overload when streaming real-time progress to a UI (e.g. Server-Sent Events).
-    /// </summary>
+/// Use this overload when streaming real-time progress to a UI (e.g. Server-Sent Events).
+/// </summary>
     public async Task<WorkflowRunResult> RunWithCallbackAsync(
         WorkflowDefinition definition,
         WorkflowData? initialData,
@@ -86,7 +86,7 @@ foreach (var (key, value) in definition.Variables)
    };
 
     // Execute the workflow graph
-   var walkResult = await _graphWalker.WalkAsync(walkConfig);
+   var walkResult = await _graphWalker.WalkAsync(walkConfig).ConfigureAwait(false);
 
         var duration = DateTime.UtcNow - startTime;
 

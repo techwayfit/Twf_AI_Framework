@@ -54,7 +54,7 @@ public abstract class BaseNode : INode
         {
             context.CancellationToken.ThrowIfCancellationRequested();
 
-            var output = await RunAsync(data, context, nodeCtx);
+            var output = await RunAsync(data, context, nodeCtx).ConfigureAwait(false);
 
             var duration = DateTime.UtcNow - startedAt;
             context.Logger.LogInformation(
@@ -127,7 +127,7 @@ public abstract class SimpleTransformNode : BaseNode
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
         var value = input.Get<object>(InputKey);
-        var result = await TransformAsync(value, context);
+        var result = await TransformAsync(value, context).ConfigureAwait(false);
         return input.Clone().Set(OutputKey, result);
     }
 }

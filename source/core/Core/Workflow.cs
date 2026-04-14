@@ -166,7 +166,7 @@ public sealed class Workflow
 
         foreach (var step in _steps)
         {
-            var stepResult = await ExecuteStepAsync(step, current, ctx);
+            var stepResult = await ExecuteStepAsync(step, current, ctx).ConfigureAwait(false);
             allResults.AddRange(stepResult.Results);
 
             if (stepResult.IsSuccess)
@@ -209,16 +209,16 @@ public sealed class Workflow
         switch (step.Type)
         {
             case StepType.Node:
-                return await ExecuteNodeStepAsync(step, data, ctx);
+                return await ExecuteNodeStepAsync(step, data, ctx).ConfigureAwait(false);
 
             case StepType.Branch:
-                return await ExecuteBranchStepAsync(step, data, ctx);
+                return await ExecuteBranchStepAsync(step, data, ctx).ConfigureAwait(false);
 
             case StepType.Parallel:
-                return await ExecuteParallelStepAsync(step, data, ctx);
+                return await ExecuteParallelStepAsync(step, data, ctx).ConfigureAwait(false);
 
             case StepType.Loop:
-                return await ExecuteLoopStepAsync(step, data, ctx);
+                return await ExecuteLoopStepAsync(step, data, ctx).ConfigureAwait(false);
 
             default:
                 throw new InvalidOperationException($"Unknown step type: {step.Type}");
@@ -257,11 +257,11 @@ public sealed class Workflow
                 cts.CancelAfter(opts.Timeout.Value);
                 var timeoutCtx = new WorkflowContext(ctx.WorkflowName, _logger,
                     ctx.Tracker, cts.Token);
-                result = await node.ExecuteAsync(data, timeoutCtx);
+                result = await node.ExecuteAsync(data, timeoutCtx).ConfigureAwait(false);
             }
             else
             {
-                result = await node.ExecuteAsync(data, ctx);
+                result = await node.ExecuteAsync(data, ctx).ConfigureAwait(false);
             }
 
             if (result.IsSuccess || attempts >= maxAttempts) break;
@@ -273,7 +273,7 @@ public sealed class Workflow
                 "🔄 [{Node}] Attempt {Attempt}/{Max} failed. Retrying in {Delay}ms...",
                 node.Name, attempts, maxAttempts, delay.TotalMilliseconds);
 
-            await Task.Delay(delay, ctx.CancellationToken);
+            await Task.Delay(delay, ctx.CancellationToken).ConfigureAwait(false);
         }
 
         ctx.Tracker.CompleteNode(record, result);
@@ -310,7 +310,7 @@ public sealed class Workflow
             return StepExecutionResult.Ok(data, Array.Empty<NodeResult>());
         }
 
-        var branchResult = await pipeline.RunAsync(data, ctx);
+        var branchResult = await pipeline.RunAsync(data, ctx).ConfigureAwait(false);
         if (branchResult.IsSuccess)
             return StepExecutionResult.Ok(branchResult.Data, branchResult.NodeResults.ToList());
         return StepExecutionResult.Fail(branchResult.NodeResults.Last(), data);
@@ -323,7 +323,7 @@ public sealed class Workflow
         ctx.Logger.LogInformation("⚡ Running {Count} nodes in parallel", nodes.Length);
 
         var tasks = nodes.Select(n => n.ExecuteAsync(data.Clone(), ctx)).ToArray();
-        var results = await Task.WhenAll(tasks);
+        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
 
         var merged = data.Clone();
         var allNodeResults = new List<NodeResult>();
@@ -361,7 +361,7 @@ public sealed class Workflow
                 .Set("__loop_index__", i)
                 .Set("__loop_total__", items.Count);
 
-            var loopResult = await step.LoopBody!.RunAsync(itemData, ctx);
+            var loopResult = await step.LoopBody!.RunAsync(itemData, ctx).ConfigureAwait(false);
             allResults.AddRange(loopResult.NodeResults);
 
             if (loopResult.IsFailure)
