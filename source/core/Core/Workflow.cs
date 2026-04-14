@@ -1,87 +1,115 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using twf_ai_framework.Core.Models;
-using twf_ai_framework.Nodes;
 
 namespace TwfAiFramework.Core;
 
 /// <summary>
-/// Fluent builder for constructing and executing workflows.
-/// 
-/// Usage:
-///   var result = await Workflow.Create("MyBot")
-///       .AddNode(new PromptBuilderNode(...))
-///       .AddNode(new LlmNode(config))
-///       .AddNode(new ResponseFormatterNode())
-///       .RunAsync(initialData);
+/// Facade for constructing and executing workflows.
+/// Delegates to <see cref="WorkflowBuilder"/> and <see cref="WorkflowExecutor"/> internally.
 /// </summary>
+/// <remarks>
+/// This class maintains backward compatibility with existing code.
+/// For new code, consider using <see cref="WorkflowBuilder"/> directly:
+/// 
+/// <code>
+/// // Old way (still works):
+/// var result = await Workflow.Create("MyBot")
+///     .AddNode(new PromptBuilderNode(...))
+///     .RunAsync(initialData);
+/// 
+/// // New way (recommended):
+/// var structure = WorkflowBuilder.Create("MyBot")
+///     .AddNode(new PromptBuilderNode(...))
+///     .Build();
+/// 
+/// var executor = new WorkflowExecutor();
+/// var result = await executor.ExecuteAsync(structure, initialData);
+/// </code>
+/// </remarks>
 public sealed class Workflow
 {
-    private readonly string _name;
-    private readonly List<PipelineStep> _steps = new();
-    private ILogger _logger = NullLogger.Instance;
-    private Action<WorkflowResult>? _onComplete;
-    private Action<string, Exception?>? _onError;
-    private GlobalErrorStrategy _errorStrategy = GlobalErrorStrategy.StopOnFirstFailure;
+    private readonly WorkflowBuilder _builder;
 
-    public string Name => _name;
+    public string Name => _builder.Build().Name;
 
-    private Workflow(string name) { _name = name; }
+    private Workflow(string name)
+    {
+        _builder = WorkflowBuilder.Create(name);
+    }
 
     // ─── Entry Point ─────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Creates a new workflow builder.
+    /// </summary>
     public static Workflow Create(string workflowName) => new(workflowName);
 
     // ─── Configuration ────────────────────────────────────────────────────────
 
+    /// <summary>
+    /// Configures the logger for workflow execution.
+    /// </summary>
     public Workflow UseLogger(ILogger logger)
     {
-        _logger = logger;
+        _builder.UseLogger(logger);
         return this;
     }
 
+    /// <summary>
+    /// Registers a callback to be invoked when the workflow completes successfully.
+    /// </summary>
     public Workflow OnComplete(Action<WorkflowResult> handler)
     {
-        _onComplete = handler;
+        _builder.OnComplete(handler);
         return this;
     }
 
+    /// <summary>
+    /// Registers a callback to be invoked when the workflow encounters an error.
+    /// </summary>
     public Workflow OnError(Action<string, Exception?> handler)
     {
-        _onError = handler;
+        _builder.OnError(handler);
         return this;
     }
 
+    /// <summary>
+    /// Configures the workflow to continue executing even if nodes fail.
+    /// </summary>
     public Workflow ContinueOnErrors()
     {
-        _errorStrategy = GlobalErrorStrategy.ContinueOnFailure;
+        _builder.ContinueOnErrors();
         return this;
     }
 
     // ─── Node Registration ────────────────────────────────────────────────────
 
     /// <summary>Add a node with default options.</summary>
-    public Workflow AddNode(INode node) =>
-        AddNode(node, NodeOptions.Default);
+    public Workflow AddNode(INode node)
+    {
+        _builder.AddNode(node);
+        return this;
+    }
 
     /// <summary>Add a node with custom options (retry, timeout, condition).</summary>
     public Workflow AddNode(INode node, NodeOptions options)
     {
-        _steps.Add(new PipelineStep(StepType.Node, node, options));
+        _builder.AddNode(node, options);
         return this;
     }
 
     /// <summary>Add an inline lambda node without creating a class.</summary>
-    public Workflow AddStep(string name,
+    public Workflow AddStep(
+        string name,
         Func<WorkflowData, WorkflowContext, Task<WorkflowData>> func,
         NodeOptions? options = null)
     {
-        var node = new LambdaNode(name, func);
-        _steps.Add(new PipelineStep(StepType.Node, node, options ?? NodeOptions.Default));
+        _builder.AddStep(name, func, options);
         return this;
     }
 
-    // ─── Branching ───────────────────────────────────────────────────────────
+    // ─── Control Flow ─────────────────────────────────────────────────────────
 
     /// <summary>
     /// Conditional branching — like an IF node in n8n.
@@ -93,26 +121,12 @@ public sealed class Workflow
         Action<Workflow> trueBranch,
         Action<Workflow>? falseBranch = null)
     {
-        var truePipeline = Create($"{_name}/Branch:True");
-        trueBranch(truePipeline);
-
-        Workflow? falsePipeline = null;
-        if (falseBranch is not null)
-        {
-            falsePipeline = Create($"{_name}/Branch:False");
-            falseBranch(falsePipeline);
-        }
-
-        _steps.Add(new PipelineStep(StepType.Branch)
-        {
-            BranchCondition = condition,
-            TrueBranch = truePipeline,
-            FalseBranch = falsePipeline
-        });
+        _builder.Branch(
+            condition,
+            tb => trueBranch(new Workflow(tb)),
+            falseBranch == null ? null : fb => falseBranch(new Workflow(fb)));
         return this;
     }
-
-    // ─── Parallel Execution ───────────────────────────────────────────────────
 
     /// <summary>
     /// Run multiple nodes in parallel. Each receives a clone of the current data.
@@ -120,11 +134,9 @@ public sealed class Workflow
     /// </summary>
     public Workflow Parallel(params INode[] nodes)
     {
-        _steps.Add(new PipelineStep(StepType.Parallel) { ParallelNodes = nodes });
+        _builder.Parallel(nodes);
         return this;
     }
-
-    // ─── Loop ─────────────────────────────────────────────────────────────────
 
     /// <summary>
     /// Iterate over a list in WorkflowData and run a sub-workflow for each item.
@@ -135,242 +147,47 @@ public sealed class Workflow
         string outputKey,
         Action<Workflow> bodyBuilder)
     {
-        var bodyPipeline = Create($"{_name}/Loop");
-        bodyBuilder(bodyPipeline);
-
-        _steps.Add(new PipelineStep(StepType.Loop)
-        {
-            LoopItemsKey = itemsKey,
-            LoopOutputKey = outputKey,
-            LoopBody = bodyPipeline
-        });
+        _builder.ForEach(
+            itemsKey,
+            outputKey,
+            bb => bodyBuilder(new Workflow(bb)));
         return this;
     }
 
     // ─── Execution ────────────────────────────────────────────────────────────
 
-    public async Task<WorkflowResult> RunAsync(
+    /// <summary>
+    /// Executes the workflow.
+    /// </summary>
+    /// <param name="initialData">Initial workflow data (optional).</param>
+    /// <param name="context">Execution context (optional, will be created if null).</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>The workflow execution result.</returns>
+    public Task<WorkflowResult> RunAsync(
         WorkflowData? initialData = null,
         WorkflowContext? context = null,
         CancellationToken cancellationToken = default)
     {
-        var ctx = context ?? new WorkflowContext(_name, _logger,
-            cancellationToken: cancellationToken);
-
-        var startedAt = DateTime.UtcNow;
-        var current = initialData?.Clone() ?? new WorkflowData();
-        var allResults = new List<NodeResult>();
-
-        ctx.Logger.LogInformation(
-            "🚀 Starting workflow '{Workflow}' [RunId: {RunId}]", _name, ctx.RunId);
-
-        foreach (var step in _steps)
+        // If context is provided, we need to use the executor directly
+        // to pass it through (builder's RunAsync doesn't accept context)
+        if (context != null)
         {
-            var stepResult = await ExecuteStepAsync(step, current, ctx).ConfigureAwait(false);
-            allResults.AddRange(stepResult.Results);
-
-            if (stepResult.IsSuccess)
-            {
-                current = stepResult.Data;
-            }
-            else if (_errorStrategy == GlobalErrorStrategy.StopOnFirstFailure)
-            {
-                var report = ctx.Tracker.GenerateReport(_name, ctx.RunId);
-                var failResult = WorkflowResult.Failure(_name, ctx.RunId, current,
-                    allResults, stepResult.FailedNodeName ?? "Unknown",
-                    stepResult.ErrorMessage ?? "Unknown error",
-                    stepResult.Exception, startedAt, report);
-
-                _onError?.Invoke(failResult.ErrorMessage!, failResult.Exception);
-                ctx.Logger.LogError("💥 Workflow '{Workflow}' FAILED at [{Node}]: {Error}",
-                    _name, failResult.FailedNodeName, failResult.ErrorMessage);
-
-                return failResult;
-            }
+            var structure = _builder.Build();
+            var executor = new WorkflowExecutor();
+            return executor.ExecuteAsync(structure, initialData, context, cancellationToken);
         }
 
-        var successReport = ctx.Tracker.GenerateReport(_name, ctx.RunId);
-        var successResult = WorkflowResult.Success(_name, ctx.RunId, current,
-            allResults, startedAt, successReport);
-
-        ctx.Logger.LogInformation(
-            "🏁 Workflow '{Workflow}' completed in {DurationMs}ms ✅",
-            _name, successResult.TotalDuration.TotalMilliseconds);
-
-        _onComplete?.Invoke(successResult);
-        return successResult;
+        // Use builder's convenience method
+        return _builder.RunAsync(initialData, cancellationToken);
     }
 
-    // ─── Internal Step Execution ──────────────────────────────────────────────
+    // ─── Helper constructor for nested workflows ──────────────────────────────
 
-    private async Task<StepExecutionResult> ExecuteStepAsync(
-        PipelineStep step, WorkflowData data, WorkflowContext ctx)
+    /// <summary>
+    /// Internal constructor to wrap a WorkflowBuilder (for nested workflows).
+    /// </summary>
+    private Workflow(WorkflowBuilder builder)
     {
-        switch (step.Type)
-        {
-            case StepType.Node:
-                return await ExecuteNodeStepAsync(step, data, ctx).ConfigureAwait(false);
-
-            case StepType.Branch:
-                return await ExecuteBranchStepAsync(step, data, ctx).ConfigureAwait(false);
-
-            case StepType.Parallel:
-                return await ExecuteParallelStepAsync(step, data, ctx).ConfigureAwait(false);
-
-            case StepType.Loop:
-                return await ExecuteLoopStepAsync(step, data, ctx).ConfigureAwait(false);
-
-            default:
-                throw new InvalidOperationException($"Unknown step type: {step.Type}");
-        }
-    }
-
-    private async Task<StepExecutionResult> ExecuteNodeStepAsync(
-        PipelineStep step, WorkflowData data, WorkflowContext ctx)
-    {
-        var node = step.Node!;
-        var opts = step.Options;
-
-        // Check condition — skip if condition is false
-        if (opts.RunCondition is not null && !opts.RunCondition(data))
-        {
-            ctx.Logger.LogInformation("⏭  [{Node}] Skipped (condition not met)", node.Name);
-            var skipped = NodeResult.Skipped(node.Name, data);
-            return StepExecutionResult.Ok(data, new[] { skipped });
-        }
-
-        // Track the node
-        var record = ctx.Tracker.BeginNode(node.Name, node.Category);
-
-        NodeResult result = null!;
-        var attempts = 0;
-        var maxAttempts = opts.MaxRetries + 1;
-
-        while (attempts < maxAttempts)
-        {
-            attempts++;
-
-            // Apply timeout if configured
-            if (opts.Timeout.HasValue)
-            {
-                using var cts = CancellationTokenSource.CreateLinkedTokenSource(ctx.CancellationToken);
-                cts.CancelAfter(opts.Timeout.Value);
-                var timeoutCtx = new WorkflowContext(ctx.WorkflowName, _logger,
-                    ctx.Tracker, cts.Token);
-                result = await node.ExecuteAsync(data, timeoutCtx).ConfigureAwait(false);
-            }
-            else
-            {
-                result = await node.ExecuteAsync(data, ctx).ConfigureAwait(false);
-            }
-
-            if (result.IsSuccess || attempts >= maxAttempts) break;
-
-            // Retry with exponential backoff
-            var delay = TimeSpan.FromMilliseconds(
-                opts.RetryDelay.TotalMilliseconds * Math.Pow(2, attempts - 1));
-            ctx.Logger.LogWarning(
-                "🔄 [{Node}] Attempt {Attempt}/{Max} failed. Retrying in {Delay}ms...",
-                node.Name, attempts, maxAttempts, delay.TotalMilliseconds);
-
-            await Task.Delay(delay, ctx.CancellationToken).ConfigureAwait(false);
-        }
-
-        ctx.Tracker.CompleteNode(record, result);
-
-        if (result.IsSuccess)
-            return StepExecutionResult.Ok(result.Data, new[] { result });
-
-        // Handle failure
-        if (opts.ContinueOnError)
-        {
-            ctx.Logger.LogWarning(
-                "⚠️  [{Node}] Failed but ContinueOnError=true. Using fallback data.",
-                node.Name);
-            var fallback = opts.FallbackData ?? data;
-            return StepExecutionResult.Ok(fallback, new[] { result });
-        }
-
-        return StepExecutionResult.Fail(result, data);
-    }
-
-    private async Task<StepExecutionResult> ExecuteBranchStepAsync(
-        PipelineStep step, WorkflowData data, WorkflowContext ctx)
-    {
-        var condition = step.BranchCondition!;
-        var branchTaken = condition(data);
-        var pipeline = branchTaken ? step.TrueBranch : step.FalseBranch;
-
-        ctx.Logger.LogInformation("🔀 Branch condition: {Result}", branchTaken ? "TRUE" : "FALSE");
-
-        if (pipeline is null)
-        {
-            ctx.Logger.LogInformation("⏭  Branch {Branch} has no handler, skipping.",
-                branchTaken ? "FALSE" : "FALSE");
-            return StepExecutionResult.Ok(data, Array.Empty<NodeResult>());
-        }
-
-        var branchResult = await pipeline.RunAsync(data, ctx).ConfigureAwait(false);
-        if (branchResult.IsSuccess)
-            return StepExecutionResult.Ok(branchResult.Data, branchResult.NodeResults.ToList());
-        return StepExecutionResult.Fail(branchResult.NodeResults.Last(), data);
-    }
-
-    private async Task<StepExecutionResult> ExecuteParallelStepAsync(
-        PipelineStep step, WorkflowData data, WorkflowContext ctx)
-    {
-        var nodes = step.ParallelNodes!;
-        ctx.Logger.LogInformation("⚡ Running {Count} nodes in parallel", nodes.Length);
-
-        var tasks = nodes.Select(n => n.ExecuteAsync(data.Clone(), ctx)).ToArray();
-        var results = await Task.WhenAll(tasks).ConfigureAwait(false);
-
-        var merged = data.Clone();
-        var allNodeResults = new List<NodeResult>();
-
-        foreach (var r in results)
-        {
-            allNodeResults.Add(r);
-            if (r.IsSuccess)
-                merged.Merge(r.Data);
-        }
-
-        var firstFailure = results.FirstOrDefault(r => r.IsFailure);
-        if (firstFailure is not null)
-            return StepExecutionResult.Fail(firstFailure, data);
-
-        return StepExecutionResult.Ok(merged, allNodeResults);
-    }
-
-    private async Task<StepExecutionResult> ExecuteLoopStepAsync(
-        PipelineStep step, WorkflowData data, WorkflowContext ctx)
-    {
-        var items = data.Get<IEnumerable<object>>(step.LoopItemsKey!)?.ToList()
-            ?? new List<object>();
-
-        ctx.Logger.LogInformation("🔁 Loop over {Count} items in '{Key}'",
-            items.Count, step.LoopItemsKey);
-
-        var outputs = new List<WorkflowData>();
-        var allResults = new List<NodeResult>();
-
-        for (var i = 0; i < items.Count; i++)
-        {
-            var itemData = data.Clone()
-                .Set("__loop_item__", items[i])
-                .Set("__loop_index__", i)
-                .Set("__loop_total__", items.Count);
-
-            var loopResult = await step.LoopBody!.RunAsync(itemData, ctx).ConfigureAwait(false);
-            allResults.AddRange(loopResult.NodeResults);
-
-            if (loopResult.IsFailure)
-                return StepExecutionResult.Fail(allResults.Last(), data);
-
-            outputs.Add(loopResult.Data);
-        }
-
-        var resultData = data.Clone().Set(step.LoopOutputKey!, outputs);
-        return StepExecutionResult.Ok(resultData, allResults);
+        _builder = builder;
     }
 }
