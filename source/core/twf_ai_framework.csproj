@@ -43,8 +43,14 @@
     <PackageReference Include="Microsoft.Extensions.Http" Version="10.0.0" />
   </ItemGroup>
 
+  <!-- Documentation files packaged with NuGet -->
   <ItemGroup>
     <None Include="README.md" Pack="true" PackagePath="\" />
+    <None Include="ARCHITECTURE.md" Pack="true" PackagePath="docs\" />
+    <None Include="USE_CASES.md" Pack="true" PackagePath="docs\" />
+    <None Include="HOW_TO_GUIDE.md" Pack="true" PackagePath="docs\" />
+    <None Include="NODE_REFERENCE.md" Pack="true" PackagePath="docs\" />
+    <None Include="DIAGRAMS.md" Pack="true" PackagePath="docs\" />
   </ItemGroup>
 
   <ItemGroup>
