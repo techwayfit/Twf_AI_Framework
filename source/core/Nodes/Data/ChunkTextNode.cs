@@ -1,4 +1,7 @@
 using TwfAiFramework.Core;
+using TwfAiFramework.Core.ValueObjects;
+using TwfAiFramework.Nodes;
+using System.Text.RegularExpressions;
 
 namespace TwfAiFramework.Nodes.Data;
 
@@ -40,9 +43,9 @@ public sealed class ChunkTextNode : BaseNode
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
     public static NodeParameterSchema Schema { get; } = new()
     {
-        NodeType    = "ChunkTextNode",
+        NodeType = "ChunkTextNode",
         Description = "Split text into overlapping chunks (character/word/sentence)",
-        Parameters  =
+        Parameters =
         [
             new() { Name = "chunkSize", Label = "Chunk Size",          Type = ParameterType.Number, Required = false, DefaultValue = 500,  MinValue = 50, MaxValue = 10000 },
             new() { Name = "overlap",   Label = "Overlap",             Type = ParameterType.Number, Required = false, DefaultValue = 50,   MinValue = 0,  MaxValue = 1000 },
@@ -67,9 +70,9 @@ public sealed class ChunkTextNode : BaseNode
     public ChunkTextNode(Dictionary<string, object?> parameters)
         : this(new ChunkConfig
         {
-            ChunkSize = NodeParameters.GetInt(parameters, "chunkSize", 500),
-            Overlap   = NodeParameters.GetInt(parameters, "overlap",   50),
-            Strategy  = Enum.TryParse<ChunkStrategy>(
+            ChunkSize = ChunkSize.FromValue(NodeParameters.GetInt(parameters, "chunkSize", 500)),
+            Overlap = ChunkOverlap.FromValue(NodeParameters.GetInt(parameters, "overlap", 50)),
+            Strategy = Enum.TryParse<ChunkStrategy>(
                 NodeParameters.GetString(parameters, "strategy"), true, out var strat)
                 ? strat : ChunkStrategy.Character
         })

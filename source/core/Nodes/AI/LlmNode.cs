@@ -2,6 +2,7 @@ using TwfAiFramework.Core;
 using TwfAiFramework.Core.Http;
 using TwfAiFramework.Core.Secrets;
 using TwfAiFramework.Core.Sanitization;
+using TwfAiFramework.Core.ValueObjects;
 using TwfAiFramework.Nodes;
 using System.Text;
 using System.Text.Json;
@@ -58,7 +59,7 @@ public sealed class LlmNode : BaseNode
 
     /// <summary>
     /// UI schema: parameter form fields shown in the properties panel when configuring the node. This includes options for selecting the LLM provider, model, API key, and other parameters that control the behavior of the node when it is executed within a workflow.
-     /// </summary> 
+    /// </summary> 
     public static NodeParameterSchema Schema { get; } = new()
     {
         NodeType = "LlmNode",
@@ -97,18 +98,18 @@ public sealed class LlmNode : BaseNode
     /// <param name="secretProvider">The secret provider for resolving API keys. If null, uses a default provider.</param>
     /// <param name="promptSanitizer">The prompt sanitizer for input validation. If null, uses a default sanitizer.</param>
     public LlmNode(
-      string name, 
-        LlmConfig config, 
+      string name,
+        LlmConfig config,
         IHttpClientProvider? httpProvider = null,
         ISecretProvider? secretProvider = null,
   IPromptSanitizer? promptSanitizer = null)
     {
         Name = name;
-_config = config;
-    _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
- _secretProvider = secretProvider ?? new DefaultSecretProvider();
-     _promptSanitizer = promptSanitizer ?? new DefaultPromptSanitizer();
- }
+        _config = config;
+        _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
+        _secretProvider = secretProvider ?? new DefaultSecretProvider();
+        _promptSanitizer = promptSanitizer ?? new DefaultPromptSanitizer();
+    }
 
     /// <summary>
     /// Backward compatibility constructor - accepts HttpClient and wraps it in a provider.
@@ -120,7 +121,7 @@ _config = config;
     public LlmNode(string name, LlmConfig config, HttpClient httpClient)
         : this(name, config, new DefaultHttpClientProvider(httpClient))
     {
-  }
+    }
 
     /// <summary>
     /// Dictionary constructor — used by the workflow runner for dynamic instantiation.
@@ -140,7 +141,7 @@ _config = config;
         var apiUrl = NodeParameters.GetString(p, "apiUrl");
         var sysPrompt = NodeParameters.GetString(p, "systemPrompt");
         var temp = (float)NodeParameters.GetDouble(p, "temperature", 0.7);
-        var maxTok = NodeParameters.GetInt(p, "maxTokens", 1000);
+        var maxTok = NodeParameters.GetInt(p, "maxTokens", 2048);
         var history = NodeParameters.GetBool(p, "maintainHistory");
 
         return provider.ToLowerInvariant() switch
@@ -148,22 +149,22 @@ _config = config;
             "anthropic" => LlmConfig.Anthropic(apiKey, model) with
             {
                 DefaultSystemPrompt = sysPrompt,
-                Temperature = temp,
-                MaxTokens = maxTok,
+                Temperature = Temperature.FromValue(temp),
+                MaxTokens = TokenCount.FromValue(maxTok),
                 MaintainHistory = history
             },
             "ollama" => LlmConfig.Ollama(model, apiUrl ?? "http://localhost:11434") with
             {
                 DefaultSystemPrompt = sysPrompt,
-                Temperature = temp,
-                MaxTokens = maxTok
+                Temperature = Temperature.FromValue(temp),
+                MaxTokens = TokenCount.FromValue(maxTok)
             },
             _ => LlmConfig.OpenAI(apiKey, model) with
             {
                 ApiEndpoint = apiUrl ?? "https://api.openai.com/v1/chat/completions",
                 DefaultSystemPrompt = sysPrompt,
-                Temperature = temp,
-                MaxTokens = maxTok,
+                Temperature = Temperature.FromValue(temp),
+                MaxTokens = TokenCount.FromValue(maxTok),
                 MaintainHistory = history
             }
         };
@@ -182,25 +183,25 @@ _config = config;
         // Sanitize prompt if enabled in config
         var sanitizedInput = input;
         if (_config.SanitizePrompts && _config.SanitizationOptions != null)
-   {
-      var rawPrompt = input.GetString("prompt") ?? "";
-        if (!string.IsNullOrEmpty(rawPrompt))
         {
-       var sanitized = _promptSanitizer.Sanitize(rawPrompt, _config.SanitizationOptions);
-         sanitizedInput = input.Clone().Set("prompt", sanitized);
-       
-      if (rawPrompt != sanitized)
-       {
-         nodeCtx.Log($"Prompt sanitized (original: {rawPrompt.Length} chars, sanitized: {sanitized.Length} chars)");
-    }
-      }
+            var rawPrompt = input.GetString("prompt") ?? "";
+            if (!string.IsNullOrEmpty(rawPrompt))
+            {
+                var sanitized = _promptSanitizer.Sanitize(rawPrompt, _config.SanitizationOptions);
+                sanitizedInput = input.Clone().Set("prompt", sanitized);
+
+                if (rawPrompt != sanitized)
+                {
+                    nodeCtx.Log($"Prompt sanitized (original: {rawPrompt.Length} chars, sanitized: {sanitized.Length} chars)");
+                }
+            }
         }
 
         // Build the messages list
         var messages = BuildMessages(sanitizedInput, context);
 
         nodeCtx.Log($"Sending {messages.Count} messages to {_config.Model}");
-   nodeCtx.Log($"Last message: {messages.Last().Content[..Math.Min(100, messages.Last().Content.Length)]}...");
+        nodeCtx.Log($"Last message: {messages.Last().Content[..Math.Min(100, messages.Last().Content.Length)]}...");
 
         var requestBody = BuildRequestBody(messages);
 
@@ -289,8 +290,8 @@ _config = config;
         {
             ["model"] = _config.Model,
             ["messages"] = messages.Select(m => new { role = m.Role, content = m.Content }),
-            ["temperature"] = _config.Temperature,
-            ["max_tokens"] = _config.MaxTokens,
+            ["temperature"] = (float)_config.Temperature,  // Explicit cast from value object
+            ["max_tokens"] = (int)_config.MaxTokens,       // Explicit cast from value object
             ["stream"] = _config.Stream
         };
         // include_usage in the final chunk — supported by OpenAI and AzureOpenAI only
@@ -302,16 +303,16 @@ _config = config;
     private Dictionary<string, object?> BuildAnthropicBody(List<(string Role, string Content)> messages)
     {
         return new Dictionary<string, object?>
-        {
-            ["model"] = _config.Model,
-            ["max_tokens"] = _config.MaxTokens,
-            ["temperature"] = _config.Temperature,
+      {
+    ["model"] = _config.Model,
+            ["max_tokens"] = (int)_config.MaxTokens,
+    ["temperature"] = (float)_config.Temperature,
             ["system"] = messages.FirstOrDefault(m => m.Role == "system").Content ?? "",
             ["messages"] = messages
-                .Where(m => m.Role != "system")
-                .Select(m => new { role = m.Role, content = m.Content }),
-            ["stream"] = _config.Stream
-        };
+           .Where(m => m.Role != "system")
+         .Select(m => new { role = m.Role, content = m.Content }),
+         ["stream"] = _config.Stream
+  };
     }
 
     private async Task<JsonDocument> CallApiAsync(object requestBody, CancellationToken ct)
@@ -333,21 +334,21 @@ _config = config;
     }
 
     private async Task AddAuthHeadersAsync(HttpRequestMessage request)
-{
+    {
         // Resolve API key using secret provider
-   var apiKey = await _config.GetApiKeyAsync(_secretProvider);
-        
+        var apiKey = await _config.GetApiKeyAsync(_secretProvider);
+
         if (string.IsNullOrEmpty(apiKey)) return;
 
         if (_config.Provider == LlmProvider.Anthropic)
-    {
-         request.Headers.Add("x-api-key", apiKey);
-         request.Headers.Add("anthropic-version", "2023-06-01");
-    }
+        {
+            request.Headers.Add("x-api-key", apiKey);
+            request.Headers.Add("anthropic-version", "2023-06-01");
+        }
         else
         {
-    request.Headers.Authorization =
-           new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+            request.Headers.Authorization =
+                   new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
         }
     }
 

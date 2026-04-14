@@ -1,5 +1,6 @@
 using TwfAiFramework.Core.Secrets;
 using TwfAiFramework.Core.Sanitization;
+using TwfAiFramework.Core.ValueObjects;
 
 namespace TwfAiFramework.Nodes.AI;
 /// <summary>
@@ -42,14 +43,36 @@ public sealed record LlmConfig
     /// Api End point
     /// </summary>
     public string ApiEndpoint { get; init; } = "https://api.openai.com/v1/chat/completions";
+
     /// <summary>
-    /// Open AI Api Temperature (0.0 - 2.0). Higher values produce more creative responses. Default is 0.7.
+    /// LLM temperature parameter (0.0 - 2.0). Higher values produce more creative responses.
+    /// Default is 0.7 (Balanced).
     /// </summary>
-    public float Temperature { get; init; } = 0.7f;
+    /// <remarks>
+    /// Use predefined values or create custom:
+    /// <code>
+    /// Temperature.Focused      // 0.3 - precise, deterministic
+    /// Temperature.Balanced     // 0.7 - default, general use
+    /// Temperature.Creative     // 1.0 - exploratory, varied
+    /// Temperature.FromValue(0.5f) // custom value
+    /// </code>
+    /// </remarks>
+    public Temperature Temperature { get; init; } = Temperature.Balanced;
+
     /// <summary>
-    /// Max tokens to generate in the response. Default is 2048.
+    /// Max tokens to generate in the response. Default is 2048 (Standard).
     /// </summary>
-    public int MaxTokens { get; init; } = 2048;
+    /// <remarks>
+    /// Use predefined values or create custom:
+    /// <code>
+    /// TokenCount.Short    // 256 - quick responses
+    /// TokenCount.Standard   // 2048 - typical use
+    /// TokenCount.Extended   // 4096 - detailed responses
+    /// TokenCount.FromValue(1000) // custom value
+    /// </code>
+    /// </remarks>
+    public TokenCount MaxTokens { get; init; } = TokenCount.Standard;
+
     /// <summary>
     /// Default system prompt to use if none is provided in the input.
     /// </summary>
@@ -135,21 +158,21 @@ public sealed record LlmConfig
     /// <param name="sanitizationMode">Prompt sanitization mode.</param>
     /// <returns>LlmConfig instance with sanitization enabled.</returns>
     public static LlmConfig OpenAISecure(
-        SecretReference apiKeyReference, 
+        SecretReference apiKeyReference,
         string model = "gpt-4o",
-        PromptSanitizationMode sanitizationMode = PromptSanitizationMode.EscapeSpecialChars) => new()
-    {
-        Provider = LlmProvider.OpenAI,
-        Model = model,
-        ApiKeyReference = apiKeyReference,
-        ApiEndpoint = "https://api.openai.com/v1/chat/completions",
-        SanitizePrompts = true,
-        SanitizationOptions = new PromptSanitizationOptions
-        {
-            Mode = sanitizationMode,
-            ValidationLevel = PromptValidationLevel.Moderate
-        }
-    };
+     PromptSanitizationMode sanitizationMode = PromptSanitizationMode.EscapeSpecialChars) => new()
+     {
+         Provider = LlmProvider.OpenAI,
+         Model = model,
+         ApiKeyReference = apiKeyReference,
+         ApiEndpoint = "https://api.openai.com/v1/chat/completions",
+         SanitizePrompts = true,
+         SanitizationOptions = new PromptSanitizationOptions
+         {
+             Mode = sanitizationMode,
+             ValidationLevel = PromptValidationLevel.Moderate
+         }
+     };
 
     /// <summary>
     /// Factory method for creating an Anthropic configuration with the specified API key and model.
