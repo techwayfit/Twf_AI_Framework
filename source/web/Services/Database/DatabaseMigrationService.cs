@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using TwfAiFramework.Web.Data;
-using TwfAiFramework.Web.Repositories;
 using TwfAiFramework.Web.Services;
+using TwfAiFramework.Web.Services.Seeding;
 
 namespace TwfAiFramework.Web.Services.Database;
 
@@ -14,20 +14,20 @@ namespace TwfAiFramework.Web.Services.Database;
 public class DatabaseMigrationService : IDatabaseMigrationService
 {
     private readonly WorkflowDbContext _context;
-    private readonly INodeTypeRepository _nodeTypeRepository;
+    private readonly INodeTypeSeeder _nodeTypeSeeder;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DatabaseMigrationService> _logger;
 
  public DatabaseMigrationService(
-        WorkflowDbContext context,
-        INodeTypeRepository nodeTypeRepository,
+      WorkflowDbContext context,
+INodeTypeSeeder nodeTypeSeeder,
   IConfiguration configuration,
         ILogger<DatabaseMigrationService> logger)
     {
-        _context = context;
-   _nodeTypeRepository = nodeTypeRepository;
+   _context = context;
+   _nodeTypeSeeder = nodeTypeSeeder;
    _configuration = configuration;
-        _logger = logger;
+     _logger = logger;
     }
 
     public async Task MigrateSchemaAsync()
@@ -150,16 +150,16 @@ await _context.Database.ExecuteSqlRawAsync(
  /// </summary>
     private async Task SeedNodeTypesAsync()
     {
-        _logger.LogInformation("Seeding node type definitions");
+    _logger.LogInformation("Seeding node type definitions");
 
         try
         {
-            await NodeTypeSeeder.SeedAsync(_nodeTypeRepository);
-            _logger.LogInformation("Node type definitions seeded successfully");
+     await _nodeTypeSeeder.SeedAsync();
+   _logger.LogInformation("Node type definitions seeded successfully");
     }
   catch (Exception ex)
-        {
-            _logger.LogError(ex, "Failed to seed node type definitions");
+  {
+    _logger.LogError(ex, "Failed to seed node type definitions");
        throw;
         }
     }

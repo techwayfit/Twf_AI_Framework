@@ -11,6 +11,23 @@ using TwfAiFramework.Web.Services.Database;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Configure structured logging
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole(options =>
+{
+    options.FormatterName = "json";
+});
+builder.Logging.AddJsonConsole(options =>
+{
+    options.IncludeScopes = true;
+    options.TimestampFormat = "yyyy-MM-dd HH:mm:ss.fff ";
+    options.JsonWriterOptions = new System.Text.Json.JsonWriterOptions
+    {
+        Indented = false
+    };
+});
+builder.Logging.AddDebug();
+
 // Add services to the container.
 builder.Services.AddControllersWithViews()
     .AddJsonOptions(options =>
@@ -32,12 +49,17 @@ builder.Services.AddProblemDetails();
 // Register workflow execution services (Refactored architecture)
 builder.Services.AddSingleton<IVariableResolver, TemplateVariableResolver>();
 builder.Services.AddSingleton<INodeFactory, ReflectionNodeFactory>();
+builder.Services.AddSingleton<TwfAiFramework.Web.Services.Schema.INodeSchemaProvider, TwfAiFramework.Web.Services.Schema.ReflectionNodeSchemaProvider>();
 builder.Services.AddScoped<INodeExecutor, RetryableNodeExecutor>();
 builder.Services.AddScoped<IWorkflowGraphWalker, WorkflowGraphWalker>();
 builder.Services.AddScoped<WorkflowDefinitionRunner>();
 
 // Register database migration service
 builder.Services.AddScoped<IDatabaseMigrationService, DatabaseMigrationService>();
+builder.Services.AddScoped<TwfAiFramework.Web.Services.Seeding.INodeTypeSeeder, TwfAiFramework.Web.Services.Seeding.NodeTypeSeederService>();
+
+// Register Unit of Work pattern
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
 // SQLite is the only supported storage backend.
 var connectionString = builder.Configuration.GetConnectionString("WorkflowDb")
