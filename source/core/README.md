@@ -1,575 +1,445 @@
-# TwfAiFramework
+# TwfAiFramework � Complete Documentation Index
 
-[![NuGet](https://img.shields.io/nuget/v/TwfAiFramework)](https://www.nuget.org/packages/TwfAiFramework) [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE) [![.NET](https://img.shields.io/badge/.NET-10.0-purple)](https://dotnet.microsoft.com/)
-
-A lightweight, node-based AI workflow engine for .NET 10. Build AI pipelines by chaining reusable nodes — LLM calls, HTTP requests, data transforms, text chunking, embeddings, conditionals, and more — with built-in retry, timeout, parallel execution, and structured logging.
-
-Inspired by tools like [n8n](https://n8n.io/), but designed as a C# library you embed directly in your application.
+Welcome to the comprehensive documentation for **TwfAiFramework** � a lightweight, node-based AI workflow automation library for .NET 10.
 
 ---
 
-## Installation
+## ?? Documentation Overview
+
+This documentation suite covers everything from architecture to implementation details:
+
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| [ARCHITECTURE.md](ARCHITECTURE.md) | System design, patterns, and technical architecture | Developers, Architects |
+| [USE_CASES.md](USE_CASES.md) | Real-world applications with ROI metrics | Product Managers, Business Analysts |
+| [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) | Step-by-step tutorials for common tasks | Developers, Engineers |
+| [NODE_REFERENCE.md](NODE_REFERENCE.md) | Complete API reference for all built-in nodes | Developers |
+| [creating-a-new-node.md](creating-a-new-node.md) | Guide to extending the framework with custom nodes | Advanced Developers |
+| [guide.md](guide.md) | Workflow Designer user guide | End Users, Designers |
+| [NAMING_CONVENTIONS.md](NAMING_CONVENTIONS.md) | Code style and naming standards | Contributors |
+
+---
+
+## ?? Quick Start
+
+### Installation
 
 ```bash
 dotnet add package TwfAiFramework
 ```
 
----
-
-## Quick Start
+### Your First Workflow
 
 ```csharp
-var result = await Workflow.Create("CustomerSupportBot")
+using TwfAiFramework.Core;
+using TwfAiFramework.Nodes.AI;
+
+var workflow = Workflow.Create("HelloAI")
     .UseLogger(logger)
-    .AddNode(new PromptBuilderNode("PromptBuilder", "You are a helpful assistant. User asked: {{question}}"))
-    .AddNode(new LlmNode("LLM", LlmConfig.OpenAI(Environment.GetEnvironmentVariable("OPENAI_API_KEY")!, "gpt-4o")))
-    .AddNode(new OutputParserNode())
-    .RunAsync(new WorkflowData().Set("question", "What is the weather today?"));
+    .AddNode(new PromptBuilderNode(
+        name: "BuildPrompt",
+        promptTemplate: "Answer this question: {{question}}"
+    ))
+    .AddNode(new LlmNode("ChatGPT", LlmConfig.OpenAI(apiKey, "gpt-4o")));
 
-if (result.IsSuccess)
-    Console.WriteLine(result.Data.GetString("llm_response"));
+var result = await workflow.RunAsync(
+    WorkflowData.From("question", "What is AI?")
+);
+
+Console.WriteLine(result.Data.GetString("llm_response"));
+```
+
+**Next Steps:**
+1. Read [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) for detailed tutorials
+2. Explore [USE_CASES.md](USE_CASES.md) for production examples
+3. Check [NODE_REFERENCE.md](NODE_REFERENCE.md) for complete API documentation
+
+---
+
+## ?? Learning Path
+
+### For Developers New to the Framework
+
+**Week 1: Fundamentals**
+1. ? Read [README.md](../source/core/README.md) � Core concepts
+2. ? Complete [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Section 1-2 � Getting started
+3. ? Run `source/console/examples/` � See real workflows
+4. ? Review [ARCHITECTURE.md](ARCHITECTURE.md) � Understanding the design
+
+**Week 2: Building Workflows**
+1. ? [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Section 3-5 � LLMs, data, control flow
+2. ? [NODE_REFERENCE.md](NODE_REFERENCE.md) � Study built-in nodes
+3. ? Build your first workflow
+4. ? [USE_CASES.md](USE_CASES.md) � Find patterns matching your needs
+
+**Week 3: Advanced Topics**
+1. ? [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Section 8-9 � RAG, multi-turn conversations
+2. ? [creating-a-new-node.md](creating-a-new-node.md) � Extend the framework
+3. ? [ARCHITECTURE.md](ARCHITECTURE.md) Extension Points � Custom providers
+4. ? Review test suite in `tests/` � Learn best practices
+
+### For Product Managers / Business Analysts
+
+**Understanding the Framework:**
+1. ? [USE_CASES.md](USE_CASES.md) � See what's possible
+2. ? [README.md](../source/core/README.md) Quick Start � Basic concepts
+3. ? [guide.md](guide.md) � Workflow designer interface
+
+**Defining Requirements:**
+1. ? [USE_CASES.md](USE_CASES.md) Section 14 � Common patterns
+2. ? Review ROI metrics in each use case
+3. ? Map your use case to framework capabilities
+
+### For Architects / Tech Leads
+
+**Technical Evaluation:**
+1. ? [ARCHITECTURE.md](ARCHITECTURE.md) � System design and patterns
+2. ? Review [twf_ai_framework.csproj](../source/core/twf_ai_framework.csproj) � Dependencies
+3. ? [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Section 11-12 � Performance, deployment
+4. ? Study test coverage in `tests/`
+
+**Integration Planning:**
+1. ? [ARCHITECTURE.md](ARCHITECTURE.md) Infrastructure Layer � Understand extension points
+2. ? [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Section 7 � External API integration
+3. ? [USE_CASES.md](USE_CASES.md) Section 4 � Data enrichment patterns
+
+---
+
+## ?? Quick Reference
+
+### Core Concepts
+
+| Concept | Description | Learn More |
+|---------|-------------|------------|
+| **WorkflowData** | Data packet flowing between nodes | [ARCHITECTURE.md](ARCHITECTURE.md#data-flow-architecture) |
+| **WorkflowContext** | Execution environment (logger, state, history) | [NODE_REFERENCE.md](NODE_REFERENCE.md#workflowcontext) |
+| **INode** | Contract for workflow operations | [ARCHITECTURE.md](ARCHITECTURE.md#node-layer) |
+| **BaseNode** | Template for custom nodes | [creating-a-new-node.md](creating-a-new-node.md) |
+| **NodeOptions** | Per-node retry, timeout, conditions | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#error-handling) |
+
+### Built-In Nodes (27 Total)
+
+| Category | Count | Key Nodes | Reference |
+|----------|-------|-----------|-----------|
+| **AI** | 4 | LLM, PromptBuilder, OutputParser, Embedding | [NODE_REFERENCE.md](NODE_REFERENCE.md#ai-nodes) |
+| **Data** | 6 | Transform, Mapper, Filter, Chunking, Memory | [NODE_REFERENCE.md](NODE_REFERENCE.md#data-nodes) |
+| **Control** | 8 | Condition, Branch, TryCatch, Loop, Delay | [NODE_REFERENCE.md](NODE_REFERENCE.md#control-nodes) |
+| **IO** | 4 | HTTP, FileReader, FileWriter, GoogleSearch | [NODE_REFERENCE.md](NODE_REFERENCE.md#io-nodes) |
+| **Base** | 3 | BaseNode, SimpleTransformNode, LambdaNode | [NODE_REFERENCE.md](NODE_REFERENCE.md#base-classes) |
+
+### Supported LLM Providers
+
+| Provider | Configuration | Streaming | Reference |
+|----------|---------------|-----------|-----------|
+| **OpenAI** | `LlmConfig.OpenAI(apiKey, model)` | ? Yes | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#openai-configuration) |
+| **Anthropic** | `LlmConfig.Anthropic(apiKey, model)` | ? Yes | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#anthropic-claude-configuration) |
+| **Azure OpenAI** | `LlmConfig.AzureOpenAI(key, model, endpoint)` | ? Yes | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#azure-openai-configuration) |
+| **Ollama** | `LlmConfig.Ollama(model, host)` | ? Yes | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#ollama-local-configuration) |
+| **Custom** | `LlmConfig.Custom(model, key, endpoint)` | ? Yes | [NODE_REFERENCE.md](NODE_REFERENCE.md#llmnode) |
+
+---
+
+## ?? Find What You Need
+
+### By Task
+
+| I want to... | Go to... |
+|--------------|----------|
+| **Understand the architecture** | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| **See real-world examples** | [USE_CASES.md](USE_CASES.md) or `source/console/examples/` |
+| **Learn how to build workflows** | [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) |
+| **Find a specific node's API** | [NODE_REFERENCE.md](NODE_REFERENCE.md) |
+| **Create a custom node** | [creating-a-new-node.md](creating-a-new-node.md) |
+| **Use the visual designer** | [guide.md](guide.md) |
+| **Understand naming conventions** | [NAMING_CONVENTIONS.md](NAMING_CONVENTIONS.md) |
+
+### By Role
+
+**Developers:**
+- Start: [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md)
+- Reference: [NODE_REFERENCE.md](NODE_REFERENCE.md)
+- Advanced: [creating-a-new-node.md](creating-a-new-node.md)
+
+**Architects:**
+- Architecture: [ARCHITECTURE.md](ARCHITECTURE.md)
+- Deployment: [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md#deployment)
+- Integration: [USE_CASES.md](USE_CASES.md)
+
+**Product Managers:**
+- Use Cases: [USE_CASES.md](USE_CASES.md)
+- ROI Analysis: [USE_CASES.md](USE_CASES.md#roi-summary)
+- Capabilities: [NODE_REFERENCE.md](NODE_REFERENCE.md)
+
+**End Users:**
+- Designer Guide: [guide.md](guide.md)
+- Workflow Patterns: [guide.md](guide.md#common-workflow-patterns)
+
+---
+
+## ??? Project Structure
+
+```
+Twf_AI_Framework/
+??? docs/        # Documentation (you are here)
+?   ??? ARCHITECTURE.md          # System architecture
+?   ??? USE_CASES.md        # Real-world applications
+?   ??? HOW_TO_GUIDE.md      # Step-by-step tutorials
+?   ??? NODE_REFERENCE.md      # Complete API reference
+?   ??? creating-a-new-node.md   # Custom node guide
+?   ??? guide.md # Designer user guide
+?   ??? NAMING_CONVENTIONS.md     # Code standards
+?
+??? source/
+?   ??? core/    # TwfAiFramework (NuGet package)
+? ?   ??? Core/      # Workflow engine
+?   ?   ??? Nodes/    # Built-in nodes
+??   ?   ??? AI/         # LLM, Prompt, Embedding, OutputParser
+?   ?   ?   ??? Data/         # Transform, Filter, Chunking, Memory
+?   ?   ?   ??? Control/         # Branch, Loop, TryCatch, Condition
+?   ?   ?   ??? IO/  # HTTP, File, GoogleSearch
+?   ?   ??? Tracking/         # Execution tracking
+?   ?   ??? README.md         # Core library README
+?   ?
+?   ??? console/            # Console examples
+?   ?   ??? examples/       # Production workflows
+?   ?   ?   ??? CustomerSupportChatbot.cs
+?   ?   ?   ??? RagDocumentQA.cs
+?   ?   ?   ??? ContentGenerationPipeline.cs
+?   ?   ??? concepts/           # Framework fundamentals
+?   ?   ??? README.md           # Console app guide
+?   ?
+?   ??? web/          # ASP.NET Core + React designer
+?     ??? Services/# Workflow execution engine
+?  ??? designer-react/             # Visual workflow designer
+?
+??? tests/     # Comprehensive test suite
+    ??? Core/    # Core framework tests
+  ??? Nodes/         # Node-specific tests
+    ??? Integration/         # Integration tests
+    ??? README.md   # Testing guide
 ```
 
 ---
 
-## Core Concepts
+## ?? Key Statistics
 
+### Framework Capabilities
 
-### WorkflowData
+- **Built-in Nodes:** 27
+- **Node Categories:** 4 (AI, Data, Control, IO)
+- **LLM Providers:** 5 (OpenAI, Anthropic, Azure, Ollama, Custom)
+- **Control Flow:** Sequential, Parallel, Branching, Looping, Try-Catch
+- **Target Framework:** .NET 10
+- **Test Coverage:** 90%+ core framework
 
-The data packet that flows between nodes. Like a typed dictionary — nodes read from it, transform it, and write results back.
+### Documentation Stats
 
-```csharp
-var data = new WorkflowData()
-    .Set("name", "Alice")
-    .Set("score", 42);
-
-var name   = data.GetString("name");          // "Alice"
-var score  = data.GetRequired<int>("score");  // 42
-var copy   = data.Clone();                    // immutable snapshot
-```
-
-| Method | Description |
-|---|---|
-| `.Set(key, value)` | Write a value |
-| `.Get<T>(key)` | Read a value (returns `default` if missing) |
-| `.GetRequired<T>(key)` | Read or throw `KeyNotFoundException` |
-| `.GetString(key)` | Shorthand for `Get<string>` |
-| `.Has(key)` | Check if key exists and is non-null |
-| `.Clone()` | Deep copy the data bag |
-| `.Remove(key)` | Remove a key |
-| `.Merge(other)` | Merge another `WorkflowData` in |
-| `.Keys` | All current keys |
+- **Total Pages:** 7
+- **Code Examples:** 200+
+- **Use Cases:** 10 detailed scenarios
+- **Node Examples:** 27 complete references
+- **Tutorial Steps:** 50+ how-to guides
 
 ---
 
-### WorkflowContext
+## ?? Contributing
 
-Immutable runtime environment shared across all nodes in a single run. Provides:
+### Code Contributions
 
-- **`Logger`** — `ILogger` prefixed with `[WorkflowName][RunId]`
-- **`Tracker`** — `ExecutionTracker` recording all node timings
-- **`CancellationToken`** — propagated to every node
-- **`RunId`** — unique 12-char ID for the run
-- **Global state bag** — survives across nodes (unlike `WorkflowData` which is per-step)
-- **Conversation history** — built-in chat history management for multi-turn bots
+1. Review [NAMING_CONVENTIONS.md](NAMING_CONVENTIONS.md)
+2. Study [ARCHITECTURE.md](ARCHITECTURE.md) to understand design patterns
+3. Add tests for new features (see `tests/` for examples)
+4. Follow [creating-a-new-node.md](creating-a-new-node.md) for node contributions
 
-```csharp
-// Global state (persists across all nodes)
-context.SetState("user_id", "u-123");
-var userId = context.GetState<string>("user_id");
+### Documentation Contributions
 
-// Conversation history
-context.AppendMessage(ChatMessage.User("Hello"));
-context.AppendMessage(ChatMessage.Assistant("Hi there!"));
-var history = context.GetChatHistory();
-```
+- Found an error? Open an issue or PR
+- Missing use case? Add to [USE_CASES.md](USE_CASES.md)
+- Need clarification? Update [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md)
+- New pattern? Document in appropriate guide
 
 ---
 
-### INode / BaseNode
+## ?? External Resources
 
-Every unit of work implements `INode`. For custom nodes, subclass `BaseNode`:
+### Official Links
 
-```csharp
-public class MyNode : BaseNode
-{
-    public override string Name     => "MyNode";
-    public override string Category => "Data";
+- **GitHub Repository:** https://github.com/techwayfit/Twf_AI_Framework
+- **NuGet Package:** https://www.nuget.org/packages/TwfAiFramework
+- **License:** MIT
 
-    protected override async Task<WorkflowData> RunAsync(
-        WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
-    {
-        nodeCtx.Log("Processing...");
-        nodeCtx.SetMetadata("processed_at", DateTime.UtcNow);
+### Learning Resources
 
-        var value = input.GetRequiredString("input_key");
-        var result = value.ToUpper();
+- **Design Inspiration:** [n8n.io](https://n8n.io/) � Visual workflow automation
+- **Patterns:** [Enterprise Integration Patterns](https://www.enterpriseintegrationpatterns.com/)
+- **.NET Documentation:** [learn.microsoft.com/dotnet](https://learn.microsoft.com/dotnet)
 
-        return input.Clone().Set("output_key", result);
-    }
-}
-```
+### LLM Provider Documentation
 
-`BaseNode` automatically handles:
-- Execution timing
-- Exception catching and wrapping into `NodeResult`
-- Structured logging with node context
-- Cancellation token forwarding
-
-For single-key transforms, subclass `SimpleTransformNode` instead:
-
-```csharp
-public class UpperCaseNode : SimpleTransformNode
-{
-    public override string Name     => "UpperCase";
-    public override string Category => "Data";
-    protected override string InputKey  => "text";
-    protected override string OutputKey => "text";
-
-    protected override Task<object?> TransformAsync(object? input, WorkflowContext context)
-        => Task.FromResult<object?>(input?.ToString()?.ToUpper());
-}
-```
+- **OpenAI API:** [platform.openai.com/docs](https://platform.openai.com/docs)
+- **Anthropic Claude:** [docs.anthropic.com](https://docs.anthropic.com)
+- **Azure OpenAI:** [learn.microsoft.com/azure/ai-services/openai](https://learn.microsoft.com/azure/ai-services/openai)
+- **Ollama:** [ollama.ai/docs](https://ollama.ai/docs)
 
 ---
 
-### NodeOptions
-
-Per-node configuration for retry, timeout, and conditional execution:
-
-```csharp
-// Retry up to 3 times with exponential backoff
-.AddNode(new LlmNode("Responder", config), NodeOptions.WithRetry(3))
-
-// Set a 10-second timeout
-.AddNode(new HttpRequestNode("FetchData", httpConfig), NodeOptions.WithTimeout(TimeSpan.FromSeconds(10)))
-
-// Skip if a condition is false
-.AddNode(new MyNode(), new NodeOptions
-{
-    RunCondition = data => data.GetString("mode") == "advanced"
-})
-
-// Continue pipeline even if this node fails
-.AddNode(new OptionalNode(), new NodeOptions { ContinueOnError = true })
-```
-
----
-
-## Built-in Nodes
-
-### AI Nodes (`TwfAiFramework.Nodes.AI`)
-
-#### `LlmNode`
-Calls any OpenAI-compatible LLM API (OpenAI, Azure OpenAI, Anthropic, Ollama, etc.). Supports both standard and streaming (SSE) response modes.
-
-```csharp
-// Standard response
-new LlmNode("ChatBot", LlmConfig.OpenAI("sk-...", "gpt-4o") with
-{
-    DefaultSystemPrompt = "You are a helpful assistant.",
-    MaintainHistory     = true,   // enables multi-turn conversation
-    Temperature         = 0.7f,
-    MaxTokens           = 1000
-})
-
-// Streaming response — invokes OnChunk per text chunk
-new LlmNode("StreamBot", LlmConfig.OpenAI("sk-...", "gpt-4o") with
-{
-    Stream   = true,
-    OnChunk  = chunk => Console.Write(chunk)   // real-time streaming callback
-})
-
-// Anthropic
-new LlmNode("AssistantNode", LlmConfig.Anthropic("sk-ant-...", "claude-sonnet-4-20250514") with
-{
-    Temperature = 0.3f
-})
-
-// Ollama (local)
-new LlmNode("Local", LlmConfig.Ollama("llama3.2"))
-
-// Azure OpenAI
-new LlmNode("Azure", LlmConfig.LmServer("gpt-4o", apiKey, "https://<resource>.openai.azure.com/..."))
-```
-
-**Reads:** `prompt` or `messages`, `system_prompt`  
-**Writes:** `llm_response`, `llm_model`, `prompt_tokens`, `completion_tokens`
-
-| `LlmConfig` factory | Provider |
-|---|---|
-| `LlmConfig.OpenAI(apiKey, model)` | OpenAI |
-| `LlmConfig.Anthropic(apiKey, model)` | Anthropic |
-| `LlmConfig.Ollama(model, host?)` | Local Ollama |
-| `LlmConfig.LmServer(model, apiKey, endpoint)` | Azure OpenAI / custom endpoint |
-
----
-
-#### `PromptBuilderNode`
-Builds dynamic prompts from `{{variable}}` templates.
-
-```csharp
-new PromptBuilderNode(
-    promptTemplate: "Summarise the following text in {{language}}: {{content}}",
-    systemTemplate: "You are an expert summariser."
-)
-```
-
-**Reads:** Keys matching `{{variable}}` names in the template  
-**Writes:** `prompt`, `system_prompt`
-
----
-
-#### `OutputParserNode`
-Extracts structured JSON from LLM responses (handles markdown code fences automatically).
-
-```csharp
-// Map specific JSON keys to WorkflowData keys
-new OutputParserNode(fieldMapping: new()
-{
-    ["sentiment"] = "sentiment",
-    ["score"]     = "anger_score"
-})
-
-// Or extract all JSON keys directly (no mapping)
-new OutputParserNode()
-```
-
-**Reads:** `llm_response`  
-**Writes:** `parsed_output`, plus individual mapped fields
-
----
-
-#### `EmbeddingNode`
-Generates vector embeddings for RAG pipelines and semantic search.
-
-```csharp
-new EmbeddingNode(new EmbeddingConfig
-{
-    Model  = "text-embedding-3-small",
-    ApiKey = "sk-...",
-    ApiUrl = "https://api.openai.com/v1/embeddings"
-})
-```
-
-**Reads:** `text` (single string) or `texts` (`List<string>`)  
-**Writes:** `embedding` (`float[]`) or `embeddings` (`List<float[]>`), `embedding_model`
-
----
-
-### IO Nodes (`TwfAiFramework.Nodes.IO`)
-
-#### `HttpRequestNode`
-Makes HTTP requests — REST APIs, webhooks, data sources.
-
-```csharp
-new HttpRequestNode("FetchUser", new HttpRequestConfig
-{
-    Method      = "GET",
-    UrlTemplate = "https://api.example.com/users/{{user_id}}",
-    Headers     = new() { ["Authorization"] = "Bearer token" },
-    Timeout     = TimeSpan.FromSeconds(30),
-    ThrowOnError = true
-})
-```
-
-URL template supports `{{variable}}` substitution from `WorkflowData`.  
-**Writes:** `http_response`, `http_status_code`, `http_headers`
-
----
-
-### Data Nodes (`TwfAiFramework.Nodes.Data`)
-
-#### `TransformNode`
-Applies custom data transformations.
-
-```csharp
-// Inline lambda
-new TransformNode("Normalize", data =>
-    data.Set("name", data.GetString("name")?.ToLower()))
-
-// Prebuilt transforms
-TransformNode.Rename("old_key", "new_key")
-TransformNode.SelectKey("nested.value", "flat_value")
-TransformNode.ConcatStrings("full_name", " ", "first_name", "last_name")
-```
-
-#### `FilterNode`
-Validates `WorkflowData` against conditions — stops the pipeline or sets an `is_valid` flag on failure.
-
----
-
-#### `ChunkTextNode`
-Splits large text into overlapping chunks for RAG and embedding pipelines.
-
-```csharp
-new ChunkTextNode(new ChunkConfig
-{
-    ChunkSize = 512,
-    Overlap   = 64,
-    Strategy  = ChunkStrategy.Sentence   // Character | Word | Sentence
-})
-```
-
-**Reads:** `text`, `source` (optional label)  
-**Writes:** `chunks` (`List<TextChunk>`), `chunk_count`
-
----
-
-#### `MemoryNode`
-Reads from or writes to the workflow's global state — useful for session context that persists across multiple pipeline runs.
-
-```csharp
-// Write keys from WorkflowData → global memory
-MemoryNode.Write("user_id", "preferences")
-
-// Read keys from global memory → WorkflowData
-MemoryNode.Read("user_id", "preferences")
-```
-
----
-
-### Control Nodes (`TwfAiFramework.Nodes.Control`)
-
-#### `ConditionNode`
-Evaluates predicates and writes boolean results to `WorkflowData`. Use with `Workflow.Branch()`.
-
-```csharp
-new ConditionNode("CheckSentiment",
-    ("is_positive",      data => data.GetString("sentiment") == "positive"),
-    ("needs_escalation", data => data.Get<int>("anger_score") > 7))
-
-// Prebuilt factories
-ConditionNode.HasKey("has_email", "email")
-ConditionNode.StringEquals("is_english", "language", "en")
-ConditionNode.LengthExceeds("too_long", "content", 500)
-```
-
-#### `DelayNode`
-Inserts a delay — useful for rate limiting.
-
-```csharp
-DelayNode.Milliseconds(500)
-DelayNode.Seconds(2, reason: "Rate limit pause")
-DelayNode.RateLimitDelay(requestsPerMinute: 20)
-```
-
-#### `MergeNode`
-Merges multiple `WorkflowData` keys into a single aggregated value.
-
----
-
-#### `BranchNode`
-Switch/case router — evaluates a key's value and dispatches to a named sub-workflow.
-
-```csharp
-new BranchNode("RouteIntent", "intent",
-    new KeyValuePair<string, Workflow>("greeting",   greetingWorkflow),
-    new KeyValuePair<string, Workflow>("complaint",  complaintWorkflow),
-    new KeyValuePair<string, Workflow>("returns",    returnsWorkflow))
-```
-
-**Reads:** the key specified in constructor  
-**Writes:** `branch_selected_port`, `branch_input_value`, `branch_case1/2/3/default` flags
-
----
-
-#### `TryCatchNode`
-Runs an embedded try workflow and, on failure, runs a catch workflow with error context injected.
-
-```csharp
-new TryCatchNode("SafeLlmCall",
-    tryBuilder: t => t
-        .AddNode(new LlmNode("LLM", config)),
-    catchBuilder: c => c
-        .AddNode(new LogNode("LlmFailed"))
-        .AddNode(new FallbackNode()))
-```
-
-**Writes on catch:** `caught_error_message`, `caught_failed_node`, `caught_exception_type`  
-**Always writes:** `try_catch_route` (`"success"` | `"catch"`), `try_success`, `try_error`
-
----
-
-#### `LogNode`
-Explicit logging checkpoint — dumps selected (or all) `WorkflowData` keys to the logger.
-
-```csharp
-// Log all keys at the current checkpoint
-new LogNode("AfterLLM")
-
-// Log specific keys
-new LogNode("Debug", keysToLog: new[] { "llm_response", "sentiment" },
-            level: LogLevel.Debug)
-```
-
----
-
-## Workflow Features
-
-### Inline Steps (no class needed)
-
-```csharp
-.AddStep("Sanitize", async (data, ctx) =>
-{
-    var text = data.GetRequiredString("input");
-    return data.Clone().Set("input", text.Trim());
-})
-```
-
-### Conditional Branching
-
-```csharp
-.Branch(
-    condition:   data => data.Get<bool>("is_positive"),
-    trueBranch:  b => b.AddNode(new PositiveResponseNode()),
-    falseBranch: b => b.AddNode(new EscalationNode())
-)
-```
-
-### Parallel Execution
-
-```csharp
-.Parallel(
-    new SentimentNode(),
-    new KeywordExtractorNode(),
-    new CategoryClassifierNode()
-)
-// Results merged back (later keys overwrite earlier ones)
-```
-
-### Loop (ForEach)
-
-```csharp
-.ForEach(
-    itemsKey:  "documents",
-    outputKey: "summaries",
-    bodyBuilder: b => b
-   .AddNode(new PromptBuilderNode("BuildPrompt", "Summarise: {{__loop_item__}}"))
-        .AddNode(new LlmNode("Summarizer", config))
-)
-```
-
-### Error Handling
-
-```csharp
-Workflow.Create("MyBot")
-    .ContinueOnErrors()            // global: never stop on failure
-    .OnError((nodeName, ex) =>
-    {
-        Console.WriteLine($"Node {nodeName} failed: {ex?.Message}");
-    })
-    .OnComplete(result =>
-    {
-        Console.WriteLine($"Done in {result.TotalDuration.TotalSeconds:F2}s");
-    })
-```
-
----
-
-## Execution Results
-
-```csharp
-var result = await workflow.RunAsync(initialData);
-
-result.IsSuccess          // bool
-result.WorkflowName       // string
-result.RunId              // "A3F7B2..."
-result.TotalDuration      // TimeSpan
-result.Data               // final WorkflowData
-result.NodeResults        // per-node results with timing + logs
-result.FailedNodeName     // which node caused failure
-result.ErrorMessage       // error message
-result.Report             // WorkflowReport with full breakdown
-```
-
-### WorkflowReport
-
-```csharp
-var report = result.Report;
-report.TotalNodes     // int
-report.SuccessCount   // int
-report.FailureCount   // int
-report.SkippedCount   // int
-report.TotalDuration  // TimeSpan
-report.NodeBreakdown  // List<NodeTimingEntry> with per-node ms, status, errors
-```
-
----
-
-## Project Structure
-
-```
-source/
-└── core/                              # TwfAiFramework (project root)
-    ├── twf_ai_framework.csproj
-    │
-    ├── Core/                          # namespace TwfAiFramework.Core
-    │   ├── INode.cs                   # INode interface, NodeStatus enum
-    │   ├── Workflow.cs                # Workflow fluent builder and execution engine
-    │   ├── WorkflowContext.cs         # Runtime context (logger, tracker, global state, chat history)
-    │   ├── WorkflowData.cs            # Per-step data packet
-    │   ├── WorkflowResult.cs          # Final workflow result
-    │   ├── NodeResult.cs              # Per-node result + fluent OnSuccess/OnFailure
-    │   ├── NodeOptions.cs             # Per-node retry/timeout/condition config
-    │   └── Models/                    # ChatMessage, GlobalErrorStrategy, StepType
-    │
-    ├── Nodes/                         # namespace TwfAiFramework.Nodes
-    │   ├── BaseNode.cs                # Abstract base + NodeExecutionContext + SimpleTransformNode
-    │   ├── LambdaNode.cs              # Inline lambda node (used by AddStep)
-    │   │
-    │   ├── AI/                        # namespace TwfAiFramework.Nodes.AI
-    │   │   ├── LlmNode.cs             # LLM API calls (OpenAI-compatible, streaming SSE)
-    │   │   ├── PromptBuilderNode.cs   # Prompt template rendering ({{variable}} substitution)
-    │   │   ├── OutputParserNode.cs    # LLM JSON output parsing
-    │   │   └── EmbeddingNode.cs       # Vector embedding generation
-    │   │
-    │   ├── IO/                        # namespace TwfAiFramework.Nodes.IO
-    │   │   └── IONodes.cs             # HttpRequestNode — REST API calls
-    │   │
-    │   ├── Data/                      # namespace TwfAiFramework.Nodes.Data
-    │   │   ├── TransformNode.cs       # Data transformation and key mapping
-    │   │   ├── FilterNode.cs          # Conditional data validation
-    │   │   ├── ChunkTextNode.cs       # Text chunking for RAG (char/word/sentence)
-    │   │   ├── MemoryNode.cs          # Global state read/write
-    │   │   └── DataMapperNode.cs      # Key-to-key data mapping
-    │   │
-    │   └── Control/                   # namespace TwfAiFramework.Nodes.Control
-    │       ├── ConditionNode.cs       # Boolean condition evaluation
-    │       ├── BranchNode.cs          # Switch/case routing
-    │       ├── TryCatchNode.cs        # Try/catch workflow composition
-    │       ├── DelayNode.cs           # Rate-limit delays
-    │       ├── LogNode.cs             # Logging checkpoint
-    │       ├── MergeNode.cs           # Key aggregation
-    │       └── ErrorRouteNode.cs      # Error routing
-    │
-    └── Tracking/                      # namespace TwfAiFramework.Tracking
-        └── ExecutionTracker.cs        # Node timing recorder + report generator
-```
-
----
-
-## Requirements
-
-- .NET 10
-- `Microsoft.Extensions.Logging` 10.0.5
-
----
-
-## What's New
-
-### v1.0.1
-- `LlmNode`: streaming response support via SSE for OpenAI, Azure OpenAI, Anthropic, Ollama, and Custom providers
-- `LlmNode`: new `Stream` flag on `LlmConfig` (default `false`, fully backward compatible)
-- `LlmNode`: new `OnChunk` callback on `LlmConfig` — invoked per text chunk during streaming
-- `LlmNode`: `stream_options.include_usage` enabled for OpenAI/Azure OpenAI to capture token counts on streamed responses
+## ?? Version History
+
+### v1.0.1 (Current)
+- ? LLM streaming support (SSE)
+- ? `OnChunk` callback for real-time responses
+- ? Token usage tracking for streamed responses
+- ? Prompt sanitization
 
 ### v1.0.0
-- Initial release
+- ? Initial release
+- ? 27 built-in nodes
+- ? 5 LLM providers
+- ? Visual workflow designer
+- ? Comprehensive test suite
 
 ---
 
-## License
+## ?? Getting Help
 
-Apache 2.0 — see [LICENSE](LICENSE).
+### Documentation Issues
+
+| Problem | Solution |
+|---------|----------|
+| **Concept unclear** | Check [ARCHITECTURE.md](ARCHITECTURE.md) for theory |
+| **How to implement X** | Search [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) |
+| **Node parameter unclear** | See [NODE_REFERENCE.md](NODE_REFERENCE.md) |
+| **Use case needed** | Browse [USE_CASES.md](USE_CASES.md) |
+
+### Code Issues
+
+1. Check the [test suite](../tests/) for examples
+2. Review [console examples](../source/console/examples/)
+3. Search [GitHub issues](https://github.com/techwayfit/Twf_AI_Framework/issues)
+4. Open a new issue with:
+   - Framework version
+   - Minimal reproduction code
+   - Expected vs actual behavior
+
+### Feature Requests
+
+1. Check if it exists in [USE_CASES.md](USE_CASES.md)
+2. Review [ARCHITECTURE.md](ARCHITECTURE.md) extension points
+3. Open a GitHub issue with:
+   - Use case description
+   - Proposed API
+   - Why existing nodes don't solve it
+
+---
+
+## ?? Training Materials
+
+### Workshops
+
+**Half-Day Workshop: Building AI Workflows**
+1. Hour 1: Framework fundamentals ([ARCHITECTURE.md](ARCHITECTURE.md))
+2. Hour 2: Hands-on with [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Sections 1-5
+3. Hour 3: Build a customer support chatbot
+4. Hour 4: Extend with custom nodes
+
+**Full-Day Workshop: Production AI Applications**
+1. Morning: Complete half-day workshop
+2. Afternoon Session 1: RAG pipeline implementation
+3. Afternoon Session 2: Multi-agent systems
+4. Afternoon Session 3: Deployment and monitoring
+
+### Self-Paced Learning
+
+**Track 1: Developer Fundamentals (8 hours)**
+- [README.md](../source/core/README.md) (1 hour)
+- [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Sections 1-6 (3 hours)
+- Build 3 workflows from scratch (2 hours)
+- [NODE_REFERENCE.md](NODE_REFERENCE.md) deep dive (2 hours)
+
+**Track 2: Advanced Development (8 hours)**
+- [ARCHITECTURE.md](ARCHITECTURE.md) complete (2 hours)
+- [creating-a-new-node.md](creating-a-new-node.md) (1 hour)
+- Create 2 custom nodes (3 hours)
+- Review test patterns in `tests/` (2 hours)
+
+**Track 3: Production Deployment (4 hours)**
+- [USE_CASES.md](USE_CASES.md) relevant sections (1 hour)
+- [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) Sections 11-12 (2 hours)
+- Deploy sample application (1 hour)
+
+---
+
+## ?? Roadmap
+
+### Planned Features
+
+**Version 1.1 (Q2 2025)**
+- Workflow versioning
+- Enhanced caching layer
+- Plugin system for dynamic node loading
+- Workflow marketplace
+
+**Version 1.2 (Q3 2025)**
+- Distributed execution
+- Advanced monitoring and observability
+- Built-in A/B testing
+- Workflow templates library
+
+**Version 2.0 (Q4 2025)**
+- GraphQL API
+- Real-time collaboration in designer
+- Workflow as Code DSL
+- Cloud-native deployment templates
+
+---
+
+## ?? Documentation Standards
+
+### When to Update Documentation
+
+- **New Node:** Update [NODE_REFERENCE.md](NODE_REFERENCE.md) + [creating-a-new-node.md](creating-a-new-node.md)
+- **New Pattern:** Add to [USE_CASES.md](USE_CASES.md)
+- **API Change:** Update [HOW_TO_GUIDE.md](HOW_TO_GUIDE.md) + [NODE_REFERENCE.md](NODE_REFERENCE.md)
+- **Architecture Change:** Update [ARCHITECTURE.md](ARCHITECTURE.md)
+
+### Documentation Review Checklist
+
+- [ ] Code examples compile and run
+- [ ] Cross-references work (links to other docs)
+- [ ] Version-specific features noted
+- [ ] Examples follow [NAMING_CONVENTIONS.md](NAMING_CONVENTIONS.md)
+- [ ] Table of contents updated
+
+---
+
+## ?? Acknowledgments
+
+### Inspiration
+
+- **n8n** � Visual workflow automation that inspired the node-based approach
+- **Apache Airflow** � DAG orchestration patterns
+- **LangChain** � LLM chaining concepts
+
+### Community
+
+- All contributors who provided feedback
+- Early adopters who tested the framework
+- Open source projects that made this possible
+
+---
+
+## ?? Contact
+
+- **Issues:** [GitHub Issues](https://github.com/techwayfit/Twf_AI_Framework/issues)
+- **Discussions:** [GitHub Discussions](https://github.com/techwayfit/Twf_AI_Framework/discussions)
+- **Repository:** [github.com/techwayfit/Twf_AI_Framework](https://github.com/techwayfit/Twf_AI_Framework)
+
+---
+
+**Last Updated:** January 2025  
+**Documentation Version:** 1.0.1  
+**Framework Version:** 1.0.1
+
+---
+
+Made with ?? by the TwfAiFramework team
