@@ -1,4 +1,5 @@
 using TwfAiFramework.Core;
+using TwfAiFramework.Core.Http;
 using TwfAiFramework.Nodes;
 using System.Text;
 using System.Text.Json;
@@ -81,19 +82,32 @@ public sealed class LlmNode : BaseNode
     };
 
     private readonly LlmConfig _config;
-    private readonly HttpClient _httpClient;
+    private readonly IHttpClientProvider _httpProvider;
+
     /// <summary>
-    /// Initializes a new instance of the LlmNode with the specified configuration and an optional HttpClient.
+    /// Initializes a new instance of the LlmNode with the specified configuration and HTTP provider.
+    /// </summary>
+    /// <param name="name">The name of the node.</param>
+    /// <param name="config">The configuration for the LLM.</param>
+    /// <param name="httpProvider">The HTTP client provider for making API calls. If null, uses a default provider.</param>
+    public LlmNode(string name, LlmConfig config, IHttpClientProvider? httpProvider = null)
+    {
+        Name = name;
+        _config = config;
+        _httpProvider = httpProvider ?? new DefaultHttpClientProvider();
+    }
+
+    /// <summary>
+    /// Backward compatibility constructor - accepts HttpClient and wraps it in a provider.
     /// </summary>
     /// <param name="name">The name of the node.</param>
     /// <param name="config">The configuration for the LLM.</param>
     /// <param name="httpClient">An optional HttpClient to use for API calls.</param>
-    public LlmNode(string name, LlmConfig config, HttpClient? httpClient = null)
+    [Obsolete("Use constructor with IHttpClientProvider instead for better testability.")]
+    public LlmNode(string name, LlmConfig config, HttpClient httpClient)
+        : this(name, config, new DefaultHttpClientProvider(httpClient))
     {
-        Name = name;
-        _config = config;
-        _httpClient = httpClient ?? new HttpClient();
-    }
+  }
 
     /// <summary>
     /// Dictionary constructor — used by the workflow runner for dynamic instantiation.
@@ -280,7 +294,8 @@ public sealed class LlmNode : BaseNode
 
         AddAuthHeaders(request);
 
-        var response = await _httpClient.SendAsync(request, ct);
+        var httpClient = _httpProvider.GetClient(_config.ApiEndpoint);
+        var response = await httpClient.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
         var content = await response.Content.ReadAsStringAsync(ct);
@@ -311,10 +326,11 @@ public sealed class LlmNode : BaseNode
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
-        AddAuthHeaders(request);
+    AddAuthHeaders(request);
 
-        var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
-        response.EnsureSuccessStatusCode();
+        var httpClient = _httpProvider.GetClient(_config.ApiEndpoint);
+        var response = await httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+   response.EnsureSuccessStatusCode();
 
         var sb = new StringBuilder();
         int promptTokens = 0, completionTokens = 0;
