@@ -185,6 +185,16 @@ export default function RunnerPanel({ workflowId, onNodeStateChange, onEdgeActiv
             <i className="bi bi-trash" />
           </button>
         </div>
+        {/* Link to run history */}
+        <div style={{ marginTop: 8, paddingTop: 8, borderTop: '1px solid #dee2e6' }}>
+          <a 
+            href={`/Workflow/Runs/${workflowId}`}
+            className="btn btn-outline-primary btn-sm w-100"
+            style={{ fontSize: 12 }}
+          >
+            <i className="bi bi-clock-history" /> View Run History
+          </a>
+        </div>
       </div>
 
       {/* ── Initial input data ── */}
