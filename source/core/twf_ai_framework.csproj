@@ -7,7 +7,7 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>TwfAiFramework</PackageId>
-    <Version>1.0.1</Version>
+    <Version>2.0.0</Version>
     <Authors>Manas Nayak</Authors>
     <Company>Manas Nayak</Company>
     <Description>A lightweight, node-based AI workflow engine for .NET 10. Build AI pipelines by chaining reusable nodes — LLM calls, HTTP requests, data transforms, embeddings, conditionals, and more — with built-in retry, timeout, parallel execution, and structured logging.</Description>
@@ -19,6 +19,29 @@
     <PackageProjectUrl>https://github.com/manasnayak/Twf_AI_Framework</PackageProjectUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReleaseNotes>
+    ## 2.0.0
+### New Nodes
+- GoogleSearchNode: real Google search via SerpApi — returns ranked organic results as structured `SearchResultItem` list; reads `search_query` / `search_results_count` from WorkflowData
+- TransformNode: apply preset or custom transformations to WorkflowData (rename key, select key, concatenate strings, pass-through, and more)
+- MemoryNode: read/write global workflow state memory for maintaining context across pipeline runs
+- ChunkTextNode: split large text into overlapping chunks for embedding and RAG (character, word, and sentence strategies)
+- SetVariableNode: set arbitrary WorkflowData keys at runtime
+- FilterNode: filter WorkflowData entries by key predicate
+- DataMapperNode: map and reshape WorkflowData keys
+- TryCatchNode: embedded try/catch workflow composition — catch workflow receives `caught_error_message`, `caught_failed_node`, `caught_exception_type`
+- ErrorRouteNode: route workflow execution based on upstream error state
+- DelayNode: introduce a configurable delay between pipeline steps
+- ConditionNode: conditional branching with expression evaluation
+- LogNode: log specific WorkflowData keys with dotted-path support for nested values
+
+### API Changes
+- `NodePort` renamed to `NodeData`; `InputPort` / `OutputPort` renamed to `DataIn` / `DataOut` on `INode`
+- `NodeParameterSchema` added to every node — provides structured UI metadata (parameter form fields, data port info) for the visual designer
+- `NodeParameters` helper class added for safe parameter extraction (`GetString`, `GetInt`, `GetBool`, etc.)
+
+### Runner Improvements
+- Runner now emits `node_start` and `node_done` events for `StartNode`, `EndNode`, and `LoopNode`
+
 ## 1.0.1
 - LlmNode: added streaming response support via SSE for OpenAI, AzureOpenAI, Anthropic, Ollama, and Custom providers
 - LlmNode: new `Stream` flag on `LlmConfig` (default false, fully backward compatible)
