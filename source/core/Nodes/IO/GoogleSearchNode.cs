@@ -32,17 +32,24 @@ public sealed class GoogleSearchNode : BaseNode
 
     public override string IdPrefix => "gsearch";
 
+    // WorkflowData keys
+    public const string InputQuery        = "search_query";
+    public const string InputResultCount  = "search_results_count";
+    public const string OutputResults     = "search_results";
+    public const string OutputQueryUsed   = "search_query_used";
+    public const string OutputResultCount = "search_results_count";
+
     public override IReadOnlyList<NodeData> DataIn =>
     [
-        new("search_query",         typeof(string), Required: true,  Description: "Search query string"),
-        new("search_results_count", typeof(int),    Required: false, Description: "Number of results to return (default 5)")
+        new(InputQuery,       typeof(string), Required: true,  Description: "Search query string"),
+        new(InputResultCount, typeof(int),    Required: false, Description: "Number of results to return (default 5)")
     ];
 
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("search_results",       typeof(List<SearchResultItem>), Description: "Parsed organic search result items"),
-        new("search_query_used",    typeof(string),                 Description: "Query submitted to Google"),
-        new("search_results_count", typeof(int),                    Description: "Number of results returned")
+        new(OutputResults,     typeof(List<SearchResultItem>), Description: "Parsed organic search result items"),
+        new(OutputQueryUsed,   typeof(string),                 Description: "Query submitted to Google"),
+        new(OutputResultCount, typeof(int),                    Description: "Number of results returned")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -83,8 +90,8 @@ public sealed class GoogleSearchNode : BaseNode
             throw new InvalidOperationException(
                 "GoogleSearchNode: 'apiKey' is required. Configure it in the node properties panel.");
 
-        var query = input.GetRequiredString("search_query");
-        var count = input.Get<int>("search_results_count");
+        var query = input.GetRequiredString(InputQuery);
+        var count = input.Get<int>(InputResultCount);
         if (count <= 0) count = 5;
 
         nodeCtx.Log($"Searching Google: \"{query}\" (top {count})");
@@ -107,9 +114,9 @@ public sealed class GoogleSearchNode : BaseNode
         nodeCtx.SetMetadata("query", query);
 
         return input.Clone()
-            .Set("search_results",       results)
-            .Set("search_query_used",    query)
-            .Set("search_results_count", results.Count);
+            .Set(OutputResults,     results)
+            .Set(OutputQueryUsed,   query)
+            .Set(OutputResultCount, results.Count);
     }
 
     private string BuildUrl(string query, int count)

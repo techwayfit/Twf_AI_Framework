@@ -32,6 +32,12 @@ public sealed class HttpRequestNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "http";
 
+    // WorkflowData keys
+    public const string InputRequestBody  = "request_body";
+    public const string OutputResponse    = "http_response";
+    public const string OutputStatusCode  = "http_status_code";
+    public const string OutputHeaders     = "http_headers";
+
     /// <inheritdoc/>
     // Input ports = {{variable}} placeholders extracted from UrlTemplate at construction time.
     public override IReadOnlyList<NodeData> DataIn
@@ -45,7 +51,7 @@ public sealed class HttpRequestNode : BaseNode
                 .DistinctBy(p => p.Key)
                 .ToList<NodeData>();
             if (_config.Method is "POST" or "PUT" or "PATCH")
-                ports.Add(new NodeData("request_body", typeof(object), Required: false, "Request body (if no static body configured)"));
+                ports.Add(new NodeData(InputRequestBody, typeof(object), Required: false, "Request body (if no static body configured)"));
             return ports;
         }
     }
@@ -53,9 +59,9 @@ public sealed class HttpRequestNode : BaseNode
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("http_response",    typeof(object), Description: "Parsed JSON or raw response string"),
-        new("http_status_code", typeof(int),    Description: "HTTP status code"),
-        new("http_headers",     typeof(Dictionary<string,string>), Required: false, "Response headers")
+        new(OutputResponse,   typeof(object), Description: "Parsed JSON or raw response string"),
+        new(OutputStatusCode, typeof(int),    Description: "HTTP status code"),
+        new(OutputHeaders,    typeof(Dictionary<string,string>), Required: false, "Response headers")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -126,7 +132,7 @@ public sealed class HttpRequestNode : BaseNode
         // Add body for POST/PUT/PATCH
         if (_config.Method is "POST" or "PUT" or "PATCH")
         {
-            var body = _config.Body ?? input.Get<object>("request_body");
+            var body = _config.Body ?? input.Get<object>(InputRequestBody);
             if (body is not null)
             {
                 var json = body is string s ? s : JsonSerializer.Serialize(body);
@@ -161,9 +167,9 @@ public sealed class HttpRequestNode : BaseNode
             h => h.Key, h => string.Join(", ", h.Value));
 
         return input.Clone()
-            .Set("http_response", parsedResponse)
-            .Set("http_status_code", statusCode)
-            .Set("http_headers", headers);
+            .Set(OutputResponse,   parsedResponse)
+            .Set(OutputStatusCode, statusCode)
+            .Set(OutputHeaders,    headers);
     }
 
     private string RenderUrl(string template, WorkflowData data)

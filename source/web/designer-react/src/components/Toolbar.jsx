@@ -4,6 +4,73 @@
  */
 import { useState, useRef, useEffect } from 'react';
 
+/** Small icon-only or icon+label button for the toolbar */
+function ToolBtn({ icon, label, onClick, title, href, variant = 'ghost', disabled }) {
+  const base = {
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    padding: label ? '5px 11px' : '5px 8px',
+    border: 'none', borderRadius: 6, cursor: disabled ? 'not-allowed' : 'pointer',
+    fontSize: 12, fontWeight: 500, lineHeight: 1, whiteSpace: 'nowrap',
+    textDecoration: 'none', transition: 'background 0.12s, opacity 0.12s',
+    opacity: disabled ? 0.5 : 1,
+    fontFamily: 'inherit',
+  };
+
+  const variants = {
+    ghost:   { background: 'rgba(255,255,255,0.06)', color: '#cbd5e1' },
+    primary: { background: '#6366f1', color: '#fff' },
+    success: { background: '#22c55e', color: '#fff' },
+    warning: { background: '#f59e0b', color: '#1e293b' },
+  };
+
+  const hoverBg = {
+    ghost:   'rgba(255,255,255,0.12)',
+    primary: '#4f46e5',
+    success: '#16a34a',
+    warning: '#d97706',
+  };
+
+  const style = { ...base, ...variants[variant] };
+
+  const [hovered, setHovered] = useState(false);
+  const hStyle = hovered && !disabled ? { ...style, background: hoverBg[variant] } : style;
+
+  const content = (
+    <>
+      <i className={`bi ${icon}`} style={{ fontSize: 13 }} />
+      {label && <span>{label}</span>}
+    </>
+  );
+
+  if (href) {
+    return (
+      <a href={href} title={title} style={hStyle}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button onClick={onClick} title={title} disabled={disabled} style={hStyle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}>
+      {content}
+    </button>
+  );
+}
+
+/** Thin vertical separator between button groups */
+function Sep() {
+  return (
+    <div style={{
+      width: 1, height: 20, background: 'rgba(255,255,255,0.12)',
+      flexShrink: 0, alignSelf: 'center',
+    }} />
+  );
+}
+
 export default function Toolbar({
   workflowName,
   workflowId,
@@ -14,9 +81,8 @@ export default function Toolbar({
   onFitView,
   saving,
   onExport,
-  // Sub-workflow context
-  activeSubWorkflow,  // null | { id, name }
-  onBackToMain,       // () => void
+  activeSubWorkflow,
+  onBackToMain,
 }) {
   const isRunner = mode === 'runner';
   const contextLabel = activeSubWorkflow
@@ -30,147 +96,154 @@ export default function Toolbar({
   const toggleExport = () => {
     if (!exportOpen && exportRef.current) {
       const rect = exportRef.current.getBoundingClientRect();
-      setDropPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+      setDropPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
     }
     setExportOpen((o) => !o);
   };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     if (!exportOpen) return;
     const handler = (e) => {
-      if (exportRef.current && !exportRef.current.contains(e.target)) {
-        setExportOpen(false);
-      }
+      if (exportRef.current && !exportRef.current.contains(e.target)) setExportOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [exportOpen]);
 
+  const toolbarBg = activeSubWorkflow
+    ? 'linear-gradient(90deg, #2d1b69 0%, #4a1d96 100%)'
+    : 'linear-gradient(90deg, #0f172a 0%, #1e293b 100%)';
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '6px 16px',
-        background: activeSubWorkflow ? '#4a235a' : '#343a40',
-        color: '#fff',
-        flexShrink: 0,
-        gap: 8,
-        transition: 'background 0.2s',
-      }}
-    >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15 }}>
-        <i className={activeSubWorkflow ? 'bi bi-diagram-3' : 'bi bi-diagram-3-fill'} />
-        <span>{contextLabel}</span>
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      padding: '0 12px',
+      height: 46,
+      background: toolbarBg,
+      flexShrink: 0,
+      gap: 8,
+      borderBottom: '1px solid rgba(255,255,255,0.07)',
+      transition: 'background 0.3s',
+    }}>
+      {/* ── Left: branding + workflow name ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+        <div style={{
+          width: 28, height: 28, borderRadius: 7,
+          background: 'linear-gradient(135deg, #6366f1, #818cf8)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          flexShrink: 0,
+          boxShadow: '0 2px 6px rgba(99,102,241,0.35)',
+        }}>
+          <i className="bi bi-diagram-3-fill" style={{ color: '#fff', fontSize: 14 }} />
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          {activeSubWorkflow && (
+            <span style={{ color: '#64748b', fontSize: 13 }}>
+              {workflowName}
+              <i className="bi bi-chevron-right" style={{ fontSize: 10, margin: '0 4px', verticalAlign: 'middle' }} />
+            </span>
+          )}
+          <span style={{
+            fontWeight: 600, fontSize: 14, color: '#f1f5f9',
+            letterSpacing: '-0.01em', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {activeSubWorkflow ? activeSubWorkflow.name : workflowName}
+          </span>
+          {isRunner && (
+            <span style={{
+              fontSize: 10, fontWeight: 600, padding: '2px 7px', borderRadius: 20,
+              background: 'rgba(34,197,94,0.15)', color: '#4ade80',
+              border: '1px solid rgba(34,197,94,0.3)',
+              letterSpacing: '0.04em',
+            }}>
+              RUNNER
+            </span>
+          )}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
-        {/* Sub-workflow back button (designer mode only) */}
+      {/* ── Right: action buttons ── */}
+      <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexShrink: 0 }}>
+        {/* Back to main sub-workflow */}
         {!isRunner && activeSubWorkflow && (
-          <button
-            className="btn btn-sm btn-warning"
-            onClick={onBackToMain}
-            title="Return to main workflow"
-            style={{ fontWeight: 600 }}
-          >
-            <i className="bi bi-arrow-left-short" /> Main Flow
-          </button>
+          <>
+            <ToolBtn icon="bi-arrow-left-short" label="Main Flow" onClick={onBackToMain} variant="warning" />
+            <Sep />
+          </>
         )}
 
-        {/* Zoom / fit — always visible */}
-        <button className="btn btn-sm btn-outline-light" onClick={onZoomIn} title="Zoom In">
-          <i className="bi bi-zoom-in" /> Zoom In
-        </button>
-        <button className="btn btn-sm btn-outline-light" onClick={onZoomOut} title="Zoom Out">
-          <i className="bi bi-zoom-out" /> Zoom Out
-        </button>
-        <button className="btn btn-sm btn-outline-light" onClick={onFitView} title="Fit to view">
-          <i className="bi bi-arrows-fullscreen" /> Reset
-        </button>
+        {/* Zoom group */}
+        <ToolBtn icon="bi-zoom-in"          onClick={onZoomIn}  title="Zoom In"     />
+        <ToolBtn icon="bi-zoom-out"         onClick={onZoomOut} title="Zoom Out"    />
+        <ToolBtn icon="bi-arrows-fullscreen" onClick={onFitView} title="Fit to view" />
 
-        {/* Designer-only: Save + Export */}
         {!isRunner && (
           <>
-            <button className="btn btn-sm btn-success" onClick={onSave} disabled={saving}>
-              <i className="bi bi-save-fill" /> {saving ? 'Saving…' : 'Save'}
-            </button>
-            <div style={{ flexShrink: 0, position: 'relative' }} ref={exportRef}>
-              <button
-                className="btn btn-sm btn-outline-light"
-                onClick={toggleExport}
-                title="Export canvas"
-              >
-                <i className="bi bi-download" /> Export
-              </button>
+            <Sep />
+            {/* Save */}
+            <ToolBtn icon="bi-save-fill" label={saving ? 'Saving…' : 'Save'} onClick={onSave} disabled={saving} variant="success" />
+
+            {/* Export dropdown */}
+            <div style={{ position: 'relative' }} ref={exportRef}>
+              <ToolBtn icon="bi-download" label="Export" onClick={toggleExport} />
               {exportOpen && (
-                <ul
-                  style={{
-                    position: 'fixed',
-                    top: dropPos.top,
-                    right: dropPos.right,
-                    zIndex: 99999,
-                    background: '#fff',
-                    border: '1px solid #dee2e6',
-                    borderRadius: 6,
-                    boxShadow: '0 4px 16px rgba(0,0,0,0.18)',
-                    listStyle: 'none',
-                    padding: '4px 0',
-                    margin: 0,
-                    minWidth: 170,
-                  }}
-                >
-                  <li>
-                    <button
-                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                      onClick={() => { onExport('png'); setExportOpen(false); }}
-                    >
-                      <i className="bi bi-file-image" style={{ marginRight: 8 }} />Export as PNG
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      style={{ display: 'block', width: '100%', textAlign: 'left', padding: '7px 16px', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, color: '#212529' }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
-                      onClick={() => { onExport('svg'); setExportOpen(false); }}
-                    >
-                      <i className="bi bi-filetype-svg" style={{ marginRight: 8 }} />Export as SVG
-                    </button>
-                  </li>
+                <ul style={{
+                  position: 'fixed',
+                  top: dropPos.top,
+                  right: dropPos.right,
+                  zIndex: 99999,
+                  background: '#fff',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: 8,
+                  boxShadow: '0 8px 24px rgba(15,23,42,0.15)',
+                  listStyle: 'none',
+                  padding: '4px 0',
+                  margin: 0,
+                  minWidth: 175,
+                }}>
+                  {[
+                    { fmt: 'png', icon: 'bi-file-image',    label: 'Export as PNG' },
+                    { fmt: 'svg', icon: 'bi-filetype-svg',  label: 'Export as SVG' },
+                  ].map(({ fmt, icon, label }) => (
+                    <li key={fmt}>
+                      <button
+                        onClick={() => { onExport(fmt); setExportOpen(false); }}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 8,
+                          width: '100%', textAlign: 'left', padding: '8px 14px',
+                          background: 'none', border: 'none', cursor: 'pointer',
+                          fontSize: 13, color: '#1e293b', fontFamily: 'inherit',
+                          borderRadius: 0,
+                        }}
+                        onMouseEnter={(e) => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={(e) => e.currentTarget.style.background = 'none'}
+                      >
+                        <i className={`bi ${icon}`} style={{ color: '#6366f1', fontSize: 14 }} />
+                        {label}
+                      </button>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
           </>
         )}
 
-        {/* Runner-only: Edit in Designer link */}
+        {/* Runner-only: edit link */}
         {isRunner && (
-          <a
-            href={`/Workflow/Designer/${workflowId}`}
-            className="btn btn-sm btn-outline-light"
-            title="Open in designer"
-          >
-            <i className="bi bi-pencil-square" /> Edit
-          </a>
+          <ToolBtn icon="bi-pencil-square" label="Edit" href={`/Workflow/Designer/${workflowId}`} />
         )}
 
-        {/* Designer-only: Run link + Back */}
+        <Sep />
+
+        {/* Run link (designer only, main flow only) */}
         {!isRunner && !activeSubWorkflow && (
-          <a
-            href={`/Workflow/Runner/${workflowId}`}
-            className="btn btn-sm btn-primary"
-            title="Open runner"
-          >
-            <i className="bi bi-play-circle-fill" /> Run
-          </a>
+          <ToolBtn icon="bi-play-circle-fill" label="Run" href={`/Workflow/Runner/${workflowId}`} variant="primary" />
         )}
-        <a href="/Workflow" className="btn btn-sm btn-outline-light" title="Back to list">
-          <i className="bi bi-arrow-left-circle-fill" /> Back
-        </a>
+
+        <ToolBtn icon="bi-arrow-left-circle-fill" label="Back" href="/Workflow" />
       </div>
     </div>
   );

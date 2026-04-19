@@ -26,18 +26,24 @@ public sealed class ChunkTextNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "chunk";
 
+    // WorkflowData keys
+    public const string InputText    = "text";
+    public const string InputSource  = "source";
+    public const string OutputChunks     = "chunks";
+    public const string OutputChunkCount = "chunk_count";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
     [
-        new("text",   typeof(string), Required: true,  "Source text to split"),
-        new("source", typeof(string), Required: false, "Label attached to each chunk for provenance")
+        new(InputText,   typeof(string), Required: true,  "Source text to split"),
+        new(InputSource, typeof(string), Required: false, "Label attached to each chunk for provenance")
     ];
 
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("chunks",      typeof(List<TextChunk>), Description: "List of text chunks"),
-        new("chunk_count", typeof(int),             Description: "Number of chunks produced")
+        new(OutputChunks,     typeof(List<TextChunk>), Description: "List of text chunks"),
+        new(OutputChunkCount, typeof(int),             Description: "Number of chunks produced")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -81,8 +87,8 @@ public sealed class ChunkTextNode : BaseNode
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
-        var text = input.GetRequiredString("text");
-        var source = input.GetString("source") ?? "unknown";
+        var text = input.GetRequiredString(InputText);
+        var source = input.GetString(InputSource) ?? "unknown";
 
         var chunks = _config.Strategy switch
         {
@@ -99,8 +105,8 @@ public sealed class ChunkTextNode : BaseNode
             chunks.Count > 0 ? chunks.Average(c => c.Text.Length) : 0);
 
         return Task.FromResult(input.Clone()
-            .Set("chunks", chunks)
-            .Set("chunk_count", chunks.Count));
+            .Set(OutputChunks,     chunks)
+            .Set(OutputChunkCount, chunks.Count));
     }
 
     private List<TextChunk> ChunkByCharacter(string text, string source)

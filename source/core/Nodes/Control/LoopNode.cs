@@ -40,6 +40,13 @@ public sealed class LoopNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "loop";
 
+    // WorkflowData keys — defaults for configurable keys and hardcoded internal keys
+    public const string DefaultItemsKey    = "items";
+    public const string DefaultOutputKey   = "results";
+    public const string DefaultLoopItemKey = "__item__";
+    public const string LoopIndexKey       = "__loop_index__";
+    public const string OutputIterationCount = "loop_iteration_count";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
     [
@@ -55,8 +62,8 @@ public sealed class LoopNode : BaseNode
     /// </remarks>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new(_outputKey,              typeof(List<WorkflowData>), Description: "Collected per-item WorkflowData results"),
-        new("loop_iteration_count",  typeof(int),                Description: "Number of items iterated")
+        new(_outputKey,        typeof(List<WorkflowData>), Description: "Collected per-item WorkflowData results"),
+        new(OutputIterationCount, typeof(int),                Description: "Number of items iterated")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -91,9 +98,9 @@ public sealed class LoopNode : BaseNode
     /// <param name="bodyBuilder">Fluent builder for the per-item sub-workflow.</param>
     public LoopNode(
         string name,
-        string itemsKey      = "items",
-        string outputKey     = "results",
-        string loopItemKey   = "__item__",
+        string itemsKey      = DefaultItemsKey,
+        string outputKey     = DefaultOutputKey,
+        string loopItemKey   = DefaultLoopItemKey,
         int    maxIterations = 0,
         Action<Workflow>? bodyBuilder = null)
     {
@@ -114,9 +121,9 @@ public sealed class LoopNode : BaseNode
     public LoopNode(Dictionary<string, object?> parameters)
         : this(
             NodeParameters.GetString(parameters, "name") ?? "Loop",
-            NodeParameters.GetString(parameters, "itemsKey")    ?? "items",
-            NodeParameters.GetString(parameters, "outputKey")   ?? "results",
-            NodeParameters.GetString(parameters, "loopItemKey") ?? "__item__",
+            NodeParameters.GetString(parameters, "itemsKey")    ?? DefaultItemsKey,
+            NodeParameters.GetString(parameters, "outputKey")   ?? DefaultOutputKey,
+            NodeParameters.GetString(parameters, "loopItemKey") ?? DefaultLoopItemKey,
             NodeParameters.GetInt(parameters, "maxIterations"))
     { }
 
@@ -144,7 +151,7 @@ public sealed class LoopNode : BaseNode
 
             var itemData = input.Clone()
                 .Set(_loopItemKey, items[i])
-                .Set("__loop_index__", i);
+                .Set(LoopIndexKey, i);
 
             if (_body is not null)
             {
@@ -168,7 +175,7 @@ public sealed class LoopNode : BaseNode
         nodeCtx.Log($"Loop complete: {items.Count} iteration(s)");
 
         return input.Clone()
-            .Set(_outputKey, outputs)
-            .Set("loop_iteration_count", items.Count);
+            .Set(_outputKey,          outputs)
+            .Set(OutputIterationCount, items.Count);
     }
 }

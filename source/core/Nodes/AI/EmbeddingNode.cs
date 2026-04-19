@@ -28,19 +28,26 @@ public sealed class EmbeddingNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "embed";
 
+    // WorkflowData keys
+    public const string InputText       = "text";
+    public const string InputTexts      = "texts";
+    public const string OutputEmbedding  = "embedding";
+    public const string OutputEmbeddings = "embeddings";
+    public const string OutputModel      = "embedding_model";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
     [
-        new("text",  typeof(string),       Required: false, "Single text to embed"),
-        new("texts", typeof(List<string>), Required: false, "Batch of texts to embed")
+        new(InputText,  typeof(string),       Required: false, "Single text to embed"),
+        new(InputTexts, typeof(List<string>), Required: false, "Batch of texts to embed")
     ];
 
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("embedding",       typeof(float[]),       Required: false, "Single embedding vector"),
-        new("embeddings",      typeof(List<float[]>), Required: false, "Batch embedding vectors"),
-        new("embedding_model", typeof(string),        Description: "Model name used")
+        new(OutputEmbedding,  typeof(float[]),       Required: false, "Single embedding vector"),
+        new(OutputEmbeddings, typeof(List<float[]>), Required: false, "Batch embedding vectors"),
+        new(OutputModel,      typeof(string),        Description: "Model name used")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -91,15 +98,15 @@ public sealed class EmbeddingNode : BaseNode
         var output = input.Clone();
 
         // Single text
-        if (input.TryGet<string>("text", out var singleText) && singleText is not null)
+        if (input.TryGet<string>(InputText, out var singleText) && singleText is not null)
         {
             nodeCtx.Log($"Embedding single text ({singleText.Length} chars)");
             var embedding = await GetEmbeddingAsync(singleText, context.CancellationToken);
-            output.Set("embedding", embedding);
+            output.Set(OutputEmbedding, embedding);
             nodeCtx.SetMetadata("dimensions", embedding.Length);
         }
         // Batch texts
-        else if (input.TryGet<List<string>>("texts", out var texts) && texts is not null)
+        else if (input.TryGet<List<string>>(InputTexts, out var texts) && texts is not null)
         {
             nodeCtx.Log($"Embedding {texts.Count} texts in batch");
             var embeddings = new List<float[]>();
@@ -108,16 +115,16 @@ public sealed class EmbeddingNode : BaseNode
                 var emb = await GetEmbeddingAsync(text, context.CancellationToken);
                 embeddings.Add(emb);
             }
-            output.Set("embeddings", embeddings);
+            output.Set(OutputEmbeddings, embeddings);
             nodeCtx.SetMetadata("batch_size", texts.Count);
         }
         else
         {
             throw new InvalidOperationException(
-                "EmbeddingNode requires 'text' (string) or 'texts' (List<string>) in WorkflowData");
+                $"EmbeddingNode requires '{InputText}' (string) or '{InputTexts}' (List<string>) in WorkflowData");
         }
 
-        output.Set("embedding_model", _config.Model);
+        output.Set(OutputModel, _config.Model);
         nodeCtx.SetMetadata("model", _config.Model);
 
         return output;

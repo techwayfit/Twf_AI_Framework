@@ -2,6 +2,23 @@ import { useState, useEffect, useRef } from 'react';
 import { useSchemas } from '../context/SchemaContext';
 import { NODE_ICONS } from '../nodeConfig';
 
+/** Section heading used inside the panel */
+function SectionHead({ icon, label, color }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6,
+      padding: '8px 14px 6px',
+      borderTop: '1px solid #f1f5f9',
+      marginTop: 4,
+    }}>
+      <i className={`bi ${icon}`} style={{ color: color ?? '#6366f1', fontSize: 12 }} />
+      <span style={{ fontSize: 11, fontWeight: 700, color: color ?? '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+        {label}
+      </span>
+    </div>
+  );
+}
+
 /**
  * Right-side properties panel.
  * Uses local form state for smooth editing; commits to the ReactFlow node
@@ -10,7 +27,6 @@ import { NODE_ICONS } from '../nodeConfig';
 export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
   const schemas = useSchemas();
 
-  // Local form state — reset only when a *different* node is selected
   const [label, setLabel] = useState('');
   const [params, setParams] = useState({});
   const nodeIdRef = useRef(null);
@@ -25,18 +41,27 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
 
   if (!selectedNode) {
     return (
-      <div style={{ padding: 16 }}>
-        <h6 style={{ color: '#6c757d', fontWeight: 600, marginBottom: 8 }}>
-          <i className="bi bi-sliders" /> Properties
-        </h6>
-        <p className="text-muted small">Select a node or connector to edit its properties.</p>
+      <div style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        height: '100%', padding: '24px 16px', gap: 10,
+      }}>
+        <div style={{
+          width: 44, height: 44, borderRadius: 12,
+          background: '#f1f5f9',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <i className="bi bi-sliders" style={{ fontSize: 20, color: '#94a3b8' }} />
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', marginBottom: 4 }}>Properties</div>
+          <div style={{ fontSize: 12, color: '#94a3b8', lineHeight: 1.5 }}>Select a node or connector to edit its properties.</div>
+        </div>
       </div>
     );
   }
 
   const schema = schemas[selectedNode.type] ?? {};
-
-  // ── helpers ──────────────────────────────────────────────────────────────
+  const nodeColor = selectedNode.data.color ?? '#3498db';
 
   const commitLabel = (val) => {
     setLabel(val);
@@ -51,62 +76,69 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
 
   // ── field renderers ──────────────────────────────────────────────────────
 
+  const inputStyle = {
+    width: '100%', padding: '6px 8px', fontSize: 12,
+    border: '1px solid #e2e8f0', borderRadius: 6,
+    background: '#fff', color: '#1e293b', fontFamily: 'inherit',
+    outline: 'none', boxSizing: 'border-box',
+    transition: 'border-color 0.12s',
+  };
+
+  const labelStyle = {
+    display: 'block', fontSize: 11, fontWeight: 600,
+    color: '#475569', marginBottom: 4,
+    letterSpacing: '0.02em',
+  };
+
   const renderField = (param) => {
     const value = params[param.name] ?? param.defaultValue ?? '';
-    const id = `prop-${param.name}`;
+    const fid = `prop-${param.name}`;
+
+    const lbl = (
+      <label htmlFor={fid} style={labelStyle}>
+        {param.label}
+        {param.required && <span style={{ color: '#ef4444', marginLeft: 2 }}>*</span>}
+      </label>
+    );
 
     switch (param.type) {
       case 'TextArea':
       case 'Json':
         return (
-          <div key={param.name} className="mb-2">
-            <label htmlFor={id} className="form-label small fw-bold mb-1">
-              {param.label}
-              {param.required && <span className="text-danger"> *</span>}
-            </label>
+          <div key={param.name} style={{ marginBottom: 10 }}>
+            {lbl}
             <textarea
-              id={id}
-              className="form-control form-control-sm"
+              id={fid}
               rows={param.type === 'Json' ? 4 : 3}
               value={String(value)}
               placeholder={param.placeholder ?? param.description ?? ''}
               onChange={(e) => commitParam(param.name, e.target.value)}
-              style={{ fontFamily: param.type === 'Json' ? 'monospace' : 'inherit', fontSize: 12 }}
+              style={{ ...inputStyle, fontFamily: param.type === 'Json' ? 'monospace' : 'inherit', resize: 'vertical' }}
             />
           </div>
         );
 
       case 'Number':
         return (
-          <div key={param.name} className="mb-2">
-            <label htmlFor={id} className="form-label small fw-bold mb-1">
-              {param.label}
-              {param.required && <span className="text-danger"> *</span>}
-            </label>
-            <input
-              id={id}
-              type="number"
-              className="form-control form-control-sm"
-              value={value}
-              min={param.minValue}
-              max={param.maxValue}
+          <div key={param.name} style={{ marginBottom: 10 }}>
+            {lbl}
+            <input id={fid} type="number" value={value}
+              min={param.minValue} max={param.maxValue}
               step={param.name === 'temperature' ? 0.1 : 1}
               onChange={(e) => commitParam(param.name, parseFloat(e.target.value))}
+              style={inputStyle}
             />
           </div>
         );
 
       case 'Boolean':
         return (
-          <div key={param.name} className="mb-2 form-check">
-            <input
-              id={id}
-              type="checkbox"
-              className="form-check-input"
-              checked={Boolean(value)}
+          <div key={param.name} style={{ marginBottom: 10, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <input id={fid} type="checkbox" checked={Boolean(value)}
               onChange={(e) => commitParam(param.name, e.target.checked)}
+              style={{ width: 14, height: 14, cursor: 'pointer', accentColor: '#6366f1' }}
             />
-            <label htmlFor={id} className="form-check-label small">
+            <label htmlFor={fid} style={{ ...labelStyle, marginBottom: 0, cursor: 'pointer' }}>
               {param.label}
             </label>
           </div>
@@ -114,60 +146,42 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
 
       case 'Select':
         return (
-          <div key={param.name} className="mb-2">
-            <label htmlFor={id} className="form-label small fw-bold mb-1">
-              {param.label}
-              {param.required && <span className="text-danger"> *</span>}
-            </label>
-            <select
-              id={id}
-              className="form-select form-select-sm"
-              value={String(value)}
+          <div key={param.name} style={{ marginBottom: 10 }}>
+            {lbl}
+            <select id={fid} value={String(value)}
               onChange={(e) => commitParam(param.name, e.target.value)}
+              style={{ ...inputStyle, cursor: 'pointer' }}
             >
               {(param.options ?? []).map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
               ))}
             </select>
           </div>
         );
 
-      default: // Text
+      case 'Color':
         return (
-          <div key={param.name} className="mb-2">
-            <label htmlFor={id} className="form-label small fw-bold mb-1">
-              {param.label}
-              {param.required && <span className="text-danger"> *</span>}
-            </label>
-            <input
-              id={id}
-              type="text"
-              className="form-control form-control-sm"
-              value={String(value)}
-              placeholder={param.placeholder ?? param.description ?? ''}
-              onChange={(e) => commitParam(param.name, e.target.value)}
-            />
+          <div key={param.name} style={{ marginBottom: 10 }}>
+            {lbl}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input id={fid} type="color" value={String(value)}
+                onChange={(e) => commitParam(param.name, e.target.value)}
+                style={{ width: 36, height: 28, padding: 2, border: '1px solid #e2e8f0', borderRadius: 5, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace' }}>{String(value)}</span>
+            </div>
           </div>
         );
 
-      case 'Color':
+      default: // Text
         return (
-          <div key={param.name} className="mb-2">
-            <label htmlFor={id} className="form-label small fw-bold mb-1">
-              {param.label}
-            </label>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <input
-                id={id}
-                type="color"
-                style={{ width: 40, height: 30, padding: 2, border: '1px solid #ced4da', borderRadius: 4, cursor: 'pointer' }}
-                value={String(value)}
-                onChange={(e) => commitParam(param.name, e.target.value)}
-              />
-              <span className="text-muted small">{String(value)}</span>
-            </div>
+          <div key={param.name} style={{ marginBottom: 10 }}>
+            {lbl}
+            <input id={fid} type="text" value={String(value)}
+              placeholder={param.placeholder ?? param.description ?? ''}
+              onChange={(e) => commitParam(param.name, e.target.value)}
+              style={inputStyle}
+            />
           </div>
         );
     }
@@ -176,160 +190,170 @@ export default function PropertiesPanel({ selectedNode, onChange, onDelete }) {
   // ── render ───────────────────────────────────────────────────────────────
 
   return (
-    <div style={{ padding: 14, overflowY: 'auto', height: '100%' }}>
-      {/* Header with icon */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          marginBottom: 12,
-          paddingBottom: 10,
-          borderBottom: '1px solid #dee2e6',
-        }}
-      >
-        <div
-          style={{
-            width: 30,
-            height: 30,
-            borderRadius: 7,
-            backgroundColor: `${selectedNode.data.color ?? '#3498db'}20`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* ── Header ── */}
+      <div style={{
+        padding: '12px 14px 10px',
+        borderBottom: '1px solid #f1f5f9',
+        background: `linear-gradient(135deg, ${nodeColor}0a 0%, transparent 100%)`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: 9,
+            background: `linear-gradient(135deg, ${nodeColor}22, ${nodeColor}12)`,
+            border: `1.5px solid ${nodeColor}30`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-          }}
-        >
-          <i
-            className={`bi ${selectedNode.data.icon ?? NODE_ICONS[selectedNode.type] ?? 'bi-box'}`}
-            style={{ color: selectedNode.data.color ?? '#3498db', fontSize: 15 }}
-          />
-        </div>
-        <div>
-          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 14, lineHeight: 1.2 }}>
-            {label || selectedNode.data.label}
+          }}>
+            <i
+              className={`bi ${selectedNode.data.icon ?? NODE_ICONS[selectedNode.type] ?? 'bi-box'}`}
+              style={{ color: nodeColor, fontSize: 16 }}
+            />
           </div>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>{selectedNode.type}</div>
-        </div>
-      </div>
-
-      {/* Node Name */}
-      <div className="mb-2">
-        <label className="form-label small fw-bold mb-1">Node Name</label>
-        <input
-          type="text"
-          className="form-control form-control-sm"
-          value={label}
-          onChange={(e) => commitLabel(e.target.value)}
-        />
-      </div>
-
-      {/* Description — always shown, displayed on the canvas */}
-      {selectedNode.type !== 'NoteNode' && selectedNode.type !== 'ContainerNode' && (
-        <div className="mb-3">
-          <label className="form-label small fw-bold mb-1">
-            Description
-            <span className="text-muted fw-normal ms-1" style={{ fontSize: 10 }}>(shown on canvas)</span>
-          </label>
-          <textarea
-            className="form-control form-control-sm"
-            rows={2}
-            value={params.description ?? ''}
-            placeholder="Briefly describe what this node does…"
-            onChange={(e) => commitParam('description', e.target.value)}
-            style={{ fontSize: 12, resize: 'vertical' }}
-          />
-        </div>
-      )}
-
-      {/* Schema-driven parameter fields (skip description — already shown above) */}
-      {schema.parameters && schema.parameters.filter(p => p.name !== 'description').length > 0 && (
-        <>
-          <hr style={{ margin: '8px 0' }} />
-          <h6 className="small fw-bold mb-2">Parameters</h6>
-          {schema.parameters.filter(p => p.name !== 'description').map(renderField)}
-        </>
-      )}
-
-      {/* Data Inputs — WorkflowData keys this node reads */}
-      {schema.dataInputs && schema.dataInputs.length > 0 && (
-        <>
-          <hr style={{ margin: '8px 0' }} />
-          <h6 className="small fw-bold mb-1" style={{ color: '#3b82f6' }}>
-            <i className="bi bi-arrow-down-circle me-1" />Reads from WorkflowData
-          </h6>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 4 }}>
-            {schema.dataInputs.map((p) => (
-              <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
-                <code style={{
-                  background: p.isDynamic ? '#fef3c7' : '#eff6ff',
-                  color: p.isDynamic ? '#92400e' : '#1d4ed8',
-                  padding: '1px 5px', borderRadius: 3, fontFamily: 'monospace', fontSize: 11,
-                  border: `1px solid ${p.isDynamic ? '#fde68a' : '#bfdbfe'}`,
-                  whiteSpace: 'nowrap',
-                }}>{p.key}</code>
-                {p.required && <span style={{ color: '#ef4444', fontSize: 10 }}>required</span>}
-                {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
-                {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
-              </div>
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Data Outputs — WorkflowData keys this node writes */}
-      {schema.dataOutputs && schema.dataOutputs.length > 0 && (
-        <>
-          <hr style={{ margin: '8px 0' }} />
-          <h6 className="small fw-bold mb-1" style={{ color: '#22c55e' }}>
-            <i className="bi bi-arrow-up-circle me-1" />Writes to WorkflowData
-          </h6>
-          {selectedNode.data.nodeId && (
-            <div style={{ fontSize: 10, color: '#64748b', marginBottom: 4, fontStyle: 'italic' }}>
-              Reference as <code style={{ fontFamily: 'monospace', fontSize: 10 }}>{'{{' + selectedNode.data.nodeId + '.key}}'}</code>
+          <div style={{ minWidth: 0 }}>
+            <div style={{
+              fontWeight: 700, color: '#0f172a', fontSize: 13.5,
+              lineHeight: 1.2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+              letterSpacing: '-0.01em',
+            }}>
+              {label || selectedNode.data.label}
             </div>
-          )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 3, marginBottom: 4 }}>
-            {schema.dataOutputs.map((p) => (
-              <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
-                <code style={{
-                  background: p.isDynamic ? '#fef3c7' : '#f0fdf4',
-                  color: p.isDynamic ? '#92400e' : '#15803d',
-                  padding: '1px 5px', borderRadius: 3, fontFamily: 'monospace', fontSize: 11,
-                  border: `1px solid ${p.isDynamic ? '#fde68a' : '#bbf7d0'}`,
-                  whiteSpace: 'nowrap',
-                  cursor: selectedNode.data.nodeId ? 'pointer' : 'default',
-                  userSelect: 'text',
-                }}
-                  title={selectedNode.data.nodeId
-                    ? `Copy: {{${selectedNode.data.nodeId}.${p.key}}}`
-                    : p.description}
-                >{p.key}</code>
-                {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
-                {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
-              </div>
-            ))}
+            <div style={{
+              fontSize: 10.5, color: '#94a3b8', marginTop: 2,
+              fontFamily: 'monospace', letterSpacing: '0.02em',
+            }}>
+              {selectedNode.type}
+            </div>
           </div>
-        </>
-      )}
-
-      {/* Delete — StartNode is permanent and cannot be removed */}
-      <hr style={{ margin: '14px 0 10px' }} />
-      {selectedNode.type === 'StartNode' ? (
-        <div
-          className="text-muted small text-center"
-          style={{ padding: '6px 0', background: '#f8f9fa', borderRadius: 4 }}
-        >
-          <i className="bi bi-lock-fill" /> Start node cannot be deleted
         </div>
-      ) : (
-        <button
-          className="btn btn-danger btn-sm w-100"
-          onClick={() => onDelete(selectedNode.id)}
-        >
-          <i className="bi bi-trash" /> Delete Node
-        </button>
-      )}
+      </div>
+
+      {/* ── Scrollable body ── */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px' }}>
+
+        {/* Node Name */}
+        <div style={{ marginBottom: 10 }}>
+          <label style={labelStyle}>Node Name</label>
+          <input type="text" value={label} onChange={(e) => commitLabel(e.target.value)} style={inputStyle} />
+        </div>
+
+        {/* Description */}
+        {selectedNode.type !== 'NoteNode' && selectedNode.type !== 'ContainerNode' && (
+          <div style={{ marginBottom: 12 }}>
+            <label style={labelStyle}>
+              Description
+              <span style={{ color: '#94a3b8', fontWeight: 400, marginLeft: 4, fontSize: 10 }}>(shown on canvas)</span>
+            </label>
+            <textarea
+              rows={2}
+              value={params.description ?? ''}
+              placeholder="Briefly describe what this node does…"
+              onChange={(e) => commitParam('description', e.target.value)}
+              style={{ ...inputStyle, resize: 'vertical' }}
+            />
+          </div>
+        )}
+
+        {/* Schema parameters */}
+        {schema.parameters && schema.parameters.filter(p => p.name !== 'description').length > 0 && (
+          <>
+            <SectionHead icon="bi-sliders" label="Parameters" />
+            <div style={{ padding: '6px 2px 0' }}>
+              {schema.parameters.filter(p => p.name !== 'description').map(renderField)}
+            </div>
+          </>
+        )}
+
+        {/* Data Inputs */}
+        {schema.dataInputs && schema.dataInputs.length > 0 && (
+          <>
+            <SectionHead icon="bi-arrow-down-circle-fill" label="Reads from WorkflowData" color="#3b82f6" />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '6px 2px 4px' }}>
+              {schema.dataInputs.map((p) => (
+                <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+                  <code style={{
+                    background: p.isDynamic ? '#fef3c7' : '#eff6ff',
+                    color: p.isDynamic ? '#92400e' : '#1d4ed8',
+                    padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace', fontSize: 11,
+                    border: `1px solid ${p.isDynamic ? '#fde68a' : '#bfdbfe'}`,
+                    whiteSpace: 'nowrap',
+                  }}>{p.key}</code>
+                  {p.required && <span style={{ color: '#ef4444', fontSize: 10, fontWeight: 600 }}>required</span>}
+                  {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
+                  {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Data Outputs */}
+        {schema.dataOutputs && schema.dataOutputs.length > 0 && (
+          <>
+            <SectionHead icon="bi-arrow-up-circle-fill" label="Writes to WorkflowData" color="#22c55e" />
+            {selectedNode.data.nodeId && (
+              <div style={{ fontSize: 10, color: '#64748b', padding: '4px 2px 2px', fontStyle: 'italic' }}>
+                Reference as{' '}
+                <code style={{ fontFamily: 'monospace', fontSize: 10, color: '#6366f1' }}>
+                  {'{{' + selectedNode.data.nodeId + '.key}}'}
+                </code>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '6px 2px 4px' }}>
+              {schema.dataOutputs.map((p) => (
+                <div key={p.key} style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 11 }}>
+                  <code style={{
+                    background: p.isDynamic ? '#fef3c7' : '#f0fdf4',
+                    color: p.isDynamic ? '#92400e' : '#15803d',
+                    padding: '2px 6px', borderRadius: 4, fontFamily: 'monospace', fontSize: 11,
+                    border: `1px solid ${p.isDynamic ? '#fde68a' : '#bbf7d0'}`,
+                    whiteSpace: 'nowrap',
+                    cursor: selectedNode.data.nodeId ? 'pointer' : 'default',
+                    userSelect: 'text',
+                  }}
+                    title={selectedNode.data.nodeId ? `Copy: {{${selectedNode.data.nodeId}.${p.key}}}` : p.description}
+                  >{p.key}</code>
+                  {p.isDynamic && <span style={{ color: '#92400e', fontSize: 10 }}>dynamic</span>}
+                  {p.description && <span style={{ color: '#94a3b8' }}>{p.description}</span>}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* Delete / lock */}
+        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #f1f5f9' }}>
+          {selectedNode.type === 'StartNode' ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              padding: '8px 12px', background: '#f8fafc', borderRadius: 7,
+              fontSize: 12, color: '#94a3b8',
+              border: '1px solid #f1f5f9',
+            }}>
+              <i className="bi bi-lock-fill" style={{ fontSize: 11 }} />
+              Start node cannot be deleted
+            </div>
+          ) : (
+            <button
+              onClick={() => onDelete(selectedNode.id)}
+              style={{
+                width: '100%', padding: '8px 12px',
+                background: 'transparent', border: '1.5px solid #fecaca',
+                borderRadius: 7, cursor: 'pointer',
+                color: '#ef4444', fontSize: 12, fontWeight: 600,
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+                fontFamily: 'inherit', transition: 'background 0.12s, border-color 0.12s',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.borderColor = '#fecaca'; }}
+            >
+              <i className="bi bi-trash" />
+              Delete Node
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

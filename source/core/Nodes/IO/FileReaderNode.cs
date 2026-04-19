@@ -38,6 +38,13 @@ public sealed class FileReaderNode : BaseNode
         ]
     };
 
+    // WorkflowData keys
+    public const string InputFilePath      = "file_path";
+    public const string OutputText         = "text";
+    public const string OutputFileName     = "file_name";
+    public const string OutputFileSize     = "file_size";
+    public const string OutputFileExtension = "file_extension";
+
     private readonly string? _staticFilePath;
 
     public FileReaderNode(string? staticFilePath = null)
@@ -53,9 +60,9 @@ public sealed class FileReaderNode : BaseNode
     protected override async Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
-        var filePath = input.GetString("file_path") ?? _staticFilePath
+        var filePath = input.GetString(InputFilePath) ?? _staticFilePath
             ?? throw new InvalidOperationException(
-                "FileReaderNode requires 'file_path' in WorkflowData or static config");
+                $"FileReaderNode requires '{InputFilePath}' in WorkflowData or static config");
 
         if (!File.Exists(filePath))
             throw new FileNotFoundException($"File not found: {filePath}");
@@ -70,9 +77,9 @@ public sealed class FileReaderNode : BaseNode
         nodeCtx.SetMetadata("file_extension", ext);
 
         return input.Clone()
-            .Set("text", content)
-            .Set("file_name", info.Name)
-            .Set("file_size", info.Length)
-            .Set("file_extension", ext);
+            .Set(OutputText,          content)
+            .Set(OutputFileName,      info.Name)
+            .Set(OutputFileSize,      info.Length)
+            .Set(OutputFileExtension, ext);
     }
 }

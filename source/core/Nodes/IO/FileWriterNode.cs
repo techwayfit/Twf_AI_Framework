@@ -31,10 +31,14 @@ public sealed class FileWriterNode : BaseNode
         ]
     };
 
+    // WorkflowData keys
+    public const string DefaultDataKey = "llm_response";
+    public const string OutputFile     = "output_file";
+
     private readonly string _outputPath;
     private readonly string _dataKey;
 
-    public FileWriterNode(string outputPath, string dataKey = "llm_response")
+    public FileWriterNode(string outputPath, string dataKey = DefaultDataKey)
     {
         _outputPath = outputPath;
         _dataKey = dataKey;
@@ -44,7 +48,7 @@ public sealed class FileWriterNode : BaseNode
     public FileWriterNode(Dictionary<string, object?> parameters)
         : this(
             NodeParameters.GetString(parameters, "filePath") ?? "output.txt",
-            NodeParameters.GetString(parameters, "contentKey") ?? "llm_response")
+            NodeParameters.GetString(parameters, "contentKey") ?? DefaultDataKey)
     { }
 
     protected override async Task<WorkflowData> RunAsync(
@@ -63,6 +67,6 @@ public sealed class FileWriterNode : BaseNode
         nodeCtx.SetMetadata("output_path", _outputPath);
         nodeCtx.SetMetadata("bytes_written", content.Length);
 
-        return input.Clone().Set("output_file", _outputPath);
+        return input.Clone().Set(OutputFile, _outputPath);
     }
 }

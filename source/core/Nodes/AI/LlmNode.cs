@@ -41,20 +41,29 @@ public sealed class LlmNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "llm";
 
+    // WorkflowData keys
+    public const string InputPrompt            = "prompt";
+    public const string InputSystemPrompt      = "system_prompt";
+    public const string InputMessages          = "messages";
+    public const string OutputResponse         = "llm_response";
+    public const string OutputModel            = "llm_model";
+    public const string OutputPromptTokens     = "prompt_tokens";
+    public const string OutputCompletionTokens = "completion_tokens";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
     [
-        new("prompt",        typeof(string), Required: true,  "Prompt text to send to the model"),
-        new("system_prompt", typeof(string), Required: false, "System instruction (overrides node config)")
+        new(InputPrompt,       typeof(string), Required: true,  "Prompt text to send to the model"),
+        new(InputSystemPrompt, typeof(string), Required: false, "System instruction (overrides node config)")
     ];
 
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("llm_response",      typeof(string), Description: "Model's text response"),
-        new("llm_model",         typeof(string), Description: "Model name used"),
-        new("prompt_tokens",     typeof(int),    Description: "Tokens consumed by the prompt"),
-        new("completion_tokens", typeof(int),    Description: "Tokens in the completion")
+        new(OutputResponse,         typeof(string), Description: "Model's text response"),
+        new(OutputModel,            typeof(string), Description: "Model name used"),
+        new(OutputPromptTokens,     typeof(int),    Description: "Tokens consumed by the prompt"),
+        new(OutputCompletionTokens, typeof(int),    Description: "Tokens in the completion")
     ];
 
     /// <summary>
@@ -184,11 +193,11 @@ public sealed class LlmNode : BaseNode
         var sanitizedInput = input;
         if (_config.SanitizePrompts && _config.SanitizationOptions != null)
         {
-            var rawPrompt = input.GetString("prompt") ?? "";
+            var rawPrompt = input.GetString(InputPrompt) ?? "";
             if (!string.IsNullOrEmpty(rawPrompt))
             {
                 var sanitized = _promptSanitizer.Sanitize(rawPrompt, _config.SanitizationOptions);
-                sanitizedInput = input.Clone().Set("prompt", sanitized);
+                sanitizedInput = input.Clone().Set(InputPrompt, sanitized);
 
                 if (rawPrompt != sanitized)
                 {
@@ -231,10 +240,10 @@ public sealed class LlmNode : BaseNode
         }
 
         return input.Clone()
-            .Set("llm_response", llmResponse)
-            .Set("llm_model", _config.Model)
-            .Set("prompt_tokens", usage.PromptTokens)
-            .Set("completion_tokens", usage.CompletionTokens);
+            .Set(OutputResponse,         llmResponse)
+            .Set(OutputModel,            _config.Model)
+            .Set(OutputPromptTokens,     usage.PromptTokens)
+            .Set(OutputCompletionTokens, usage.CompletionTokens);
     }
 
     private List<(string Role, string Content)> BuildMessages(
@@ -243,7 +252,7 @@ public sealed class LlmNode : BaseNode
         var messages = new List<(string Role, string Content)>();
 
         // Add system prompt
-        var systemPrompt = input.GetString("system_prompt") ?? _config.DefaultSystemPrompt;
+        var systemPrompt = input.GetString(InputSystemPrompt) ?? _config.DefaultSystemPrompt;
         if (!string.IsNullOrWhiteSpace(systemPrompt))
             messages.Add(("system", systemPrompt));
 
@@ -255,13 +264,13 @@ public sealed class LlmNode : BaseNode
         }
 
         // Add current prompt or raw messages
-        if (input.TryGet<List<(string, string)>>("messages", out var rawMessages) && rawMessages is not null)
+        if (input.TryGet<List<(string, string)>>(InputMessages, out var rawMessages) && rawMessages is not null)
         {
             messages.AddRange(rawMessages);
         }
         else
         {
-            var prompt = input.GetRequiredString("prompt");
+            var prompt = input.GetRequiredString(InputPrompt);
 
             if (_config.MaintainHistory)
                 context.AppendMessage(ChatMessage.User(prompt));

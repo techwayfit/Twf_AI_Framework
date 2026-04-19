@@ -6,10 +6,10 @@ import { portColor, NODE_ICONS, NODE_ROUTING_PORTS, DEFAULT_ROUTING_PORTS } from
  * Standard rectangular node used for most node types.
  *
  * Layout:
- *   ┌─ colored left border ──────────────────────────┐
- *   │ [icon]  Node Name (label)          [type badge] │
- *   │         description text (2-line clamp)         │
- *   └─────────────────────────────────────────────────┘
+ *   ┌─ colored left accent ──────────────────────────────┐
+ *   │ [icon]  Node Name (label)           [nodeId badge] │
+ *   │         description text (2-line clamp)            │
+ *   └────────────────────────────────────────────────────┘
  */
 export default function GenericNode({ id, data, selected }) {
   const isRunner = useIsRunner();
@@ -50,133 +50,126 @@ export default function GenericNode({ id, data, selected }) {
               color: '#fff', fontSize: 13, lineHeight: 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               cursor: 'pointer', padding: 0,
-              boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+              boxShadow: '0 2px 6px rgba(239,68,68,0.35)',
             }}
           >
             <i className="bi bi-x" />
           </button>
         </NodeToolbar>
       )}
-    <div
-      className={runnerClass}
-      title={data.type}
-      style={{
-        borderRadius: 8,
-        backgroundColor: selected ? '#f0f4ff' : '#fff',
-        border: `1.5px solid ${selected ? color : '#e2e8f0'}`,
-        borderLeft: `4px solid ${color}`,
-        minWidth: 180,
-        minHeight: 60,
-        boxShadow: selected ? `0 0 0 2px ${color}33` : 'none',
-        position: 'relative',
-        fontFamily: 'inherit',
-        cursor: 'default',
-        userSelect: 'none',
-        transition: 'border-color 0.15s, box-shadow 0.15s',
-      }}
-    >
-      {inputPorts.map((port, i) => (
-        <Handle
-          key={port.id}
-          type="target"
-          position={Position.Left}
-          id={port.id}
-          style={{ top: portTop(i, inputPorts.length), background: portColor(port.id, 'target') }}
-          title={port.label}
-        />
-      ))}
-
-      {/* Header row: icon + name */}
       <div
+        className={runnerClass}
+        title={data.type}
         style={{
+          borderRadius: 10,
+          backgroundColor: selected ? '#f8faff' : '#ffffff',
+          border: `1.5px solid ${selected ? color : '#e2e8f0'}`,
+          borderLeft: `4px solid ${color}`,
+          minWidth: 184,
+          minHeight: 62,
+          boxShadow: selected
+            ? `0 0 0 3px ${color}22, 0 4px 16px rgba(15,23,42,0.12)`
+            : '0 1px 3px rgba(15,23,42,0.08), 0 4px 12px rgba(15,23,42,0.05)',
+          position: 'relative',
+          fontFamily: 'inherit',
+          cursor: 'default',
+          userSelect: 'none',
+          transition: 'border-color 0.15s, box-shadow 0.15s, background 0.15s',
+        }}
+      >
+        {inputPorts.map((port, i) => (
+          <Handle
+            key={port.id}
+            type="target"
+            position={Position.Left}
+            id={port.id}
+            style={{ top: portTop(i, inputPorts.length), background: portColor(port.id, 'target') }}
+            title={port.label}
+          />
+        ))}
+
+        {/* Header row: icon + name + nodeId */}
+        <div style={{
           display: 'flex',
           alignItems: 'center',
           gap: 7,
-          padding: '9px 12px 4px 12px',
-        }}
-      >
-        {/* Icon badge */}
-        <div
-          style={{
-            width: 26,
-            height: 26,
-            borderRadius: 6,
-            backgroundColor: `${color}18`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
+          padding: '9px 11px 4px 11px',
+        }}>
+          {/* Icon badge */}
+          <div style={{
+            width: 28, height: 28, borderRadius: 7,
+            background: `linear-gradient(135deg, ${color}22 0%, ${color}12 100%)`,
+            border: `1px solid ${color}28`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
             flexShrink: 0,
-          }}
-        >
-          <i className={`bi ${icon}`} style={{ color, fontSize: 13 }} />
-        </div>
+          }}>
+            <i className={`bi ${icon}`} style={{ color, fontSize: 13 }} />
+          </div>
 
-        {/* Node name */}
-        <div
-          style={{
+          {/* Node name */}
+          <div style={{
             fontWeight: 600,
-            fontSize: 13,
-            color: '#1e293b',
+            fontSize: 12.5,
+            color: '#0f172a',
             lineHeight: 1.2,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
             flex: 1,
-          }}
-        >
-          {data.label}
+            letterSpacing: '-0.01em',
+          }}>
+            {data.label}
+          </div>
+
+          {/* NodeId badge */}
+          {data.nodeId && (
+            <div
+              title={`Reference this node's outputs as {{${data.nodeId}.key}}`}
+              style={{
+                fontSize: 9.5,
+                fontFamily: 'monospace',
+                color: '#6366f1',
+                background: '#eef2ff',
+                border: '1px solid #c7d2fe',
+                borderRadius: 4,
+                padding: '2px 5px',
+                flexShrink: 0,
+                userSelect: 'text',
+                letterSpacing: '0.02em',
+              }}
+            >
+              {data.nodeId}
+            </div>
+          )}
         </div>
 
-        {/* NodeId badge — shown when assigned, used for {{nodeId.key}} references */}
-        {data.nodeId && (
-          <div
-            title={`Reference this node's outputs as {{${data.nodeId}.key}}`}
-            style={{
-              fontSize: 10,
-              fontFamily: 'monospace',
-              color: '#64748b',
-              background: '#f1f5f9',
-              border: '1px solid #e2e8f0',
-              borderRadius: 4,
-              padding: '1px 5px',
-              flexShrink: 0,
-              userSelect: 'text',
-            }}
-          >
-            {data.nodeId}
-          </div>
-        )}
-      </div>
-
-      {/* Description — strictly 2 lines, never expands node */}
-      <div
-        style={{
-          padding: '0 12px 9px 45px',
+        {/* Description — strictly 2 lines */}
+        <div style={{
+          padding: '0 11px 9px 46px',
           fontSize: 11,
           color: desc ? '#64748b' : '#94a3b8',
           fontStyle: desc ? 'normal' : 'italic',
-          lineHeight: 1.4,
-          height: '2.8em',   /* exactly 2 lines — prevents node from growing */
+          lineHeight: 1.45,
+          height: '2.9em',
           overflow: 'hidden',
           display: '-webkit-box',
           WebkitLineClamp: 2,
           WebkitBoxOrient: 'vertical',
-        }}
-      >
-        {desc || 'No description'}
-      </div>
+        }}>
+          {desc || 'No description'}
+        </div>
 
-      {outputPorts.map((port, i) => (
-        <Handle
-          key={port.id}
-          type="source"
-          position={Position.Right}
-          id={port.id}
-          style={{ top: portTop(i, outputPorts.length), background: portColor(port.id, 'source') }}
-          title={port.label}
-        />
-      ))}
-    </div>
+        {outputPorts.map((port, i) => (
+          <Handle
+            key={port.id}
+            type="source"
+            position={Position.Right}
+            id={port.id}
+            style={{ top: portTop(i, outputPorts.length), background: portColor(port.id, 'source') }}
+            title={port.label}
+          />
+        ))}
+      </div>
     </>
   );
 }

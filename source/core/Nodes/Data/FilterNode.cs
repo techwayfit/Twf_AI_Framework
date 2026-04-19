@@ -69,6 +69,10 @@ public sealed class FilterNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "filter";
 
+    // WorkflowData keys
+    public const string OutputIsValid          = "is_valid";
+    public const string OutputValidationErrors = "validation_errors";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
         _rules.Select(r => new NodeData(r.Key, typeof(object), Required: false, "Field subject to validation rule"))
@@ -78,8 +82,8 @@ public sealed class FilterNode : BaseNode
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("is_valid",          typeof(bool),         Description: "True if all rules passed"),
-        new("validation_errors", typeof(List<string>), Required: false, "List of failure messages")
+        new(OutputIsValid,          typeof(bool),         Description: "True if all rules passed"),
+        new(OutputValidationErrors, typeof(List<string>), Required: false, "List of failure messages")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -170,12 +174,12 @@ public sealed class FilterNode : BaseNode
         }
 
         var isValid = failures.Count == 0;
-        var output = input.Clone().Set("is_valid", isValid);
+        var output = input.Clone().Set(OutputIsValid, isValid);
 
         if (!isValid)
         {
             var errorSummary = string.Join("; ", failures);
-            output.Set("validation_errors", failures);
+            output.Set(OutputValidationErrors, failures);
 
             if (_throwOnFail)
                 throw new ValidationException(Name, errorSummary);

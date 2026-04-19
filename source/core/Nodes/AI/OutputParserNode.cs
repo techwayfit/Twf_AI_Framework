@@ -165,10 +165,14 @@ public sealed class OutputParserNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "parser";
 
+    // WorkflowData keys
+    public const string InputResponse   = "llm_response";
+    public const string OutputParsedOutput = "parsed_output";
+
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataIn =>
     [
-        new("llm_response", typeof(string), Required: true, "Raw LLM text to parse JSON from")
+        new(InputResponse, typeof(string), Required: true, "Raw LLM text to parse JSON from")
     ];
 
     /// <inheritdoc/>
@@ -178,7 +182,7 @@ public sealed class OutputParserNode : BaseNode
         {
             var ports = new List<NodeData>
             {
-                new("parsed_output", typeof(Dictionary<string, object?>), Description: "Full parsed JSON object")
+                new(OutputParsedOutput, typeof(Dictionary<string, object?>), Description: "Full parsed JSON object")
             };
             if (_fieldMapping is not null)
                 foreach (var (_, dataKey) in _fieldMapping)
@@ -229,7 +233,7 @@ public sealed class OutputParserNode : BaseNode
     protected override Task<WorkflowData> RunAsync(
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
-        var rawResponse = input.GetRequiredString("llm_response");
+        var rawResponse = input.GetRequiredString(InputResponse);
         var json = ExtractJson(rawResponse);
 
         if (json is null)
@@ -250,7 +254,7 @@ public sealed class OutputParserNode : BaseNode
             var parsedDict = JsonSerializer.Deserialize<Dictionary<string, object?>>(json)
                              ?? new Dictionary<string, object?>();
 
-            output.Set("parsed_output", parsedDict);
+            output.Set(OutputParsedOutput, parsedDict);
 
             if (_fieldMapping is not null)
             {

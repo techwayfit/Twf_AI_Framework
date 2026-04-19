@@ -10,12 +10,12 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  AI:      '#4A90E2',
-  Control: '#F5A623',
-  Data:    '#7ED321',
-  IO:      '#BD10E0',
-  Logic:   '#20c997',
-  Visual:  '#6366f1',
+  AI:      '#6366f1',
+  Control: '#f59e0b',
+  Data:    '#22c55e',
+  IO:      '#ec4899',
+  Logic:   '#14b8a6',
+  Visual:  '#8b5cf6',
 };
 
 export default function NodePalette({ availableNodes, disabledTypes = new Set() }) {
@@ -31,32 +31,43 @@ export default function NodePalette({ availableNodes, disabledTypes = new Set() 
   };
 
   return (
-    <div style={{ padding: '8px 6px', overflowY: 'auto', height: '100%' }}>
+    <div style={{ padding: '10px 8px', overflowY: 'auto', height: '100%' }}>
       {Object.entries(grouped).map(([category, nodes]) => {
         const catColor = CATEGORY_COLORS[category] ?? '#6c757d';
         return (
-          <div key={category} style={{ marginBottom: 12 }}>
+          <div key={category} style={{ marginBottom: 14 }}>
             {/* Category header */}
-            <div
-              style={{
-                fontSize: 10,
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '3px 6px 5px',
+              marginBottom: 3,
+            }}>
+              <div style={{
+                width: 18, height: 18, borderRadius: 4,
+                background: `${catColor}18`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                flexShrink: 0,
+              }}>
+                <i className={`bi ${CATEGORY_ICONS[category] ?? 'bi-box'}`}
+                   style={{ color: catColor, fontSize: 10 }} />
+              </div>
+              <span style={{
+                fontSize: 10.5,
                 fontWeight: 700,
                 color: catColor,
                 textTransform: 'uppercase',
-                letterSpacing: '0.7px',
-                padding: '4px 6px 3px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <i className={`bi ${CATEGORY_ICONS[category] ?? 'bi-box'}`} />
-              {category}
+                letterSpacing: '0.06em',
+              }}>
+                {category}
+              </span>
             </div>
 
             {nodes.map((node) => {
               const disabled = disabledTypes.has(node.type);
               const icon = node.icon ?? NODE_ICONS[node.type] ?? 'bi-box';
+              const nodeColor = disabled ? '#94a3b8' : node.color;
               return (
                 <div
                   key={node.type}
@@ -67,47 +78,58 @@ export default function NodePalette({ availableNodes, disabledTypes = new Set() 
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    padding: '5px 8px',
+                    padding: '6px 8px',
                     marginBottom: 2,
-                    borderRadius: 6,
-                    background: disabled ? '#f8f8f8' : '#fff',
-                    border: `1px solid ${disabled ? '#e2e8f0' : '#f1f5f9'}`,
-                    borderLeft: `3px solid ${disabled ? '#cbd5e1' : node.color}`,
+                    borderRadius: 7,
+                    background: disabled ? '#f8fafc' : '#ffffff',
+                    border: `1px solid ${disabled ? '#e2e8f0' : '#eef2f7'}`,
+                    borderLeft: `3px solid ${disabled ? '#d1d5db' : node.color}`,
                     cursor: disabled ? 'not-allowed' : 'grab',
                     userSelect: 'none',
                     opacity: disabled ? 0.5 : 1,
-                    transition: 'background 0.1s, border-color 0.1s',
+                    transition: 'background 0.12s, box-shadow 0.12s, border-color 0.12s',
+                    boxShadow: disabled ? 'none' : '0 1px 2px rgba(15,23,42,0.04)',
                   }}
-                  onMouseEnter={(e) => { if (!disabled) e.currentTarget.style.background = '#f8fafc'; }}
-                  onMouseLeave={(e) => { if (!disabled) e.currentTarget.style.background = '#fff'; }}
+                  onMouseEnter={(e) => {
+                    if (!disabled) {
+                      e.currentTarget.style.background = '#f8fafc';
+                      e.currentTarget.style.boxShadow = '0 2px 6px rgba(15,23,42,0.08)';
+                      e.currentTarget.style.borderColor = node.color + '55';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!disabled) {
+                      e.currentTarget.style.background = '#ffffff';
+                      e.currentTarget.style.boxShadow = '0 1px 2px rgba(15,23,42,0.04)';
+                      e.currentTarget.style.borderColor = '#eef2f7';
+                    }
+                  }}
                 >
                   {/* Icon badge */}
-                  <div
-                    style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 5,
-                      backgroundColor: disabled ? '#e2e8f0' : `${node.color}18`,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexShrink: 0,
-                    }}
-                  >
-                    <i
-                      className={`bi ${icon}`}
-                      style={{ color: disabled ? '#94a3b8' : node.color, fontSize: 12 }}
-                    />
+                  <div style={{
+                    width: 26, height: 26, borderRadius: 6,
+                    background: disabled ? '#f1f5f9' : `linear-gradient(135deg, ${node.color}20, ${node.color}10)`,
+                    border: `1px solid ${disabled ? '#e2e8f0' : node.color + '28'}`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    flexShrink: 0,
+                  }}>
+                    <i className={`bi ${icon}`} style={{ color: nodeColor, fontSize: 12 }} />
                   </div>
 
                   {/* Name */}
-                  <span style={{ fontSize: 12, fontWeight: 500, color: disabled ? '#94a3b8' : '#334155', flex: 1 }}>
+                  <span style={{
+                    fontSize: 12, fontWeight: 500,
+                    color: disabled ? '#94a3b8' : '#1e293b',
+                    flex: 1, lineHeight: 1.3,
+                    letterSpacing: '-0.005em',
+                  }}>
                     {node.name}
                   </span>
 
-                  {disabled && (
-                    <i className="bi bi-lock-fill" style={{ fontSize: 10, color: '#94a3b8' }} />
-                  )}
+                  {disabled
+                    ? <i className="bi bi-lock-fill" style={{ fontSize: 9, color: '#94a3b8' }} />
+                    : <i className="bi bi-grip-vertical" style={{ fontSize: 10, color: '#d1d5db' }} />
+                  }
                 </div>
               );
             })}

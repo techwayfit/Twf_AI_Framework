@@ -337,7 +337,7 @@ public class WorkflowGraphWalker : IWorkflowGraphWalker
         {
             config.Context.CancellationToken.ThrowIfCancellationRequested();
 
-            var itemData = data.Clone()
+            var itemData = data
             .Set(loopItemKey, rawItems[loopIdx])
          .Set("__loop_index__", loopIdx);
 

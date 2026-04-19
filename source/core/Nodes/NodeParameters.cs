@@ -1,4 +1,5 @@
 using System.Text.Json;
+using TwfAiFramework.Core;
 
 namespace TwfAiFramework.Nodes;
 
@@ -154,6 +155,18 @@ public static class NodeParameters
         if (!data.TryGetValue(rootKey, out var root) || root is null) return null;
 
         return TraversePropertyPath(root, key[(dot + 1)..]);
+    }
+    /// <summary>
+    /// Extension method for WorkflowData to retrieve a nested value by key, supporting dotted property paths.
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="path"></param>
+    /// <returns></returns>
+    public static object? NestedValue(this WorkflowData input,string path)
+    {
+        var val = NodeParameters.GetNestedValue(
+                input.Keys.ToDictionary(k => k, input.Get<object>), path);
+        return val;
     }
 
     /// <summary>

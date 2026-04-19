@@ -136,6 +136,10 @@ public sealed class PromptBuilderNode : BaseNode
     /// <inheritdoc/>
     public override string IdPrefix => "prompt";
 
+    // WorkflowData keys
+    public const string OutputPrompt       = "prompt";
+    public const string OutputSystemPrompt = "system_prompt";
+
     /// <inheritdoc/>
     // Input ports are the {{variable}} placeholders found in the templates at construction time.
     public override IReadOnlyList<NodeData> DataIn => ExtractTemplatePorts();
@@ -143,8 +147,8 @@ public sealed class PromptBuilderNode : BaseNode
     /// <inheritdoc/>
     public override IReadOnlyList<NodeData> DataOut =>
     [
-        new("prompt",        typeof(string), Description: "Rendered prompt text"),
-        new("system_prompt", typeof(string), Required: false, Description: "Rendered system instruction")
+        new(OutputPrompt,       typeof(string), Description: "Rendered prompt text"),
+        new(OutputSystemPrompt, typeof(string), Required: false, Description: "Rendered system instruction")
     ];
 
     /// <summary>UI schema: parameter form fields shown in the properties panel.</summary>
@@ -189,14 +193,14 @@ public sealed class PromptBuilderNode : BaseNode
         WorkflowData input, WorkflowContext context, NodeExecutionContext nodeCtx)
     {
         var prompt = Render(_promptTemplate, input, nodeCtx);
-        var output = input.Clone().Set("prompt", prompt);
+        var output = input.Clone().Set(OutputPrompt, prompt);
 
         nodeCtx.Log($"Prompt length: {prompt.Length} chars");
 
         if (_systemTemplate is not null)
         {
             var system = Render(_systemTemplate, input, nodeCtx);
-            output.Set("system_prompt", system);
+            output.Set(OutputSystemPrompt, system);
             nodeCtx.Log($"System prompt length: {system.Length} chars");
         }
 
