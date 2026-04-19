@@ -4,31 +4,31 @@
 
 A comprehensive xUnit test suite has been created for the **TwfAiFramework** project with **95 passing tests** covering all core functionality.
 
-## ?? Test Results
+## Test Results
 
 ```
 Test summary: total: 95, failed: 0, succeeded: 95, skipped: 0
 Build succeeded ?
 ```
 
-## ?? Project Structure
+## Project Structure
 
 ```
 tests/TwfAiFramework.Tests/
-??? Core/
-?   ??? WorkflowDataTests.cs        (25 tests) ?
-?   ??? NodeOptionsTests.cs         (15 tests) ?
-?   ??? NodeResultTests.cs          (17 tests) ?
-? ??? WorkflowContextTests.cs     (18 tests) ?
-?   ??? WorkflowBuilderTests.cs     (18 tests) ?
-??? Nodes/
-?   ??? BaseNodeTests.cs       (8 tests)  ?
-??? GlobalUsings.cs
-??? TwfAiFramework.Tests.csproj
-??? README.md
++-- Core/
+|   +-- WorkflowDataTests.cs        (25 tests) ?
+|   +-- NodeOptionsTests.cs         (15 tests) ?
+|   +-- NodeResultTests.cs          (17 tests) ?
+? +-- WorkflowContextTests.cs     (18 tests) ?
+|   +-- WorkflowBuilderTests.cs     (18 tests) ?
++-- Nodes/
+|   +-- BaseNodeTests.cs       (8 tests)  ?
++-- GlobalUsings.cs
++-- TwfAiFramework.Tests.csproj
++-- README.md
 ```
 
-## ?? Test Coverage
+## Test Coverage
 
 ### WorkflowData (25 tests)
 - ? Type-safe get/set operations
@@ -76,14 +76,14 @@ tests/TwfAiFramework.Tests/
 - ? Execution timing
 - ? Multiple executions
 
-## ?? Technologies Used
+## Technologies Used
 
 - **xUnit** 2.9.2 - Modern test framework
 - **FluentAssertions** 7.0.0 - Readable assertions
 - **NSubstitute** 5.3.0 - Mocking framework
 - **Microsoft.Extensions.Logging** - Logging infrastructure
 
-## ?? Running Tests
+## Running Tests
 
 ### Visual Studio
 ```
@@ -105,7 +105,7 @@ dotnet test --filter "FullyQualifiedName~WorkflowDataTests"
 dotnet test --collect:"XPlat Code Coverage"
 ```
 
-## ?? Key Features Tested
+## Key Features Tested
 
 1. **Immutability** - Record-based NodeOptions with `with` expressions
 2. **Type Safety** - Generic get/set methods with type conversion
@@ -114,7 +114,7 @@ dotnet test --collect:"XPlat Code Coverage"
 5. **Execution Tracking** - Timing, metadata, logs
 6. **Fluent APIs** - Builder patterns throughout
 
-## ?? Test Helper: TestNode
+## Test Helper: TestNode
 
 A versatile test helper class provides easy node creation:
 
@@ -140,7 +140,7 @@ var node = TestNode.Transform("TransformNode", "input", "output",
 3. **Test assertions** - Updated emoji checks to be console-agnostic
 4. **Fallback behavior** - Corrected test expectations for ContinueOnError
 
-## ?? Best Practices Demonstrated
+## Best Practices Demonstrated
 
 - **AAA Pattern** - Arrange, Act, Assert in every test
 - **Clear naming** - `MethodName_Should_ExpectedBehavior_When_Condition`
@@ -148,7 +148,7 @@ var node = TestNode.Transform("TransformNode", "input", "output",
 - **Test isolation** - No shared state between tests
 - **Readable assertions** - FluentAssertions for clarity
 
-## ?? Next Steps
+## Next Steps
 
 Consider adding:
 - Integration tests for AI nodes (requires external services)

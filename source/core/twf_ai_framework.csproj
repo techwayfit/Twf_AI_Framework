@@ -7,7 +7,7 @@
 
     <!-- NuGet Package Metadata -->
     <PackageId>TwfAiFramework</PackageId>
-    <Version>2.0.0</Version>
+    <Version>2.1.0</Version>
     <Authors>Manas Nayak</Authors>
     <Company>Manas Nayak</Company>
     <Description>A lightweight, node-based AI workflow engine for .NET 10. Build AI pipelines by chaining reusable nodes — LLM calls, HTTP requests, data transforms, embeddings, conditionals, and more — with built-in retry, timeout, parallel execution, and structured logging.</Description>
@@ -19,6 +19,32 @@
     <PackageProjectUrl>https://github.com/manasnayak/Twf_AI_Framework</PackageProjectUrl>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <PackageReleaseNotes>
+## 2.1.0
+
+### Developer Experience
+- Node key constants: every node now exposes `public const string InputXxx` / `OutputXxx` fields for all WorkflowData keys it reads or writes, eliminating magic strings and enabling IDE autocomplete and refactoring
+- Pipeline extension methods on `Workflow` (`using TwfAiFramework.Core.Extensions`):
+  - `AddAIPipeline(AIPipelineConfig)` — wires PromptBuilderNode → LlmNode → optional OutputParserNode in one call
+  - `AddEmbeddingPipeline(EmbeddingPipelineConfig)` — optional ChunkTextNode → EmbeddingNode
+  - `AddSearchAndSummarizePipeline(SearchAndSummarizeConfig)` — GoogleSearchNode → PromptBuilderNode → LlmNode
+- Typed result accessors on `WorkflowResult` and `WorkflowData` (`using TwfAiFramework.Core.Extensions`):
+  - `LlmResponse()`, `LlmModel()`, `PromptTokens()`, `CompletionTokens()`
+  - `ParsedOutput()`, `Embedding()`, `Embeddings()`
+  - `SearchResults()`, `HttpResponse()`, `HttpStatusCode()`
+  - `FileContent()`, `Chunks()`, `IsValid()`, `ValidationErrors()`
+
+### New Nodes
+- `CsvReadNode` — parse CSV text into `List&lt;Dictionary&lt;string,string&gt;&gt;` (RFC 4180, configurable delimiter, header detection); writes `csv_row_count` and `csv_columns`
+- `CsvWriteNode` — serialize row objects back to a CSV string; writes `csv_row_count`
+- `JsonParseNode` — parse a JSON string into structured .NET objects; writes `json_parse_success`
+- `JsonStringifyNode` — serialize any WorkflowData value to a JSON string with optional pretty-print
+- `MathOperationNode` — arithmetic operations on WorkflowData values: add, subtract, multiply, divide, modulo, power, min, max, abs, sqrt, round, floor, ceil, negate
+- `CreateListNode` — create a new list, optionally pre-populated from a JSON array; writes `list_count`
+- `AddListItemNode` — append or prepend an item to an existing list; writes `list_count`
+- `RemoveListItemNode` — remove an item by 0-based index (supports negative indexing) or by value; writes `list_count` and `removed_item`
+- `MergeListsNode` — concatenate two lists with optional deduplication; writes `list_count`
+- `AppendStringNode` — concatenate strings with configurable separator
+
     ## 2.0.0
 ### New Nodes
 - GoogleSearchNode: real Google search via SerpApi — returns ranked organic results as structured `SearchResultItem` list; reads `search_query` / `search_results_count` from WorkflowData

@@ -80,8 +80,8 @@ public sealed class MyCustomNode : BaseNode
     // dynamically. Parameter keys must match the names in NodeSchemaProvider.
     public MyCustomNode(Dictionary<string, object?> parameters)
         : this(
-            NodeParameters.GetString(parameters, "name")    ?? "My Custom Node",
-            NodeParameters.GetString(parameters, "myParam") ?? "default value")
+            NodeParameters.GetString(parameters, "name")    "My Custom Node",
+            NodeParameters.GetString(parameters, "myParam") "default value")
     { }
 
     // ── Execution ─────────────────────────────────────────────────────────────
@@ -291,13 +291,13 @@ public sealed class SentimentNode : BaseNode
     public SentimentNode(string name, string[]? positiveWords = null)
     {
         Name           = name;
-        _positiveWords = positiveWords ?? ["good", "great", "excellent", "love", "happy"];
+        _positiveWords = positiveWords ["good", "great", "excellent", "love", "happy"];
     }
 
     // Dictionary constructor — runner uses this for dynamic instantiation
     public SentimentNode(Dictionary<string, object?> parameters)
         : this(
-            NodeParameters.GetString(parameters, "name") ?? "Sentiment",
+            NodeParameters.GetString(parameters, "name") "Sentiment",
             NodeParameters.GetStringList(parameters, "positiveWords")?.ToArray())
     { }
 

@@ -4,7 +4,7 @@ Complete documentation for the TwfAiFramework - a lightweight, node-based AI wor
 
 ---
 
-## ?? Core Library Documentation
+## Core Library Documentation
 
 These documents are packaged with the NuGet package and located in `source/core/`:
 
@@ -87,7 +87,7 @@ These documents are packaged with the NuGet package and located in `source/core/
 
 ---
 
-## ?? Project-Wide Documentation
+## Project-Wide Documentation
 
 These documents are in the `docs/` folder and cover the entire solution:
 
@@ -118,7 +118,7 @@ These documents are in the `docs/` folder and cover the entire solution:
 
 ---
 
-## ?? Quick Navigation
+## Quick Navigation
 
 ### By Role
 
@@ -157,7 +157,7 @@ These documents are in the `docs/` folder and cover the entire solution:
 
 ---
 
-## ?? Additional Resources
+## Additional Resources
 
 ### Code Examples
 
@@ -183,7 +183,7 @@ These documents are in the `docs/` folder and cover the entire solution:
 
 ---
 
-## ?? Documentation Statistics
+## Documentation Statistics
 
 - **Total Documents:** 9 comprehensive guides
 - **Total Lines:** 30,000+ lines of documentation
@@ -195,7 +195,7 @@ These documents are in the `docs/` folder and cover the entire solution:
 
 ---
 
-## ?? Getting Started in 3 Steps
+## Getting Started in 3 Steps
 
 ### 1. Installation
 ```bash
@@ -212,7 +212,7 @@ dotnet add package TwfAiFramework
 
 ---
 
-## ?? Contributing
+## Contributing
 
 - Review [NAMING_CONVENTIONS.md](docs/NAMING_CONVENTIONS.md) for code standards
 - Study [ARCHITECTURE.md](source/core/ARCHITECTURE.md) to understand design patterns
@@ -221,7 +221,7 @@ dotnet add package TwfAiFramework
 
 ---
 
-## ?? Support
+## Support
 
 - **Issues:** [GitHub Issues](https://github.com/techwayfit/Twf_AI_Framework/issues)
 - **Discussions:** [GitHub Discussions](https://github.com/techwayfit/Twf_AI_Framework/discussions)
@@ -234,4 +234,4 @@ dotnet add package TwfAiFramework
 
 ---
 
-Made with ?? by the TwfAiFramework team
+Made with by the TwfAiFramework team

@@ -2,7 +2,7 @@
 
 Comprehensive xUnit test suite for the **TwfAiFramework** - an n8n-inspired workflow automation library for .NET.
 
-## ?? What's Tested
+## What's Tested
 
 This test project provides extensive coverage for all core framework components:
 
@@ -17,7 +17,7 @@ This test project provides extensive coverage for all core framework components:
 | **BaseNode** | `Nodes/BaseNodeTests.cs` | Node execution, error handling, logging, metadata collection |
 | **WorkflowBuilder** | `Core/WorkflowBuilderTests.cs` | Sequential execution, branching, parallel nodes, loops, error strategies |
 
-## ?? Test Categories
+## Test Categories
 
 ### Data Flow Tests
 - Type-safe data access with `Get<T>()`, `Set<T>()`, `TryGet<T>()`
@@ -46,7 +46,7 @@ This test project provides extensive coverage for all core framework components:
 - Cancellation token propagation
 - Success/failure callbacks
 
-## ?? Running Tests
+## Running Tests
 
 ### Visual Studio
 1. Open Test Explorer (Test ? Test Explorer)
@@ -72,7 +72,7 @@ dotnet test --collect:"XPlat Code Coverage"
 2. Tests will appear in the Test Explorer sidebar
 3. Click the play button to run tests
 
-## ?? Test Utilities
+## Test Utilities
 
 ### TestNode Helper
 The `TestNode` class provides convenient test doubles for unit testing:
@@ -92,22 +92,22 @@ var node = TestNode.Transform("TransformNode", "input", "output",
     value => $"transformed_{value}");
 ```
 
-## ?? Test Coverage Goals
+## Test Coverage Goals
 
 - ? **Core Framework**: 90%+ coverage
 - ? **Node Execution**: 85%+ coverage
 - ? **Workflow Builder**: 80%+ coverage
-- ?? **AI Nodes**: Integration tests (requires external services)
-- ?? **IO Nodes**: Integration tests (requires file system/HTTP)
+- **AI Nodes**: Integration tests (requires external services)
+- **IO Nodes**: Integration tests (requires file system/HTTP)
 
-## ?? Dependencies
+## Dependencies
 
 - **xUnit** - Test framework
 - **FluentAssertions** - Readable assertion syntax
 - **NSubstitute** - Mocking framework
 - **Microsoft.Extensions.Logging** - Logging infrastructure
 
-## ?? Writing New Tests
+## Writing New Tests
 
 ### Test Naming Convention
 ```csharp
@@ -146,24 +146,24 @@ public async Task Workflow_Should_Stop_On_First_Failure_By_Default()
 }
 ```
 
-## ??? Project Structure
+## Project Structure
 
 ```
 tests/TwfAiFramework.Tests/
-??? Core/
-?   ??? WorkflowDataTests.cs
-?   ??? NodeOptionsTests.cs
-?   ??? NodeResultTests.cs
-?   ??? WorkflowContextTests.cs
-?   ??? WorkflowBuilderTests.cs
-??? Nodes/
-?   ??? BaseNodeTests.cs
-??? GlobalUsings.cs
-??? TwfAiFramework.Tests.csproj
-??? README.md (this file)
++-- Core/
+|   +-- WorkflowDataTests.cs
+|   +-- NodeOptionsTests.cs
+|   +-- NodeResultTests.cs
+|   +-- WorkflowContextTests.cs
+|   +-- WorkflowBuilderTests.cs
++-- Nodes/
+|   +-- BaseNodeTests.cs
++-- GlobalUsings.cs
++-- TwfAiFramework.Tests.csproj
++-- README.md (this file)
 ```
 
-## ?? CI/CD Integration
+## CI/CD Integration
 
 These tests are designed to run in CI/CD pipelines:
 
@@ -181,13 +181,13 @@ These tests are designed to run in CI/CD pipelines:
     reporter: dotnet-trx
 ```
 
-## ?? Additional Resources
+## Additional Resources
 
 - [xUnit Documentation](https://xunit.net/)
 - [FluentAssertions Documentation](https://fluentassertions.com/)
 - [.NET Testing Best Practices](https://learn.microsoft.com/en-us/dotnet/core/testing/unit-testing-best-practices)
 
-## ?? Contributing
+## Contributing
 
 When adding new features to TwfAiFramework:
 1. Write tests first (TDD approach)

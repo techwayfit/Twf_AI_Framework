@@ -1,4 +1,4 @@
-# TwfAiFramework — Use Cases and Application Scenarios
+# TwfAiFramework  Use Cases and Application Scenarios
 
 This document provides detailed use cases demonstrating how TwfAiFramework solves real-world problems across different domains.
 
@@ -38,7 +38,7 @@ This document provides detailed use cases demonstrating how TwfAiFramework solve
 var supportBot = Workflow.Create("CustomerSupportBot")
   .UseLogger(logger)
     
-    // 1. Safety check — filter inappropriate content
+    // 1. Safety check  filter inappropriate content
   .AddNode(new PromptBuilderNode("SafetyCheck",
       promptTemplate: "Classify if safe: '{{user_message}}'. JSON: {\"is_safe\": true/false}"))
     .AddNode(new LlmNode("SafetyClassifier", llmConfig))
@@ -284,7 +284,7 @@ var contentPipeline = Workflow.Create("ContentGenerator")
     .AddNode(new LlmNode("SEOAnalyzer", llmConfig))
     .AddNode(new OutputParserNode("SEOParser"))
     
-    // 5. Quality gate — only publish if SEO score >= 7
+    // 5. Quality gate  only publish if SEO score >= 7
     .Branch(
         condition: data => data.Get<int>("seo_score") >= 7,
   trueBranch: approved => approved
@@ -827,7 +827,7 @@ var codeReviewPipeline = Workflow.Create("AutomatedCodeReview")
      Body = new
         {
  body = """
-       ## ?? Automated Code Review
+       ## Automated Code Review
        
      ### Quality Issues
        {{quality_issues}}
@@ -1215,25 +1215,25 @@ var marketResearchPipeline = Workflow.Create("MarketResearch")
 ## Common Patterns Across Use Cases
 
 ### 1. **Data Enrichment Pattern**
-Fetch from multiple sources ? Merge ? Analyze ? Enrich
+Fetch from multiple sources -> Merge -> Analyze -> Enrich
 
 ### 2. **Quality Gate Pattern**
-Process ? Score ? Branch (approve/reject) ? Handle
+Process -> Score -> Branch (approve/reject) -> Handle
 
 ### 3. **Multi-Agent Pattern**
-Decompose ? Parallel agents ? Critique ? Synthesize
+Decompose -> Parallel agents -> Critique -> Synthesize
 
 ### 4. **Research Pattern**
-Gather ? Extract ? Analyze ? Report
+Gather -> Extract -> Analyze -> Report
 
 ### 5. **Personalization Pattern**
-User profile ? Preferences ? Match ? Customize
+User profile -> Preferences -> Match -> Customize
 
 ### 6. **Monitoring Pattern**
-Aggregate ? Detect anomalies ? Classify ? Alert
+Aggregate -> Detect anomalies -> Classify -> Alert
 
 ### 7. **Compliance Pattern**
-Scan ? Detect violations ? Suggest fixes ? Audit
+Scan -> Detect violations -> Suggest fixes -> Audit
 
 ---
 

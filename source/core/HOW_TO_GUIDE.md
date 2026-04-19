@@ -1,4 +1,4 @@
-# TwfAiFramework — How-To Guide
+# TwfAiFramework  How-To Guide
 
 Complete guide to common tasks and workflows in TwfAiFramework. Each section provides step-by-step instructions with code examples.
 
@@ -55,15 +55,15 @@ var workflow = Workflow.Create("HelloWorld")
 **Store API keys securely:**
 
 ```csharp
-// ? DON'T: Hardcode API keys
+//  DON'T: Hardcode API keys
 var llmConfig = LlmConfig.OpenAI("sk-hardcoded-key", "gpt-4o");
 
-// ? DO: Use environment variables
+//  DO: Use environment variables
 var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY") 
-    ?? throw new InvalidOperationException("API key not configured");
+    throw new InvalidOperationException("API key not configured");
 var llmConfig = LlmConfig.OpenAI(apiKey, "gpt-4o");
 
-// ? BETTER: Use configuration
+//  BETTER: Use configuration
 var configuration = new ConfigurationBuilder()
     .AddUserSecrets<Program>()
     .AddEnvironmentVariables()
@@ -139,7 +139,7 @@ var workflow = Workflow.Create("ValidatedQA")
     
     .OnError((nodeName, exception) =>
     {
-        Console.WriteLine($"? Failed at {nodeName}: {exception?.Message}");
+        Console.WriteLine($" Failed at {nodeName}: {exception?.Message}");
     });
 ```
 
@@ -264,7 +264,7 @@ var totalCost = CalculateCost(promptTokens, completionTokens, "gpt-4o");
 ### Prompt Engineering Best Practices
 
 ```csharp
-// ? DO: Be specific and structured
+//  DO: Be specific and structured
 var prompt = new PromptBuilderNode("Prompt",
     promptTemplate: """
         Classify the sentiment of this customer message.
@@ -281,7 +281,7 @@ var prompt = new PromptBuilderNode("Prompt",
     systemTemplate: "You are a sentiment analysis expert. Always return valid JSON."
 );
 
-// ? DON'T: Vague prompts
+//  DON'T: Vague prompts
 var badPrompt = new PromptBuilderNode("Prompt",
     promptTemplate: "What do you think about: {{message}}"
 );
@@ -1185,12 +1185,12 @@ result.Data.GetString("llm_response").Should().Be("This is a mock response");
 ### Use Parallel Execution
 
 ```csharp
-// ? Sequential (slow)
+//  Sequential (slow)
 .AddNode(new SentimentNode())
 .AddNode(new KeywordNode())
 .AddNode(new CategoryNode())
 
-// ? Parallel (3x faster)
+//  Parallel (3x faster)
 .Parallel(
     new SentimentNode(),
     new KeywordNode(),
@@ -1201,7 +1201,7 @@ result.Data.GetString("llm_response").Should().Be("This is a mock response");
 ### Batch Operations
 
 ```csharp
-// ? Individual API calls in loop (slow)
+//  Individual API calls in loop (slow)
 .ForEach(
     itemsKey: "items",
     outputKey: "results",
@@ -1209,7 +1209,7 @@ result.Data.GetString("llm_response").Should().Be("This is a mock response");
 .AddNode(new HttpRequestNode("CallAPI", apiConfig))
 )
 
-// ? Batch API call (single request)
+//  Batch API call (single request)
 .AddStep("BatchProcess", async (data, ctx) =>
 {
   var items = data.Get<List<object>>("items");
@@ -1467,22 +1467,22 @@ var llmConfig = LlmConfig.OpenAI(
 
 This guide covered:
 
-? **Getting Started**: Installation and basic setup  
-? **Workflows**: Sequential, parallel, conditional, looping  
-? **LLMs**: All major providers, streaming, temperature control  
-? **Data**: Transformations, validation, type conversions  
-? **Control Flow**: Branching, loops, try-catch  
-? **Error Handling**: Retry, fallbacks, workflow-level handlers  
-? **APIs**: HTTP requests, rate limiting, error handling  
-? **RAG**: Chunking, embeddings, vector search  
-? **Conversations**: Multi-turn, history management  
-? **Testing**: Unit tests, mocks, integration tests  
-? **Performance**: Parallelism, batching, caching  
-? **Deployment**: ASP.NET Core, Azure Functions, Docker  
+ **Getting Started**: Installation and basic setup  
+ **Workflows**: Sequential, parallel, conditional, looping  
+ **LLMs**: All major providers, streaming, temperature control  
+ **Data**: Transformations, validation, type conversions  
+ **Control Flow**: Branching, loops, try-catch  
+ **Error Handling**: Retry, fallbacks, workflow-level handlers  
+ **APIs**: HTTP requests, rate limiting, error handling  
+ **RAG**: Chunking, embeddings, vector search  
+ **Conversations**: Multi-turn, history management  
+ **Testing**: Unit tests, mocks, integration tests  
+ **Performance**: Parallelism, batching, caching  
+ **Deployment**: ASP.NET Core, Azure Functions, Docker  
 
 For more examples, see:
-- `source/console/examples/` — Complete workflow examples
-- `source/console/concepts/` — Framework concept demonstrations
-- `tests/` — Comprehensive test suite
+- `source/console/examples/`  Complete workflow examples
+- `source/console/concepts/`  Framework concept demonstrations
+- `tests/`  Comprehensive test suite
 
 **Need help?** Check the [GitHub repository](https://github.com/techwayfit/Twf_AI_Framework) for issues and discussions.

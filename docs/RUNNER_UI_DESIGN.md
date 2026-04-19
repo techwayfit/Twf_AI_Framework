@@ -76,7 +76,7 @@ public record NodeStepEvent(
     string      NodeType,
     Dictionary<string, object?> InputData,
     Dictionary<string, object?> OutputData,
-    string?     ErrorMessage,
+    string|     ErrorMessage,
     DateTimeOffset Timestamp
 );
 ```
@@ -125,7 +125,7 @@ await onStep(new NodeStepEvent(
     NodeName:    nodeDef.Name,
     NodeType:    nodeDef.Type,
     InputData:   data.ToDictionary(),           // data before the node
-    OutputData:  result.Data?.ToDictionary() ?? new(),
+    OutputData:  result.Data?.ToDictionary() new(),
     ErrorMessage: null,
     Timestamp:   DateTimeOffset.UtcNow));
 ```
@@ -545,7 +545,7 @@ function updateStepCard(nodeId, state, step) {
 }
 
 function stateIcon(state) {
-    return { running: '⏳', done: '✅', error: '❌', pending: '○' }[state] ?? '○';
+    return { running: '⏳', done: '✅', error: '❌', pending: '○' }[state] '○';
 }
 
 function updateStatusBadge(state) {

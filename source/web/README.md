@@ -2,7 +2,7 @@
 
 A visual workflow designer for creating and managing AI workflows using the TWF AI Framework.
 
-## ?? Documentation
+## Documentation
 
 This project includes comprehensive documentation:
 
@@ -44,7 +44,7 @@ This project includes comprehensive documentation:
   - Error responses
   - SSE streaming
 
-## ?? Quick Start
+## Quick Start
 
 ### Prerequisites
 - .NET 10.0 SDK
@@ -100,14 +100,14 @@ This project includes comprehensive documentation:
 - **Scoped outputs** for accessing node results
 - **Structured logging** with correlation IDs
 
-## ??? Architecture
+## Architecture
 
 The application follows a **clean architecture** pattern with clear separation of concerns:
 
 ```
 Controllers ? Services ? Repositories ? Database
-     ?      ?            ?   ?
- ??????????? Dependency Injection ??????
+     |      |            |   ?
+ +-- Dependency Injection +--
 ```
 
 **Key Services:**
@@ -119,7 +119,7 @@ Controllers ? Services ? Repositories ? Database
 
 For detailed architecture diagrams, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
-## ?? API Endpoints
+## API Endpoints
 
 ### Workflow Management
 - `GET /Workflow` - List workflows
@@ -141,7 +141,7 @@ For detailed architecture diagrams, see [ARCHITECTURE.md](./ARCHITECTURE.md).
 
 For complete API specification, see [API_SPECIFICATION.md](./API_SPECIFICATION.md).
 
-## ??? Database
+## Database
 
 The application uses **SQLite** with **Entity Framework Core** for persistence.
 
@@ -159,7 +159,7 @@ The application uses **SQLite** with **Entity Framework Core** for persistence.
 }
 ```
 
-## ?? Configuration
+## Configuration
 
 ### appsettings.json
 
@@ -179,24 +179,24 @@ The application uses **SQLite** with **Entity Framework Core** for persistence.
 }
 ```
 
-## ??? Development
+## Development
 
 ### Project Structure
 
 ```
 source/web/
-??? Controllers/     # MVC controllers
-??? Services/            # Business logic
-?   ??? GraphWalker/     # Workflow execution
-?   ??? NodeFactory/     # Node instantiation
-?   ??? Execution/       # Node execution
-?   ??? VariableResolution/ # Template variables
-??? Repositories/        # Data access
-??? Models/           # Data models
-??? Data/      # EF Core DbContext
-??? Middleware/       # Custom middleware
-??? Views/         # Razor views
-??? wwwroot/ # Static files
++-- Controllers/     # MVC controllers
++-- Services/            # Business logic
+|   +-- GraphWalker/     # Workflow execution
+|   +-- NodeFactory/     # Node instantiation
+|   +-- Execution/       # Node execution
+|   +-- VariableResolution/ # Template variables
++-- Repositories/        # Data access
++-- Models/           # Data models
++-- Data/      # EF Core DbContext
++-- Middleware/       # Custom middleware
++-- Views/         # Razor views
++-- wwwroot/ # Static files
 
 ```
 
@@ -204,14 +204,14 @@ source/web/
 
 See [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#create-a-custom-node-c) for code examples.
 
-## ?? Testing
+## Testing
 
 ```bash
 cd tests/TwfAiFramework.Tests
 dotnet test
 ```
 
-## ?? Deployment
+## Deployment
 
 ### Docker
 
@@ -228,7 +228,7 @@ docker run -d -p 8080:80 -v /data:/app/data twf-ai-framework-web
 
 For detailed deployment instructions, see [DOCUMENTATION.md](./DOCUMENTATION.md#deployment).
 
-## ?? Troubleshooting
+## Troubleshooting
 
 ### Common Issues
 
@@ -246,7 +246,7 @@ For detailed deployment instructions, see [DOCUMENTATION.md](./DOCUMENTATION.md#
 
 For more troubleshooting tips, see [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#troubleshooting).
 
-## ?? Performance
+## Performance
 
 - **Async/await** throughout for maximum throughput
 - **HTTP client pooling** for AI API calls
@@ -254,7 +254,7 @@ For more troubleshooting tips, see [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#tro
 - **Scoped logging** to reduce verbosity
 - **Server-Sent Events** for real-time updates without polling
 
-## ?? Security
+## Security
 
 - **HTTPS enforcement** in production
 - **Anti-forgery tokens** for state-changing requests
@@ -262,7 +262,7 @@ For more troubleshooting tips, see [QUICK_REFERENCE.md](./QUICK_REFERENCE.md#tro
 - **SQL injection prevention** via EF Core parameterization
 - **Exception details filtering** in production
 
-## ?? Contributing
+## Contributing
 
 Contributions are welcome! Please:
 1. Fork the repository
@@ -272,11 +272,11 @@ Contributions are welcome! Please:
 5. Update documentation
 6. Submit pull request
 
-## ?? License
+## License
 
 This project is part of the TWF AI Framework.
 
-## ?? Acknowledgments
+## Acknowledgments
 
 - Built with ASP.NET Core MVC
 - Uses Entity Framework Core
