@@ -5,6 +5,7 @@ using TwfAiFramework.Core;
 using TwfAiFramework.Web.Data;
 using TwfAiFramework.Web.Repositories;
 using TwfAiFramework.Web.Services.Schema;
+using TwfAiFramework.Web.Models.VisualNodes;
 
 namespace TwfAiFramework.Web.Services.Seeding;
 
@@ -40,7 +41,7 @@ public class NodeTypeSeederService : INodeTypeSeeder
 
         var schemas = _schemaProvider.GetAllSchemas();
         var existing = (await _repository.GetAllAsync())
-            .ToDictionary(e => e.NodeType, StringComparer.OrdinalIgnoreCase);
+     .ToDictionary(e => e.NodeType, StringComparer.OrdinalIgnoreCase);
         var overrides = GetPaletteOverrides();
         var uiOnlyDefs = GetUiOnlyNodeDefinitions();
 
@@ -101,12 +102,8 @@ public class NodeTypeSeederService : INodeTypeSeeder
         // ── Upsert UI-only nodes (no core assembly implementation) ────────────
         foreach (var def in uiOnlyDefs)
         {
-            var schema = new NodeParameterSchema
-            {
-                NodeType = def.NodeType,
-                Description = def.Description,
-                Parameters = [],
-            };
+            // Get the actual schema with parameters from the schema class
+            var schema = GetVisualNodeSchema(def.NodeType);
             var schemaJson = JsonSerializer.Serialize(schema, _jsonOptions);
 
             if (existing.TryGetValue(def.NodeType, out var entity))
@@ -125,20 +122,20 @@ public class NodeTypeSeederService : INodeTypeSeeder
             }
             else
             {
-                await _repository.CreateAsync(new NodeTypeEntity
-                {
-                    NodeType = def.NodeType,
-                    Name = def.Name,
-                    Category = def.Category,
-                    Description = def.Description,
-                    Color = def.Color,
-                    Icon = def.Icon,
-                    SchemaJson = schemaJson,
-                    IsEnabled = true,
-                    IdPrefix = def.IdPrefix,
-                    FullTypeName = null,
+    await _repository.CreateAsync(new NodeTypeEntity
+      {
+    NodeType = def.NodeType,
+         Name = def.Name,
+     Category = def.Category,
+        Description = def.Description,
+     Color = def.Color,
+          Icon = def.Icon,
+  SchemaJson = schemaJson,
+        IsEnabled = true,
+   IdPrefix = def.IdPrefix,
+  FullTypeName = null,
                 });
-                upserted++;
+              upserted++;
             }
         }
 
@@ -309,4 +306,40 @@ public class NodeTypeSeederService : INodeTypeSeeder
         new("ContainerNode", "Container", "Visual",  "Groups related nodes visually on the canvas.",     "#6366f1", "bi-bounding-box",             "container"),
         new("NoteNode",      "Note",      "Visual",  "Adds a comment or annotation to the canvas.",      "#f59e0b", "bi-sticky",                   "note"),
     ];
+
+    /// <summary>
+    /// Gets the actual NodeParameterSchema for visual nodes (ContainerNode, NoteNode, etc.)
+    /// </summary>
+ private static NodeParameterSchema GetVisualNodeSchema(string nodeType)
+  {
+        return nodeType switch
+     {
+    "ContainerNode" => ContainerNodeSchema.GetSchema(),
+        "NoteNode" => NoteNodeSchema.GetSchema(),
+ "StartNode" => new NodeParameterSchema
+          {
+      NodeType = "StartNode",
+  Description = "Marks the entry point of the workflow.",
+         Parameters = [],
+           DataInputs = [],
+  DataOutputs = []
+      },
+     "EndNode" => new NodeParameterSchema
+     {
+        NodeType = "EndNode",
+  Description = "Marks the successful exit point of the workflow.",
+             Parameters = [],
+ DataInputs = [],
+    DataOutputs = []
+  },
+      _ => new NodeParameterSchema
+{
+       NodeType = nodeType,
+    Description = "",
+       Parameters = [],
+           DataInputs = [],
+     DataOutputs = []
+            }
+        };
+    }
 }

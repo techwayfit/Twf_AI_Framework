@@ -104,6 +104,7 @@
 
   <ItemGroup>
     <Folder Include="Core\Caching\" />
+    <Folder Include="Nodes\Visual\" />
   </ItemGroup>
 
 </Project>

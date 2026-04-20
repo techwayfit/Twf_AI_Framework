@@ -10,6 +10,13 @@ const COLOR_MAP = {
   purple: { bg: '#f3e5f5', border: '#6a1b9a', text: '#3e0063', fold: '#6a1b9a' },
 };
 
+/**
+ * NoteNode — sticky note style annotation with:
+ *   • Multiple output handles for flexible arrow connections
+ *   • Handles on all four sides (top, right, bottom, left)
+ *   • Customizable color themes
+ *   • Folded corner visual effect
+ */
 export default function NoteNode({ id, data, selected }) {
   const { setNodes, setEdges } = useReactFlow();
   const theme = COLOR_MAP[data.parameters?.color ?? 'yellow'] ?? COLOR_MAP.yellow;
@@ -18,6 +25,15 @@ export default function NoteNode({ id, data, selected }) {
   const deleteNode = () => {
     setNodes((ns) => ns.filter((n) => n.id !== id));
     setEdges((es) => es.filter((e) => e.source !== id && e.target !== id));
+  };
+
+  // Handle style configuration
+  const handleStyle = {
+    background: theme.border,
+    border: `2px solid ${theme.bg}`,
+    width: 8,
+    height: 8,
+    opacity: 0.7,
   };
 
   return (
@@ -41,83 +57,105 @@ export default function NoteNode({ id, data, selected }) {
           </button>
         </NodeToolbar>
       )}
-    <div
-      style={{
-        position: 'relative',
-        width: 200,
-        minHeight: 80,
-        backgroundColor: theme.bg,
-        border: `1.5px ${selected ? 'solid' : 'dashed'} ${theme.border}`,
-        borderRadius: 4,
-        // Clip the top-right corner for the fold effect
-        clipPath: `polygon(0 0, calc(100% - ${FOLD}px) 0, 100% ${FOLD}px, 100% 100%, 0 100%)`,
-        padding: `10px ${FOLD + 6}px 10px 12px`,
-        fontFamily: "'Segoe UI', sans-serif",
-        cursor: 'default',
-        userSelect: 'none',
-        opacity: selected ? 1 : 0.92,
-      }}
-    >
-      {/* Folded corner triangle */}
       <div
         style={{
-          position: 'absolute',
-          top: 0,
-          right: 0,
-          width: 0,
-          height: 0,
-          borderStyle: 'solid',
-          borderWidth: `0 ${FOLD}px ${FOLD}px 0`,
-          borderColor: `transparent ${theme.fold} transparent transparent`,
-          opacity: 0.5,
-          pointerEvents: 'none',
-        }}
-      />
-
-      {/* "Note" badge */}
-      <div
-        style={{
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: 1,
-          color: theme.border,
-          textTransform: 'uppercase',
-          marginBottom: 5,
-          opacity: 0.7,
+          position: 'relative',
+          width: 200,
+          minHeight: 80,
+          backgroundColor: theme.bg,
+          border: `1.5px ${selected ? 'solid' : 'dashed'} ${theme.border}`,
+          borderRadius: 4,
+          // Clip the top-right corner for the fold effect
+          clipPath: `polygon(0 0, calc(100% - ${FOLD}px) 0, 100% ${FOLD}px, 100% 100%, 0 100%)`,
+          padding: `10px ${FOLD + 6}px 10px 12px`,
+          fontFamily: "'Segoe UI', sans-serif",
+          cursor: 'default',
+          userSelect: 'none',
+          opacity: selected ? 1 : 0.92,
         }}
       >
-        ✏ Note
-      </div>
+        {/* Folded corner triangle */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            right: 0,
+            width: 0,
+            height: 0,
+            borderStyle: 'solid',
+            borderWidth: `0 ${FOLD}px ${FOLD}px 0`,
+            borderColor: `transparent ${theme.fold} transparent transparent`,
+            opacity: 0.5,
+            pointerEvents: 'none',
+          }}
+        />
 
-      {/* Note text */}
-      <div
-        style={{
-          fontSize: 12,
-          color: theme.text,
-          lineHeight: 1.5,
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          minHeight: 24,
-        }}
-      >
-        {text || <span style={{ opacity: 0.4, fontStyle: 'italic' }}>No text</span>}
-      </div>
+        {/* "Note" badge */}
+        <div
+          style={{
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: 1,
+            color: theme.border,
+            textTransform: 'uppercase',
+            marginBottom: 5,
+            opacity: 0.7,
+          }}
+        >
+          ✏ Note
+        </div>
 
-      {/* Single output handle — connects to the node this note refers to */}
-      <Handle
-        type="source"
-        position={Position.Right}
-        id="ref"
-        style={{
-          background: theme.border,
-          border: `2px solid ${theme.bg}`,
-          width: 8,
-          height: 8,
-          opacity: 0.7,
-        }}
-        title="Link to node"
-      />
-    </div>
+        {/* Note text */}
+        <div
+          style={{
+            fontSize: 12,
+            color: theme.text,
+            lineHeight: 1.5,
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            minHeight: 24,
+          }}
+        >
+          {text || <span style={{ opacity: 0.4, fontStyle: 'italic' }}>No text</span>}
+        </div>
+
+        {/* Multiple output handles on all sides for flexible arrow connections */}
+        {/* Top handle */}
+        <Handle
+          type="source"
+          position={Position.Top}
+          id="ref-top"
+          style={{ ...handleStyle, top: -4, left: '50%', transform: 'translateX(-50%)' }}
+          title="Link from top"
+        />
+        
+        {/* Right handle (primary) */}
+        <Handle
+          type="source"
+          position={Position.Right}
+          id="ref-right"
+          style={{ ...handleStyle, right: -4, top: '50%', transform: 'translateY(-50%)' }}
+          title="Link from right"
+        />
+        
+        {/* Bottom handle */}
+        <Handle
+          type="source"
+          position={Position.Bottom}
+          id="ref-bottom"
+          style={{ ...handleStyle, bottom: -4, left: '50%', transform: 'translateX(-50%)' }}
+          title="Link from bottom"
+        />
+  
+        {/* Left handle */}
+        <Handle
+          type="source"
+          position={Position.Left}
+          id="ref-left"
+          style={{ ...handleStyle, left: -4, top: '50%', transform: 'translateY(-50%)' }}
+          title="Link from left"
+        />
+      </div>
     </>
   );
 }

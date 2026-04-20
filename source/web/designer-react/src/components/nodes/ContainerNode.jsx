@@ -4,12 +4,14 @@ import { NodeResizer, useReactFlow } from '@xyflow/react';
  * ContainerNode — a purely visual grouping node with:
  *   • No input / output handles (ports)
  *   • Resizable via NodeResizer
+ *   • **Customizable background color via color picker**
  *   • Semi-transparent configurable background colour
  *   • Rendered behind all other nodes (inserted at index 0)
  */
 export default function ContainerNode({ id, data, selected }) {
   const { updateNodeData } = useReactFlow();
 
+  // Support for custom background color with fallback to default indigo
   const bgColor  = data.parameters?.backgroundColor ?? '#6366f1';
   const opacity  = Math.max(0, Math.min(1, Number(data.parameters?.opacity ?? 0.12)));
 

@@ -96,7 +96,11 @@ export const NODE_ROUTING_PORTS = {
   FileWriterNode:  { inputs: [{ id: 'input', label: 'Input' }],
                      outputs: [{ id: 'output', label: 'Output' }, { id: 'error', label: 'Error' }] },
   ContainerNode:   { inputs: [], outputs: [] },
-  NoteNode:        { inputs: [], outputs: [] },
+  NoteNode:        { inputs: [], 
+         outputs: [{ id: 'ref-top', label: 'Top' }, 
+   { id: 'ref-right', label: 'Right' }, 
+      { id: 'ref-bottom', label: 'Bottom' }, 
+          { id: 'ref-left', label: 'Left' }] },
 };
 
 // Default routing ports for any node not in NODE_ROUTING_PORTS
